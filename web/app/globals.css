@@ -1,0 +1,235 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ──────────────────────────────────────────────────────────────────────────
+   "Calm Athletic" palette
+   ──────────────────────────────────────────────────────────────────────────
+   Light: warm off-white background + sand neutrals + deep forest green
+          (used as an accent rather than the hero color) + lime yellow for
+          streaks/achievements.
+   Dark:  deep slate-green background, brighter primary for contrast,
+          same lime accent.
+
+   All colors are oklch so we can interpolate / tint them at runtime.
+   ────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Surfaces */
+  --background: oklch(0.975 0.008 95);          /* warm off-white */
+  --foreground: oklch(0.18 0.015 145);          /* near-black with a hint of green */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.015 145);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.015 145);
+
+  /* Brand */
+  --primary: oklch(0.52 0.14 145);              /* deep forest green */
+  --primary-foreground: oklch(0.99 0 0);
+
+  /* Neutrals — warm sand instead of cool gray */
+  --secondary: oklch(0.94 0.012 85);
+  --secondary-foreground: oklch(0.3 0.015 85);
+  --muted: oklch(0.96 0.008 85);
+  --muted-foreground: oklch(0.48 0.012 85);
+
+  /* Accent — lime yellow, reserved for streaks / "you did it" moments */
+  --accent: oklch(0.82 0.16 100);
+  --accent-foreground: oklch(0.22 0.05 100);
+
+  /* States */
+  --destructive: oklch(0.58 0.21 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.62 0.15 145);
+
+  /* Lines + inputs */
+  --border: oklch(0.9 0.01 85);
+  --input: oklch(0.93 0.01 85);
+  --ring: oklch(0.52 0.14 145);
+
+  /* Charts */
+  --chart-1: oklch(0.52 0.14 145);
+  --chart-2: oklch(0.6 0.12 200);
+  --chart-3: oklch(0.62 0.12 250);
+  --chart-4: oklch(0.82 0.16 100);
+  --chart-5: oklch(0.58 0.18 25);
+
+  /* Sidebar surface — slightly cooler than card so the rail reads as "chrome" */
+  --sidebar: oklch(0.98 0.005 95);
+  --sidebar-foreground: oklch(0.25 0.012 145);
+  --sidebar-primary: oklch(0.52 0.14 145);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.94 0.012 85);
+  --sidebar-accent-foreground: oklch(0.25 0.012 145);
+  --sidebar-border: oklch(0.9 0.01 85);
+  --sidebar-ring: oklch(0.52 0.14 145);
+
+  --radius: 0.75rem;                            /* slightly chunkier than before */
+}
+
+.dark {
+  --background: oklch(0.16 0.012 145);
+  --foreground: oklch(0.95 0.005 95);
+  --card: oklch(0.2 0.014 145);
+  --card-foreground: oklch(0.95 0.005 95);
+  --popover: oklch(0.2 0.014 145);
+  --popover-foreground: oklch(0.95 0.005 95);
+
+  --primary: oklch(0.7 0.16 145);               /* brighter for contrast */
+  --primary-foreground: oklch(0.12 0.015 145);
+
+  --secondary: oklch(0.26 0.018 85);
+  --secondary-foreground: oklch(0.92 0.008 85);
+  --muted: oklch(0.23 0.014 85);
+  --muted-foreground: oklch(0.68 0.012 85);
+
+  --accent: oklch(0.78 0.16 100);
+  --accent-foreground: oklch(0.18 0.05 100);
+
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --success: oklch(0.68 0.16 145);
+
+  --border: oklch(0.3 0.014 85);
+  --input: oklch(0.26 0.014 85);
+  --ring: oklch(0.7 0.16 145);
+
+  --chart-1: oklch(0.7 0.16 145);
+  --chart-2: oklch(0.68 0.13 200);
+  --chart-3: oklch(0.7 0.13 250);
+  --chart-4: oklch(0.78 0.16 100);
+  --chart-5: oklch(0.66 0.2 25);
+
+  --sidebar: oklch(0.18 0.014 145);
+  --sidebar-foreground: oklch(0.85 0.008 95);
+  --sidebar-primary: oklch(0.7 0.16 145);
+  --sidebar-primary-foreground: oklch(0.12 0.015 145);
+  --sidebar-accent: oklch(0.26 0.018 85);
+  --sidebar-accent-foreground: oklch(0.92 0.008 85);
+  --sidebar-border: oklch(0.3 0.014 85);
+  --sidebar-ring: oklch(0.7 0.16 145);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), 'Inter', 'Helvetica Neue', sans-serif;
+  --font-heading: var(--font-space-grotesk), 'Space Grotesk', sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    /* No flash on theme switch — paired with disableTransitionOnChange in next-themes */
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv11', 'ss01';        /* Inter stylistic alternates */
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Editorial numerals via Space Grotesk + tabular figures */
+  .font-display {
+    font-family: var(--font-heading);
+    font-feature-settings: 'tnum', 'ss01';
+    letter-spacing: -0.01em;
+  }
+
+  /* Slimmer scrollbars, theme-aware via CSS vars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+
+  /* Respect reduced-motion preferences globally */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Skeleton shimmer
+   ──────────────────────────────────────────────────────────────────────────
+   A slow horizontal sweep used by `<Skeleton>` placeholders. The gradient
+   reads as a soft sand → sand-with-highlight → sand cycle, which matches
+   the Calm Athletic palette better than a binary pulse.
+   ────────────────────────────────────────────────────────────────────── */
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.animate-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in oklch, var(--muted) 92%, transparent) 0%,
+    color-mix(in oklch, var(--muted) 65%, var(--background)) 45%,
+    color-mix(in oklch, var(--muted) 92%, transparent) 90%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 2s ease-in-out infinite;
+}

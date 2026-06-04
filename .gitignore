@@ -1,0 +1,21 @@
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Editor / IDE ----
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ---- Agent / local tooling ----
+.claude/
+.cursor/
+
+# ---- Misc local files ----
+*.local
+*.log
+
+# NOTE: web/ 与 rag/ 子目录各自维护了更细的 .gitignore，
+# 这里只放仓库根级别通用的忽略项。

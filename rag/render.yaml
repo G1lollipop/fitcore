@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: fitcore-rag
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: RERANKER_ENABLED
+        value: "false"
+      - key: VECTOR_BACKEND
+        value: supabase
+      # Cache layer: Redis backend (Upstash) survives Render free-tier cold
+      # boots. Falls back to in-process memory if UPSTASH_* secrets missing.
+      - key: CACHE_BACKEND
+        value: redis
+      - key: CACHE_RETRIEVAL_TTL_SEC
+        value: "3600"
+      - key: CACHE_EMBEDDING_TTL_SEC
+        value: "86400"
+      # 以下 key 在 Render Dashboard 手动填写
+      - key: DASHSCOPE_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false

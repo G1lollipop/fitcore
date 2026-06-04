@@ -1,0 +1,14 @@
+[
+  { "prompt": "我今天吃了两顿外卖，蛋白质还差多少才够？", "expect": "personal" },
+  { "prompt": "根据我的记录，这周训练量够不够？", "expect": "personal" },
+  { "prompt": "我的今日热量和目标是多少还差？", "expect": "personal" },
+  { "prompt": "深蹲膝盖内扣的常见错误有哪些？", "expect": "rag" },
+  { "prompt": "渐进超负荷是什么原理？", "expect": "rag" },
+  { "prompt": "肌酸和咖啡因补剂一般怎么安排？", "expect": "rag" },
+  { "prompt": "what is a deload week", "expect": "rag" },
+  { "prompt": "我最近深蹲重量上不去，是不是动作问题？", "expect": "hybrid" },
+  { "prompt": "我今天练完腿膝盖外侧疼，这正常吗？", "expect": "personal" },
+  { "prompt": "结合我的目标解释下什么是渐进超负荷", "expect": "hybrid" },
+  { "prompt": "你好", "expect": "hybrid" },
+  { "prompt": "深蹲怎么做", "expect": "rag" }
+]

@@ -1,0 +1,107 @@
+[
+  {
+    "id": "eval_001",
+    "question": "深蹲时膝盖应该朝哪个方向？",
+    "expected_keywords": ["脚尖", "膝盖方向", "外展", "内扣"],
+    "topic": "exercise_form",
+    "difficulty": "easy"
+  },
+  {
+    "id": "eval_002",
+    "question": "硬拉和深蹲的主要区别是什么？",
+    "expected_keywords": ["臀部", "股四头肌", "脊柱", "铰链", "起始姿势"],
+    "topic": "exercise_comparison",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_003",
+    "question": "增肌期每天蛋白质摄入应该是多少？",
+    "expected_keywords": ["体重", "克", "摄入量", "1.6", "2.2", "每公斤"],
+    "topic": "nutrition",
+    "difficulty": "easy"
+  },
+  {
+    "id": "eval_004",
+    "question": "渐进超负荷原则是什么意思？",
+    "expected_keywords": ["重量", "增加", "适应", "肌肉", "刺激"],
+    "topic": "training_principle",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_005",
+    "question": "卧推时应该如何正确握杠铃？",
+    "expected_keywords": ["握距", "肩宽", "手腕", "拇指", "握法"],
+    "topic": "exercise_form",
+    "difficulty": "easy"
+  },
+  {
+    "id": "eval_006",
+    "question": "推A拉B分化训练计划适合哪类人群？",
+    "expected_keywords": ["中级", "训练频率", "肌群", "恢复", "分化"],
+    "topic": "training_plan",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_007",
+    "question": "肌酸补剂的作用和服用方法是什么？",
+    "expected_keywords": ["ATP", "力量", "冲击期", "维持期", "每天", "克"],
+    "topic": "supplement",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_008",
+    "question": "有氧运动对力量训练有什么影响？",
+    "expected_keywords": ["干扰效应", "恢复", "心肺", "安排", "间隔"],
+    "topic": "cardio_and_strength",
+    "difficulty": "hard"
+  },
+  {
+    "id": "eval_009",
+    "question": "热身运动应该做多久？做哪些内容？",
+    "expected_keywords": ["动态拉伸", "5分钟", "10分钟", "心率", "关节"],
+    "topic": "warmup",
+    "difficulty": "easy"
+  },
+  {
+    "id": "eval_010",
+    "question": "减脂期间如何避免肌肉流失？",
+    "expected_keywords": ["蛋白质", "热量缺口", "力量训练", "保持", "速率"],
+    "topic": "fat_loss",
+    "difficulty": "hard"
+  },
+  {
+    "id": "eval_011",
+    "question": "卧推膝盖疼痛是什么原因？",
+    "expected_keywords": ["姿势", "膝盖位置", "脚踩地", "稳定", "代偿"],
+    "topic": "injury_prevention",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_012",
+    "question": "每周训练几次比较合适？",
+    "expected_keywords": ["频率", "恢复", "新手", "中级", "高级", "天"],
+    "topic": "training_frequency",
+    "difficulty": "easy"
+  },
+  {
+    "id": "eval_013",
+    "question": "碳水化合物在训练中扮演什么角色？",
+    "expected_keywords": ["糖原", "能量", "运动表现", "补充", "训练前后"],
+    "topic": "nutrition",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_014",
+    "question": "如何判断自己是否过度训练了？",
+    "expected_keywords": ["疲劳", "力量下降", "睡眠", "恢复", "休息日", "症状"],
+    "topic": "recovery",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_015",
+    "question": "引体向上做不了几个怎么办？",
+    "expected_keywords": ["辅助", "弹力带", "负重引体", "离心", "进阶"],
+    "topic": "exercise_progression",
+    "difficulty": "easy"
+  }
+]

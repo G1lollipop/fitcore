@@ -1,0 +1,79 @@
+# 本文件位于「仅含 Python RAG」的仓库根目录（如 G1lollipop/Rag）。
+# 在本机无法解析 *.supabase.co 时，用 GitHub 云端网络灌库。
+#
+# Secrets（Repository → Settings → Secrets and variables → Actions）：
+#   SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   DASHSCOPE_API_KEY
+#
+# Actions → 「RAG KB ingest (Supabase)」→ Run workflow
+
+name: RAG KB ingest (Supabase)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Action secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+        run: |
+          set -e
+          if [ -z "$SUPABASE_URL" ]; then echo "::error::缺少 Secret: SUPABASE_URL"; exit 1; fi
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "::error::缺少 Secret: SUPABASE_SERVICE_ROLE_KEY"; exit 1; fi
+          if [ -z "$DASHSCOPE_API_KEY" ]; then echo "::error::缺少 Secret: DASHSCOPE_API_KEY"; exit 1; fi
+          echo "Secrets 已配置（未打印具体值）。"
+
+      - name: Validate SUPABASE_URL (DNS)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          python <<'PY'
+          import os, socket
+          from urllib.parse import urlparse
+
+          raw = os.environ.get("SUPABASE_URL", "")
+          u = raw.strip().strip("\ufeff").strip('"').strip("'").strip()
+          p = urlparse(u)
+          host = p.hostname
+          if not host or p.scheme not in ("https", "http"):
+              raise SystemExit(
+                  f"SUPABASE_URL 无效：需为 https://xxx.supabase.co 形式（当前 scheme={p.scheme!r} hostname={host!r} 长度={len(u)}）"
+              )
+          print("解析到的 hostname:", host)
+          try:
+              socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+          except OSError as e:
+              raise SystemExit(f"DNS 解析失败 {host!r}: {e}。请检查 Secret 是否多空格/换行/错别字。") from e
+          print("DNS 解析成功")
+          PY
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-ingest-ci.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-ingest-ci.txt
+
+      - name: Ingest seed KB to Supabase
+        env:
+          VECTOR_BACKEND: supabase
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+        run: python scripts/ingest_seed_kb.py --force
