@@ -1,3 +1,6 @@
+# 仓库根级兜底忽略（适用于整个 monorepo）。
+# web/ 与 rag/ 子目录各自维护了更细的 .gitignore，二者叠加生效。
+
 # ---- OS ----
 .DS_Store
 Thumbs.db
@@ -13,9 +16,43 @@ Thumbs.db
 .claude/
 .cursor/
 
-# ---- Misc local files ----
+# ---- 环境变量 / 密钥（切勿提交）----
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# ---- Node / 前端 ----
+**/node_modules/
+**/.next/
+**/out/
+**/dist/
+**/build/
+**/.vercel/
+**/*.tsbuildinfo
+**/next-env.d.ts
+.eslintcache
+
+# ---- Python / 后端 ----
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# ---- RAG 运行时产物 ----
+**/chroma/
+**/chat_history/
+**/md5.text
+**/eval/eval_report_*.json
+
+# ---- 日志 / 杂项本地文件 ----
 *.local
 *.log
+logs/
 
-# NOTE: web/ 与 rag/ 子目录各自维护了更细的 .gitignore，
-# 这里只放仓库根级别通用的忽略项。
+# ---- 包管理锁文件（当前不纳入版本管理）----
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
