@@ -54,6 +54,23 @@ npm run dev
 
 打开 http://localhost:3000 即可访问。
 
+## 部署
+
+monorepo 下前后端分别部署，互不干扰：
+
+### 前端 → Vercel
+
+在 Vercel 新建/关联项目时，将 **Root Directory** 设为 `web`（Settings → General → Root Directory）。
+其余按 Next.js 默认即可，环境变量参考 `web/.env.local.example`。
+
+### 后端 → Render
+
+仓库根目录已有 `render.yaml`（Blueprint），其中 `rootDir: rag` 指向后端子目录。
+在 Render 用 **Blueprint** 方式连接本仓库即可自动识别；
+标记为 `sync: false` 的密钥（`DASHSCOPE_API_KEY`、`SUPABASE_*`、`UPSTASH_*` 等）在 Render Dashboard 手动填写。
+
+> 前端的 `RAG_SERVICE_URL` 需指向 Render 上后端服务的公网地址。
+
 ## 技术栈
 
 - **前端**：Next.js 16、React 19、TypeScript、Tailwind CSS 4、shadcn/ui、Clerk、Supabase
