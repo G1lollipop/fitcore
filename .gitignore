@@ -14,7 +14,7 @@ Thumbs.db
 
 # ---- Agent / local tooling ----
 .claude/
-.cursor/
+# 注意：.cursor/ 下的 environment.json、rules 等是需要提交共享的，不整体忽略
 
 # ---- 环境变量 / 密钥（切勿提交）----
 .env
