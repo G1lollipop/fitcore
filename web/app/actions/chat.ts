@@ -4,7 +4,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 
 type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row'];
-type ChatMessageInsert = Database['public']['Tables']['chat_messages']['Insert'];
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -86,38 +85,6 @@ export async function getChatHistory(
   } catch (error) {
     console.error('[getChatHistory] 异常:', error);
     return { success: false, error: '获取历史消息失败' };
-  }
-}
-
-export async function saveChatMessage(
-  userId: string,
-  role: 'user' | 'assistant',
-  content: string,
-  conversationId?: string | null
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const insertData: ChatMessageInsert = {
-      user_id: userId,
-      role,
-      content,
-      ...(conversationId ? { conversation_id: conversationId } : {}),
-    };
-
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .insert(insertData)
-      .select();
-
-    if (error) {
-      console.error('[saveChatMessage] 保存错误:', error);
-      return { success: false, error: '保存消息失败' };
-    }
-
-    console.log('[saveChatMessage] 保存成功, 返回数据:', data);
-    return { success: true };
-  } catch (error) {
-    console.error('[saveChatMessage] 异常:', error);
-    return { success: false, error: '保存消息失败' };
   }
 }
 

@@ -2,10 +2,9 @@ import { auth } from "@clerk/nextjs/server"
 import { supabase } from "@/lib/supabaseClient"
 import { z } from "zod"
 
-import type { AgentSSEEvent } from "@/lib/ai/types"
+import type { AgentSSEEvent, CoachChatMessage } from "@/lib/ai/types"
 import { runAgent } from "@/lib/ai/agent"
 import { buildUserContext } from "@/lib/ai/user-context"
-import type { CoachChatMessage } from "@/lib/ai/personal-coach"
 
 const requestSchema = z.object({
   message: z.string().trim().min(1, "message is required"),

@@ -81,7 +81,7 @@ def build_compression_retriever(
     except ImportError as exc:
         print(
             "[RagService] Reranker 依赖未安装 (torch / sentence-transformers)，"
-            f"已降级为基础检索 (Vector + BM25)。安装 requirements.txt 可启用重排序。详情: {exc}"
+            f"已降级为基础检索 (Vector + BM25)。安装 torch + sentence-transformers 可启用重排序。详情: {exc}"
         )
         return None
 

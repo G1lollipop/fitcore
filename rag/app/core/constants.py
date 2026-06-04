@@ -25,8 +25,3 @@ similarity_threshold = 1
 # migration's vector(1024) is dimensioned for. Changing this requires also
 # rerunning the SQL migration with the new dim.
 embedding_model_name = "text-embedding-v4"
-
-# ── Crawler (extension; disabled by default) ──────────────────────────────
-CRAWLER_ENABLED = False
-CRAWLER_CHECK_INTERVAL_MINUTES = 5
-CRAWLER_TASKS: list[dict] = []

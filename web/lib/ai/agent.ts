@@ -44,9 +44,8 @@
 
 import { openai } from "@/lib/openaiClient"
 import { AI_CHAT_MODEL } from "@/lib/ai/model"
-import type { Citation, AgentMode, UserContextPayload } from "@/lib/ai/types"
+import type { Citation, AgentMode, UserContextPayload, CoachChatMessage } from "@/lib/ai/types"
 import { chatWithRagRetrieve } from "@/lib/ai/rag-client"
-import type { CoachChatMessage } from "@/lib/ai/personal-coach"
 
 // ─── Tool 定义 ─────────────────────────────────────────────────────────────
 

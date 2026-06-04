@@ -1,5 +1,11 @@
 export type ChatMode = "personal" | "rag" | "hybrid"
 
+/** 单条对话消息（用户 / 助手） */
+export interface CoachChatMessage {
+  role: "user" | "assistant"
+  content: string
+}
+
 /** Agent 模式：由 LLM 自主决定调用哪些工具 */
 export type AgentMode = "knowledge" | "personal" | "hybrid" | "direct"
 

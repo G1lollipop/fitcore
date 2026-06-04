@@ -21,12 +21,14 @@ Fitcore/
 
 前端通过环境变量 `RAG_SERVICE_URL`（默认 `http://127.0.0.1:8000`）调用后端 RAG 服务。
 
+> 完整的开发指南（架构细节、接口契约、灌库、测试、排错）见 [`DEVELOPMENT.md`](./DEVELOPMENT.md)。
+
 ## 子项目
 
 | 目录 | 说明 | 文档 |
 |------|------|------|
 | [`web/`](./web) | 前端单页应用，主页 `/` 内含「今日概览 / 饮食中心 / 训练历史 / 我的计划 / 知识库」五个模块 | [`web/README.md`](./web/README.md) |
-| [`rag/`](./rag) | RAG 检索服务：向量检索 + BM25 融合，可选重排，自适应 topK | [`rag/前后端分离架构文档.md`](./rag/前后端分离架构文档.md) |
+| [`rag/`](./rag) | RAG 检索服务：向量检索 + BM25 融合，可选重排，自适应 topK | [`DEVELOPMENT.md`](./DEVELOPMENT.md) |
 
 ## 本地启动
 
