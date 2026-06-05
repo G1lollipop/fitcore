@@ -21,7 +21,7 @@ npm run typecheck    # tsc --noEmit（改动 TS 后务必跑一次）
 npm run format       # Prettier
 ```
 
-环境变量见 `web/.env.local.example`（Clerk / Supabase / `RAG_SERVICE_URL` / `OPENAI_API_KEY` / Gemini）。
+环境变量见 `web/.env.local.example`（Clerk / Supabase / `RAG_SERVICE_URL` / `GOOGLE_AI_STUDIO_API_KEY`，一个 Gemini key 覆盖全部 AI）。
 
 ## 后端 `rag/`
 
@@ -36,7 +36,7 @@ cd rag
 ./.venv/bin/python scripts/ingest_seed_kb.py                     # 灌入种子知识库
 ```
 
-环境变量见 `rag/.env.example`（至少需要 `DASHSCOPE_API_KEY`；`VECTOR_BACKEND` 默认 `chroma`，云端用 `supabase` 时需 `SUPABASE_*`）。
+环境变量见 `rag/.env.example`（至少需要 `GOOGLE_AI_STUDIO_API_KEY`；`VECTOR_BACKEND` 默认 `chroma`，云端用 `supabase` 时需 `SUPABASE_*`）。
 
 ## 代码地图（新人/agent 必读）
 

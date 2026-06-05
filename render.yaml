@@ -21,7 +21,7 @@ services:
       - key: CACHE_EMBEDDING_TTL_SEC
         value: "86400"
       # 以下 key 在 Render Dashboard 手动填写
-      - key: DASHSCOPE_API_KEY
+      - key: GOOGLE_AI_STUDIO_API_KEY
         sync: false
       - key: SUPABASE_URL
         sync: false
