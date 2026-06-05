@@ -84,7 +84,7 @@ export async function logWorkout(
 
   const workoutData = await parseWorkoutWithAI(userInput);
   if (!workoutData) {
-    return { success: false, error: 'AI 解析失败，请检查 OPENAI_API_KEY 配置' };
+    return { success: false, error: 'AI 解析失败，请检查 GOOGLE_AI_STUDIO_API_KEY 配置' };
   }
 
   if (planContext?.planId) {

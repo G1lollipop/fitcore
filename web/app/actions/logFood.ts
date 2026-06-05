@@ -80,7 +80,7 @@ export async function logFood(
 
   const foodData = await parseFoodWithAI(userInput);
   if (!foodData) {
-    return { success: false, error: 'AI 解析失败，请检查 OPENAI_API_KEY 配置' };
+    return { success: false, error: 'AI 解析失败，请检查 GOOGLE_AI_STUDIO_API_KEY 配置' };
   }
 
   const today = getTodayDate();
