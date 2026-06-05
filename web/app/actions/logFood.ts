@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { AI_FAST_MODEL } from '@/lib/ai/model';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
+import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import type { DietLogItem, DailyStatsData } from './types';
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -49,8 +50,6 @@ async function parseFoodWithAI(userInput: string): Promise<DietLogItem | null> {
     const content = response.choices[0]?.message?.content;
     if (!content) return null;
 
-    console.log('[AI Response] 原始返回:', content);
-
     const parsed = JSON.parse(content);
     const result = {
       id: randomUUID(),
@@ -62,7 +61,6 @@ async function parseFoodWithAI(userInput: string): Promise<DietLogItem | null> {
       logged_at: new Date().toISOString(),
     };
 
-    console.log('[AI Response] 解析结果:', JSON.stringify(result, null, 2));
     return result;
   } catch (error) {
     console.error('AI parsing error:', error);
@@ -71,10 +69,12 @@ async function parseFoodWithAI(userInput: string): Promise<DietLogItem | null> {
 }
 
 export async function logFood(
-  userInput: string,
-  userId: string
+  userInput: string
 ): Promise<{ success: boolean; data?: DietLogItem; error?: string }> {
-  if (!userInput || !userId) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+  if (!userInput) {
     return { success: false, error: '缺少必要参数' };
   }
 
@@ -84,8 +84,6 @@ export async function logFood(
   }
 
   const today = getTodayDate();
-
-  console.log('[logFood] Querying daily_stats for user:', userId, 'date:', today);
 
   const queryResult = await supabase
     .from('daily_stats')
@@ -98,7 +96,7 @@ export async function logFood(
   const queryError = queryResult.error;
 
   if (queryError && queryError.code !== 'PGRST116') {
-    console.error('[logFood] Query error:', JSON.stringify(queryError, null, 2));
+    console.error('[logFood] Query error:', queryError.message);
     return { success: false, error: `查询数据库失败: ${queryError.message}` };
   }
 
@@ -119,18 +117,15 @@ export async function logFood(
       diet_logs: updatedDietLogs,
     };
 
-    console.log('[logFood] Updating existing record:', existingRecord.id);
-
     const updateResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .update(updateData)
       .eq('id', existingRecord.id);
 
     const updateError = updateResult.error;
 
     if (updateError) {
-      console.error('[logFood] Update error:', JSON.stringify(updateError, null, 2));
+      console.error('[logFood] Update error:', updateError.message);
       return { success: false, error: `更新记录失败: ${updateError.message}` };
     }
 
@@ -145,77 +140,70 @@ export async function logFood(
       total_carbs: foodData.carbs,
       total_fat: foodData.fat,
       calories_burned: 0,
-      diet_logs: [foodData] as unknown as Database['public']['Tables']['daily_stats']['Insert']['diet_logs'],
-      workout_logs: [] as unknown as Database['public']['Tables']['daily_stats']['Insert']['workout_logs'],
+      diet_logs: [foodData],
+      workout_logs: [],
     };
-
-    console.log('[logFood] Inserting new record:', JSON.stringify(insertData, null, 2));
 
     const insertResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .insert(insertData)
       .select();
 
     const insertError = insertResult.error;
-    const insertedData = insertResult.data;
 
     if (insertError) {
-      console.error('[logFood] Insert error:', JSON.stringify(insertError, null, 2));
+      console.error('[logFood] Insert error:', insertError.message);
       return { success: false, error: `创建记录失败: ${insertError.message}` };
     }
-
-    console.log('[logFood] Insert success:', insertedData);
 
     revalidatePath('/');
     return { success: true, data: foodData };
   }
 }
 
-export async function getDailyStats(userId: string): Promise<DailyStatsData | null> {
+export async function getDailyStats(): Promise<DailyStatsData | null> {
+  const userId = await getUserIdOrNull();
   if (!userId) return null;
 
   const today = getTodayDate();
-  console.log('[getDailyStats] Querying for user:', userId, 'date:', today);
 
   const { data, error } = await supabase
     .from('daily_stats')
     .select('*')
     .eq('user_id', userId)
     .eq('date', today)
-    .single() as { data: DailyStatsRow | null; error: null };
+    .single();
 
-  if (error) {
-    console.log('[getDailyStats] Query error:', JSON.stringify(error, null, 2));
+  if (error && error.code !== 'PGRST116') {
+    console.error('[getDailyStats] Query error:', error.message);
     return null;
   }
 
-  if (!data) {
-    console.log('[getDailyStats] No data found');
+  const row = data as DailyStatsRow | null;
+  if (!row) {
     return null;
   }
-
-  console.log('[getDailyStats] Found data:', JSON.stringify(data, null, 2));
 
   return {
-    total_calories: data.total_calories || 0,
-    total_protein: data.total_protein || 0,
-    total_carbs: data.total_carbs || 0,
-    total_fat: data.total_fat || 0,
-    diet_logs: (data.diet_logs as DietLogItem[]) || [],
+    total_calories: row.total_calories || 0,
+    total_protein: row.total_protein || 0,
+    total_carbs: row.total_carbs || 0,
+    total_fat: row.total_fat || 0,
+    diet_logs: (row.diet_logs as DietLogItem[]) || [],
   };
 }
 
 export async function deleteDietLog(
-  userId: string,
   logId: string
 ): Promise<{ success: boolean; error?: string }> {
-  if (!userId || !logId) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+  if (!logId) {
     return { success: false, error: '缺少必要参数' };
   }
 
   const today = getTodayDate();
-  console.log('[deleteDietLog] Deleting log with id:', logId, 'for user:', userId);
 
   const queryResult = await supabase
     .from('daily_stats')
@@ -255,7 +243,6 @@ export async function deleteDietLog(
 
   const updateResult = await supabase
     .from('daily_stats')
-    // @ts-ignore - Supabase types issue
     .update(updateData)
     .eq('id', existingRecord.id);
 

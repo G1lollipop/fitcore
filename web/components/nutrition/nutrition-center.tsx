@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
 import { logFood } from "@/app/actions/logFood"
+import { getNutritionByDate } from "@/app/actions/history"
 import { useToast } from "@/hooks/use-toast"
 import { sumMacros } from "@/lib/metrics/macros"
-import { supabase } from "@/lib/supabaseClient"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MealTimeline } from "./meal-timeline"
@@ -46,34 +46,9 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
     setLoading(true)
     try {
       const dateStr = selectedDate.toISOString().split('T')[0]
-
-      const { data: settings } = await supabase
-        .from('user_settings')
-        .select('target_calories, target_protein, target_carbs, target_fat')
-        .eq('user_id', userId)
-        .single()
-
-      if (settings) {
-        setGoals({
-          calories: settings.target_calories || DEFAULT_GOALS.calories,
-          protein: settings.target_protein || DEFAULT_GOALS.protein,
-          carbs: settings.target_carbs || DEFAULT_GOALS.carbs,
-          fat: settings.target_fat || DEFAULT_GOALS.fat,
-        })
-      }
-
-      const { data: statsData } = await supabase
-        .from('daily_stats')
-        .select('diet_logs')
-        .eq('user_id', userId)
-        .eq('date', dateStr)
-        .single()
-
-      if (statsData?.diet_logs) {
-        setDietData(statsData.diet_logs as DietLogItem[])
-      } else {
-        setDietData([])
-      }
+      const { goals: nextGoals, dietLogs } = await getNutritionByDate(dateStr)
+      setGoals(nextGoals)
+      setDietData(dietLogs)
     } catch (error) {
       console.error('加载饮食数据失败:', error)
     } finally {
@@ -97,7 +72,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
     if (!inputText.trim() || !userId) return
     setIsSubmitting(true)
     try {
-      const result = await logFood(inputText, userId)
+      const result = await logFood(inputText)
       if (result.success) {
         await loadDietData()
         setInputText("")

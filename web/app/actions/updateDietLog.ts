@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
+import { authedUserId } from '@/lib/auth/require-user';
+import { dietLogInputSchema, firstZodError } from '@/lib/validation/schemas';
 import type { DietLogItem } from './types';
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -19,11 +21,17 @@ type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
  */
 export async function updateDietLog(
   originalId: string,
-  next: DietLogItem,
-  userId: string
+  next: DietLogItem
 ): Promise<{ success: boolean; error?: string }> {
-  if (!userId) return { success: false, error: '缺少用户 ID' };
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   if (!originalId) return { success: false, error: '缺少原记录 ID' };
+
+  const parsed = dietLogInputSchema.safeParse(next);
+  if (!parsed.success) {
+    return { success: false, error: firstZodError(parsed.error) };
+  }
 
   const today = getTodayDate();
 
@@ -61,7 +69,6 @@ export async function updateDietLog(
 
   const { error: updateError } = await supabase
     .from('daily_stats')
-    // @ts-ignore - Supabase types issue
     .update(updateData)
     .eq('id', row.id);
 

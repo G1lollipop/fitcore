@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
+import { authedUserId } from '@/lib/auth/require-user';
 
 type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row'];
 
@@ -16,9 +17,14 @@ export interface ChatConversationSummary {
   preview: string;
 }
 
-export async function listChatConversations(
-  userId: string
-): Promise<{ success: boolean; conversations?: ChatConversationSummary[]; error?: string }> {
+export async function listChatConversations(): Promise<{
+  success: boolean;
+  conversations?: ChatConversationSummary[];
+  error?: string;
+}> {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     const { data, error } = await supabase
       .from('chat_messages')
@@ -54,10 +60,12 @@ export async function listChatConversations(
 }
 
 export async function getChatHistory(
-  userId: string,
   conversationId: string,
   limit: number = 50
 ): Promise<{ success: boolean; messages?: ChatMessage[]; error?: string }> {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     if (!conversationId.trim()) {
       return { success: true, messages: [] };
@@ -89,9 +97,11 @@ export async function getChatHistory(
 }
 
 export async function clearChatHistory(
-  userId: string,
   conversationId?: string | null
 ): Promise<{ success: boolean; error?: string }> {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     let q = supabase.from('chat_messages').delete().eq('user_id', userId);
     if (conversationId?.trim()) {

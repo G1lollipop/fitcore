@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { AI_FAST_MODEL } from '@/lib/ai/model';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
+import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import type { WorkoutLogItem, DailyWorkoutStatsData } from './types';
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -53,8 +54,6 @@ async function parseWorkoutWithAI(userInput: string): Promise<WorkoutLogItem | n
     const content = response.choices[0]?.message?.content;
     if (!content) return null;
 
-    console.log('[AI Response] 原始返回:', content);
-
     const parsed = JSON.parse(content);
     const result = {
       id: randomUUID(),
@@ -65,7 +64,6 @@ async function parseWorkoutWithAI(userInput: string): Promise<WorkoutLogItem | n
       logged_at: new Date().toISOString(),
     };
 
-    console.log('[AI Response] 解析结果:', JSON.stringify(result, null, 2));
     return result;
   } catch (error) {
     console.error('AI parsing error:', error);
@@ -75,10 +73,12 @@ async function parseWorkoutWithAI(userInput: string): Promise<WorkoutLogItem | n
 
 export async function logWorkout(
   userInput: string,
-  userId: string,
   planContext?: { planId?: string; dayId?: string }
 ): Promise<{ success: boolean; data?: WorkoutLogItem; error?: string }> {
-  if (!userInput || !userId) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+  if (!userInput) {
     return { success: false, error: '缺少必要参数' };
   }
 
@@ -96,8 +96,6 @@ export async function logWorkout(
 
   const today = getTodayDate();
 
-  console.log('[logWorkout] Querying daily_stats for user:', userId, 'date:', today);
-
   const queryResult = await supabase
     .from('daily_stats')
     .select('*')
@@ -109,7 +107,7 @@ export async function logWorkout(
   const queryError = queryResult.error;
 
   if (queryError && queryError.code !== 'PGRST116') {
-    console.error('[logWorkout] Query error:', JSON.stringify(queryError, null, 2));
+    console.error('[logWorkout] Query error:', queryError.message);
     return { success: false, error: `查询数据库失败: ${queryError.message}` };
   }
 
@@ -126,18 +124,15 @@ export async function logWorkout(
       workout_logs: updatedWorkoutLogs,
     };
 
-    console.log('[logWorkout] Updating existing record:', existingRecord.id);
-
     const updateResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .update(updateData)
       .eq('id', existingRecord.id);
 
     const updateError = updateResult.error;
 
     if (updateError) {
-      console.error('[logWorkout] Update error:', JSON.stringify(updateError, null, 2));
+      console.error('[logWorkout] Update error:', updateError.message);
       return { success: false, error: `更新记录失败: ${updateError.message}` };
     }
 
@@ -153,76 +148,69 @@ export async function logWorkout(
       total_fat: 0,
       calories_burned: workoutData.calories_burned,
       workout_duration: workoutData.duration_minutes,
-      diet_logs: [] as unknown as Database['public']['Tables']['daily_stats']['Insert']['diet_logs'],
-      workout_logs: [workoutData] as unknown as Database['public']['Tables']['daily_stats']['Insert']['workout_logs'],
+      diet_logs: [],
+      workout_logs: [workoutData],
     };
-
-    console.log('[logWorkout] Inserting new record:', JSON.stringify(insertData, null, 2));
 
     const insertResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .insert(insertData)
       .select();
 
     const insertError = insertResult.error;
-    const insertedData = insertResult.data;
 
     if (insertError) {
-      console.error('[logWorkout] Insert error:', JSON.stringify(insertError, null, 2));
+      console.error('[logWorkout] Insert error:', insertError.message);
       return { success: false, error: `创建记录失败: ${insertError.message}` };
     }
-
-    console.log('[logWorkout] Insert success:', insertedData);
 
     revalidatePath('/');
     return { success: true, data: workoutData };
   }
 }
 
-export async function getDailyWorkoutStats(userId: string): Promise<DailyWorkoutStatsData | null> {
+export async function getDailyWorkoutStats(): Promise<DailyWorkoutStatsData | null> {
+  const userId = await getUserIdOrNull();
   if (!userId) return null;
 
   const today = getTodayDate();
-  console.log('[getDailyWorkoutStats] Querying for user:', userId, 'date:', today);
 
   const { data, error } = await supabase
     .from('daily_stats')
     .select('*')
     .eq('user_id', userId)
     .eq('date', today)
-    .single() as { data: DailyStatsRow | null; error: null };
+    .single();
 
-  if (error) {
-    console.log('[getDailyWorkoutStats] Query error:', JSON.stringify(error, null, 2));
+  if (error && error.code !== 'PGRST116') {
+    console.error('[getDailyWorkoutStats] Query error:', error.message);
     return null;
   }
 
-  if (!data) {
-    console.log('[getDailyWorkoutStats] No data found');
+  const row = data as DailyStatsRow | null;
+  if (!row) {
     return null;
   }
-
-  console.log('[getDailyWorkoutStats] Found data:', JSON.stringify(data, null, 2));
 
   return {
-    calories_burned: data.calories_burned || 0,
-    workout_duration: data.workout_duration || 0,
-    water_intake: data.water_intake || 0,
-    workout_logs: (data.workout_logs as WorkoutLogItem[]) || [],
+    calories_burned: row.calories_burned || 0,
+    workout_duration: row.workout_duration || 0,
+    water_intake: row.water_intake || 0,
+    workout_logs: (row.workout_logs as WorkoutLogItem[]) || [],
   };
 }
 
 export async function deleteWorkoutLog(
-  userId: string,
   logId: string
 ): Promise<{ success: boolean; error?: string }> {
-  if (!userId || !logId) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+  if (!logId) {
     return { success: false, error: '缺少必要参数' };
   }
 
   const today = getTodayDate();
-  console.log('[deleteWorkoutLog] Deleting log with id:', logId, 'for user:', userId);
 
   const queryResult = await supabase
     .from('daily_stats')
@@ -258,7 +246,6 @@ export async function deleteWorkoutLog(
 
   const updateResult = await supabase
     .from('daily_stats')
-    // @ts-ignore - Supabase types issue
     .update(updateData)
     .eq('id', existingRecord.id);
 
@@ -272,15 +259,16 @@ export async function deleteWorkoutLog(
 }
 
 export async function batchLogWorkouts(
-  userId: string,
   workouts: Array<{ name: string; sets?: number | null; duration_minutes?: number; calories_burned?: number }>
 ): Promise<{ success: boolean; count?: number; error?: string }> {
-  if (!userId || !workouts || workouts.length === 0) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+  if (!workouts || workouts.length === 0) {
     return { success: false, error: '缺少必要参数' };
   }
 
   const today = getTodayDate();
-  console.log('[batchLogWorkouts] Batch logging', workouts.length, 'workouts for user:', userId);
 
   const queryResult = await supabase
     .from('daily_stats')
@@ -329,7 +317,6 @@ export async function batchLogWorkouts(
 
     const updateResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .update(updateData)
       .eq('id', existingRecord.id);
 
@@ -350,13 +337,12 @@ export async function batchLogWorkouts(
       total_fat: 0,
       calories_burned: totalCalories,
       workout_duration: totalDuration,
-      diet_logs: [] as unknown as Database['public']['Tables']['daily_stats']['Insert']['diet_logs'],
-      workout_logs: newWorkoutLogs as unknown as Database['public']['Tables']['daily_stats']['Insert']['workout_logs'],
+      diet_logs: [],
+      workout_logs: newWorkoutLogs,
     };
 
     const insertResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .insert(insertData)
       .select();
 

@@ -58,7 +58,7 @@ export function QuickLogBar() {
 
     void (async () => {
       try {
-        const res = await quickLog(trimmed, userId)
+        const res = await quickLog(trimmed)
         loading.dismiss()
         if (!res.success) {
           toast({ variant: 'destructive', title: '记录失败', description: res.error })

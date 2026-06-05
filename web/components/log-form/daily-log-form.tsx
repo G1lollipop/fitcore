@@ -245,7 +245,7 @@ export function DailyLogForm({
   const addDiet = (text: string) => {
     if (!userId) return
     startDietTransition(async () => {
-      const result = await logFood(text, userId)
+      const result = await logFood(text)
       if (result.success && result.data) {
         setDietEntries((prev) => [...prev, { id: Date.now().toString(), text: result.data!.food_name, time: now() }])
         onLogSuccess?.()
@@ -259,7 +259,7 @@ export function DailyLogForm({
   const addWorkout = (text: string) => {
     if (!userId) return
     startWorkoutTransition(async () => {
-      const result = await logWorkout(text, userId)
+      const result = await logWorkout(text)
       if (result.success && result.data) {
         setWorkoutEntries((prev) => [...prev, { id: Date.now().toString(), text: result.data!.workout_name, time: now() }])
         onLogSuccess?.()
@@ -273,7 +273,7 @@ export function DailyLogForm({
   const removeDiet = (id: string) => {
     if (!dietEntries.some((e) => e.id === id)) return
     startDietTransition(async () => {
-      const result = await deleteDietLog(userId!, id)
+      const result = await deleteDietLog(id)
       if (result.success) {
         setDietEntries((prev) => prev.filter((e) => e.id !== id))
         onLogSuccess?.()
@@ -287,7 +287,7 @@ export function DailyLogForm({
   const removeWorkout = (id: string) => {
     if (!workoutEntries.some((e) => e.id === id)) return
     startWorkoutTransition(async () => {
-      const result = await deleteWorkoutLog(userId!, id)
+      const result = await deleteWorkoutLog(id)
       if (result.success) {
         setWorkoutEntries((prev) => prev.filter((e) => e.id !== id))
         onLogSuccess?.()
@@ -310,7 +310,7 @@ export function DailyLogForm({
     }
     startWorkoutTransition(async () => {
       const workouts = newEntries.map((e) => ({ name: e.text, duration_minutes: 15, calories_burned: 50 }))
-      const result = await batchLogWorkouts(userId, workouts)
+      const result = await batchLogWorkouts(workouts)
       if (result.success) {
         const t = now()
         setWorkoutEntries((prev) => [...prev, ...newEntries.map((p) => ({ id: `y-${Date.now()}-${p.text}`, text: p.text, time: t }))])
@@ -339,7 +339,7 @@ export function DailyLogForm({
     }
     startWorkoutTransition(async () => {
       const workouts = newExercises.map((e) => ({ name: e.text, sets: e.sets, duration_minutes: 15, calories_burned: 50 }))
-      const result = await batchLogWorkouts(userId, workouts)
+      const result = await batchLogWorkouts(workouts)
       if (result.success) {
         const t = now()
         setWorkoutEntries((prev) => [...prev, ...newExercises.map((e) => ({ id: `pl-${Date.now()}-${e.id}`, text: e.text, time: t }))])

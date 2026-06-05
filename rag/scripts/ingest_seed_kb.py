@@ -48,9 +48,14 @@ def main() -> int:
         )
         return 2
 
+    from app.infra.cache import CacheManager  # noqa: WPS433
     from app.services.kb_service import KnowledgeBaseService  # noqa: WPS433 (runtime import after sys.path)
 
-    service = KnowledgeBaseService()
+    # Share a CacheManager so each successful upload invalidates retrieval/
+    # embedding caches. With CACHE_BACKEND=redis this clears the *shared* cache
+    # the API reads, so it won't serve rankings computed against the old corpus.
+    cache_manager = CacheManager()
+    service = KnowledgeBaseService(cache_manager=cache_manager)
 
     patterns = [
         str(RAG_ROOT / "data" / "fitcore_kb_*.txt"),
@@ -90,6 +95,20 @@ def main() -> int:
             print(f"[异常] {path.name}: {exc}")
 
     print(f"[汇总] success={ok}, skipped={skipped}, failed={failed}, total={len(files)}")
+
+    # Cache invalidation crosses processes only with a shared backend (Redis).
+    # With the default in-process memory cache, the running API keeps its own
+    # cache + BM25 index until restarted.
+    if ok > 0:
+        from app.core.settings import get_settings  # noqa: WPS433
+
+        if get_settings().cache_backend == "redis":
+            print("[缓存] 已失效共享缓存（Redis）；运行中的 API 会在下次查询重建检索器。")
+        else:
+            print(
+                "[缓存] 当前为内存缓存（进程隔离）；如有运行中的 API 服务，请重启以加载新语料。"
+            )
+
     return 0 if failed == 0 else 3
 
 

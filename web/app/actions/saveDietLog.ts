@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
+import { authedUserId } from '@/lib/auth/require-user';
+import { dietLogInputSchema, firstZodError } from '@/lib/validation/schemas';
 import type { DietLogItem } from './types';
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -19,11 +21,17 @@ type DailyStatsInsert = Database['public']['Tables']['daily_stats']['Insert'];
  * the user confirms.
  */
 export async function saveDietLog(
-  item: DietLogItem,
-  userId: string
+  item: DietLogItem
 ): Promise<{ success: boolean; data?: DietLogItem; error?: string }> {
-  if (!userId) return { success: false, error: '缺少用户 ID' };
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   if (!item) return { success: false, error: '缺少食物数据' };
+
+  const parsed = dietLogInputSchema.safeParse(item);
+  if (!parsed.success) {
+    return { success: false, error: firstZodError(parsed.error) };
+  }
 
   const today = getTodayDate();
 
@@ -55,7 +63,6 @@ export async function saveDietLog(
 
     const updateResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .update(updateData)
       .eq('id', existingRecord.id);
 
@@ -75,13 +82,12 @@ export async function saveDietLog(
     total_carbs: item.carbs,
     total_fat: item.fat,
     calories_burned: 0,
-    diet_logs: [item] as unknown as Database['public']['Tables']['daily_stats']['Insert']['diet_logs'],
-    workout_logs: [] as unknown as Database['public']['Tables']['daily_stats']['Insert']['workout_logs'],
+    diet_logs: [item],
+    workout_logs: [],
   };
 
   const insertResult = await supabase
     .from('daily_stats')
-    // @ts-ignore - Supabase types issue
     .insert(insertData)
     .select();
 

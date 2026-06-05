@@ -89,7 +89,7 @@ function TemplateCard({ template, delay, userId, onCopied }: TemplateCardProps) 
       return
     }
     startTransition(async () => {
-      const result = await copyTemplateToUser(template.id, userId, template.name)
+      const result = await copyTemplateToUser(template.id, template.name)
       if (result.success) {
         setCopied(true)
         toast({

@@ -206,7 +206,7 @@ export function PlanWizard({
         }
       })
 
-      const result = await createCustomPlan(userId, {
+      const result = await createCustomPlan({
         name: state.basics.name.trim(),
         description: state.basics.description.trim() || undefined,
         goal: state.basics.goal,

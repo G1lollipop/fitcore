@@ -66,9 +66,21 @@ function isoWeekdayIndex(date: Date): number {
 function formatExerciseText(pe: PlanExerciseRow): string {
   const name = pe.exercises?.name ?? '未知动作'
   const sets = pe.target_sets ?? 0
-  const min = pe.target_reps_min ?? 0
-  const max = pe.target_reps_max ?? 0
-  return `${name} ${sets}组 ${min}-${max}次`
+  if (sets <= 0) return name
+
+  let text = `${name} ${sets}组`
+  const min = pe.target_reps_min
+  const max = pe.target_reps_max
+  if (min && max) {
+    text += ` ${min}-${max}次`
+  } else if (min) {
+    text += ` ${min}次`
+  }
+  const weight = pe.target_weight_kg
+  if (weight) {
+    text += ` ${weight}kg`
+  }
+  return text
 }
 
 function mapExercises(day: WorkoutDayRow | null | undefined): TodayWorkoutExercise[] {

@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { AI_FAST_MODEL } from '@/lib/ai/model';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
+import { authedUserId } from '@/lib/auth/require-user';
 import type { DietLogItem, WorkoutLogItem } from './types';
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -124,9 +125,12 @@ async function parseQuickLog(userInput: string): Promise<ParsedSegment[]> {
  * either insert or merge into today's daily_stats row. Significantly cheaper
  * than calling logFood + logWorkout separately for mixed inputs.
  */
-export async function quickLog(userInput: string, userId: string): Promise<QuickLogResponse> {
+export async function quickLog(userInput: string): Promise<QuickLogResponse> {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   const trimmed = userInput.trim();
-  if (!trimmed || !userId) {
+  if (!trimmed) {
     return { success: false, error: '缺少必要参数' };
   }
 
@@ -231,7 +235,6 @@ export async function quickLog(userInput: string, userId: string): Promise<Quick
 
     const updateResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .update(updateData)
       .eq('id', existing.id);
 
@@ -250,13 +253,12 @@ export async function quickLog(userInput: string, userId: string): Promise<Quick
       calories_burned: sumWorkout.cal,
       workout_duration: sumWorkout.minutes,
       water_intake: 0,
-      diet_logs: dietLogs as unknown as DailyStatsInsert['diet_logs'],
-      workout_logs: workoutLogs as unknown as DailyStatsInsert['workout_logs'],
+      diet_logs: dietLogs,
+      workout_logs: workoutLogs,
     };
 
     const insertResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .insert(insertData);
 
     if (insertResult.error) {

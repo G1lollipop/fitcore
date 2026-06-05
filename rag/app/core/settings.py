@@ -74,7 +74,16 @@ class Settings(BaseSettings):
     # ── HTTP API ─────────────────────────────────────────────────────────
     allowed_origins_raw: str = Field(default="*", alias="ALLOWED_ORIGINS")
     rag_chat_timeout_sec: float = Field(default=118.0, alias="RAG_CHAT_TIMEOUT_SEC")
+    rag_retrieve_timeout_sec: float = Field(default=30.0, alias="RAG_RETRIEVE_TIMEOUT_SEC")
     rag_chat_retries: int = Field(default=3, alias="RAG_CHAT_RETRIES", ge=1)
+
+    # ── API auth / rate limiting ──────────────────────────────────────────
+    # When RAG_API_KEY is set, /v1/chat and /v1/retrieve require a matching
+    # X-API-Key header. Empty (default) disables the check so local dev and the
+    # test suite keep working without configuration.
+    rag_api_key: str = Field(default="", alias="RAG_API_KEY")
+    # Per-client (IP) requests/minute. 0 disables rate limiting.
+    rag_rate_limit_per_min: int = Field(default=0, alias="RAG_RATE_LIMIT_PER_MIN", ge=0)
 
     # ── Cache layer ──────────────────────────────────────────────────────
     # CACHE_BACKEND=memory (default) keeps the previous in-process LRU.
@@ -109,6 +118,13 @@ class Settings(BaseSettings):
     @field_validator("upstash_redis_url", "upstash_redis_token", mode="before")
     @classmethod
     def _normalize_upstash_secret(cls, v: Any) -> Any:
+        if not isinstance(v, str):
+            return v
+        return _normalize_pasted_secret(v)
+
+    @field_validator("rag_api_key", mode="before")
+    @classmethod
+    def _normalize_api_key(cls, v: Any) -> Any:
         if not isinstance(v, str):
             return v
         return _normalize_pasted_secret(v)

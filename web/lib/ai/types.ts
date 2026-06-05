@@ -1,3 +1,5 @@
+import type { DietLogItem, WorkoutLogItem } from "@/app/actions/types"
+
 export type ChatMode = "personal" | "rag" | "hybrid"
 
 /** 单条对话消息（用户 / 助手） */
@@ -21,6 +23,7 @@ export interface AIChatMeta {
   retrievalBackend?: VectorRetrievalBackend
   retrievalK?: number        // LLM 选择的召回数量
   retrievalKReason?: string  // LLM 给出的理由
+  persisted?: boolean        // 消息是否成功写入历史库
 }
 
 export interface Citation {
@@ -72,8 +75,8 @@ export interface UserContextPayload {
     currentPlanId?: string | null
   }
   logs: {
-    dietLogs: any[]
-    workoutLogs: any[]
+    dietLogs: DietLogItem[]
+    workoutLogs: WorkoutLogItem[]
   }
 }
 

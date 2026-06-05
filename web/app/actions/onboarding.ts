@@ -4,6 +4,12 @@ import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { openai } from '@/lib/openaiClient';
 import { AI_FAST_MODEL } from '@/lib/ai/model';
+import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
+import {
+  onboardingDataSchema,
+  nutritionRecommendationSchema,
+  firstZodError,
+} from '@/lib/validation/schemas';
 
 type UserSettingsInsert = Database['public']['Tables']['user_settings']['Insert'];
 
@@ -61,6 +67,10 @@ function calculateMacros(tdee: number): { protein: number; carbs: number; fat: n
 export async function calculateNutritionRecommendation(
   data: OnboardingData
 ): Promise<{ success: boolean; recommendation?: NutritionRecommendation; error?: string }> {
+  const parsed = onboardingDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: firstZodError(parsed.error) };
+  }
   try {
     const bmr = calculateBMR(data.gender, data.age, data.height, data.weight);
     const tdee = calculateTDEE(bmr, data.activityLevel);
@@ -128,12 +138,20 @@ export async function calculateNutritionRecommendation(
 }
 
 export async function saveOnboardingData(
-  userId: string,
   data: OnboardingData,
   recommendation: NutritionRecommendation
 ): Promise<{ success: boolean; error?: string }> {
-  if (!userId) {
-    return { success: false, error: '用户未登录' };
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+
+  const parsedData = onboardingDataSchema.safeParse(data);
+  if (!parsedData.success) {
+    return { success: false, error: firstZodError(parsedData.error) };
+  }
+  const parsedRec = nutritionRecommendationSchema.safeParse(recommendation);
+  if (!parsedRec.success) {
+    return { success: false, error: firstZodError(parsedRec.error) };
   }
 
   try {
@@ -152,7 +170,6 @@ export async function saveOnboardingData(
 
     const { error } = await supabase
       .from('user_settings')
-      // @ts-ignore - Supabase types issue
       .upsert(insertData, { onConflict: 'user_id' });
 
     if (error) {
@@ -167,7 +184,8 @@ export async function saveOnboardingData(
   }
 }
 
-export async function checkUserOnboarded(userId: string): Promise<boolean> {
+export async function checkUserOnboarded(): Promise<boolean> {
+  const userId = await getUserIdOrNull();
   if (!userId) return false;
 
   try {
@@ -189,7 +207,8 @@ export async function checkUserOnboarded(userId: string): Promise<boolean> {
 
 type UserSettingsRow = Database['public']['Tables']['user_settings']['Row'];
 
-export async function getUserSettings(userId: string): Promise<UserSettingsRow | null> {
+export async function getUserSettings(): Promise<UserSettingsRow | null> {
+  const userId = await getUserIdOrNull();
   if (!userId) return null;
 
   try {

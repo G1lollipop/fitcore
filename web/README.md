@@ -211,7 +211,7 @@ python eval/evaluate.py
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=   # 服务端专用（server action + middleware），绕过 RLS，禁止暴露到浏览器
 OPENAI_API_KEY=          # DashScope API Key（OpenAI 兼容）
 OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 AI_CHAT_MODEL=qwen3.5-flash

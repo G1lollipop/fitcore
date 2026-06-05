@@ -10,16 +10,27 @@ Fitcore/
 
 ## 整体架构
 
-```
-浏览器
-  ├── Server Actions ─────────────► Supabase（日志 / 计划 / 统计等业务数据）
-  └── fetch /api/ai/chat (SSE) ───► Next 服务端 Agent
-                                      ├── DashScope / Qwen + Gemini（LLM / 视觉）
-                                      ├── Supabase（用户上下文、聊天记录）
-                                      └── RAG 服务 /v1/retrieve ──► FastAPI (rag/)
+```mermaid
+flowchart TD
+    Browser["浏览器 (React 19 客户端组件)"]
+    Clerk["Clerk 鉴权<br/>(proxy.ts 中间件)"]
+    Actions["Server Actions<br/>(web/app/actions/*)"]
+    ChatAPI["/api/ai/chat (SSE)<br/>route.ts"]
+    Supabase[("Supabase<br/>日志/计划/统计/聊天")]
+    LLM["DashScope·Qwen + Gemini<br/>(LLM / 视觉)"]
+    RAG["RAG 服务 FastAPI (rag/)<br/>/v1/retrieve · /v1/chat"]
+
+    Browser -->|"受保护路由"| Clerk
+    Browser -->|"业务读写<br/>(userId 由服务端 auth() 注入)"| Actions
+    Browser -->|"对话"| ChatAPI
+    Actions --> Supabase
+    ChatAPI -->|"个人上下文 user-context.ts"| Supabase
+    ChatAPI -->|"生成"| LLM
+    ChatAPI -->|"知识检索 rag-client.ts"| RAG
+    RAG -->|"向量+BM25 融合·重排"| RAG
 ```
 
-前端通过环境变量 `RAG_SERVICE_URL`（默认 `http://127.0.0.1:8000`）调用后端 RAG 服务。
+> 说明：前端不直连 Supabase——所有数据访问都走 Server Actions（`web/lib/supabaseClient.ts` 是 `server-only` + service-role）。前端通过 `RAG_SERVICE_URL`（默认 `http://127.0.0.1:8000`）调用后端 RAG 服务。
 
 > 完整的开发指南（架构细节、接口契约、灌库、测试、排错）见 [`DEVELOPMENT.md`](./DEVELOPMENT.md)。
 

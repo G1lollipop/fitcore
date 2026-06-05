@@ -95,7 +95,7 @@ export function DailyLogDrawer({
     if (!inputText.trim() || !canEdit) return
     setIsSubmitting(true)
     try {
-      const result = await logWorkout(inputText, userId!)
+      const result = await logWorkout(inputText)
       if (result.success) {
         toast({
           title: '记录成功',
@@ -248,7 +248,7 @@ function WorkoutRow({ log, canDelete, userId, onChange }: WorkoutRowProps) {
     if (!canDelete || !userId || isPending) return
     setIsRemoving(true)
     startTransition(async () => {
-      const result = await deleteWorkoutLog(userId, log.id)
+      const result = await deleteWorkoutLog(log.id)
       if (!result.success) {
         setIsRemoving(false)
         toast({

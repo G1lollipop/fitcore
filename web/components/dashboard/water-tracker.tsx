@@ -3,7 +3,7 @@
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 import { Droplets, Plus } from 'lucide-react'
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
-import { logWater } from '@/app/actions/dashboardActions'
+import { logWater } from '@/app/actions/dashboard'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 
@@ -73,7 +73,7 @@ export function WaterTracker({
     const optimistic = previous + incrementMl
     setMl(optimistic)
     startTransition(async () => {
-      const result = await logWater(userId, incrementMl)
+      const result = await logWater(incrementMl)
       if (!result.success) {
         setMl(previous)
         toast({

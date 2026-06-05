@@ -63,15 +63,15 @@ export function useConversations(userId: string): UseConversationsResult {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true)
 
   const refreshSummaries = useCallback(async () => {
-    const r = await listChatConversations(userId)
+    const r = await listChatConversations()
     if (r.success && r.conversations) setConversations(r.conversations)
-  }, [userId])
+  }, [])
 
   const loadHistoryFor = useCallback(
     async (cid: string) => {
       if (!cid) return
       setIsLoadingHistory(true)
-      const result = await getChatHistory(userId, cid, 80)
+      const result = await getChatHistory(cid, 80)
       if (result.success && result.messages && result.messages.length > 0) {
         setMessages(
           result.messages.map((m, i) => ({
@@ -86,7 +86,7 @@ export function useConversations(userId: string): UseConversationsResult {
       }
       setIsLoadingHistory(false)
     },
-    [userId]
+    []
   )
 
   // Initial mount: pull the persisted conversation id, load history,
@@ -139,7 +139,7 @@ export function useConversations(userId: string): UseConversationsResult {
     if (!conversationId) return
     if (!confirm('确定清除当前会话的所有消息？')) return
 
-    const result = await clearChatHistory(userId, conversationId)
+    const result = await clearChatHistory(conversationId)
     if (!result.success) return
 
     const next = createConversationId(userId)

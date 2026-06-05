@@ -93,8 +93,8 @@ export function MyPlans() {
     setLoading(true)
     try {
       const [userPlansRes, currentPlanRes, templatesRes] = await Promise.all([
-        getUserPlansLight(userId),
-        getCurrentPlanLight(userId),
+        getUserPlansLight(),
+        getCurrentPlanLight(),
         getSystemTemplatesLight(),
       ])
 
@@ -110,7 +110,7 @@ export function MyPlans() {
         setTodayResult(null)
       }
       if (templatesRes.success && templatesRes.data) {
-        setTemplates(templatesRes.data as WorkoutPlan[])
+        setTemplates(templatesRes.data as unknown as WorkoutPlan[])
       }
     } catch (error) {
       console.error('加载计划失败:', error)
@@ -128,7 +128,7 @@ export function MyPlans() {
       if (!userId) return
       setPendingPlanId(planId)
       try {
-        const result = await setCurrentPlan(userId, planId)
+        const result = await setCurrentPlan(planId)
         if (result.success) {
           const newCurrent = userPlans.find((p) => p.id === planId) ?? null
           setCurrentPlanData(newCurrent)
@@ -188,7 +188,7 @@ export function MyPlans() {
         duration_minutes: 15,
         calories_burned: Math.round((e.sets ?? 3) * 8),
       }))
-      const result = await batchLogWorkouts(userId, workouts)
+      const result = await batchLogWorkouts(workouts)
       if (result.success) {
         toast({
           title: '训练开始',

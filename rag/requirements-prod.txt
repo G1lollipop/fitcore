@@ -33,7 +33,6 @@ supabase
 
 # BM25 检索
 rank-bm25
-nltk
 
 # 文件解析
 pypdf

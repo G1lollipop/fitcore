@@ -16,7 +16,7 @@ async function saveMessage(
   role: "user" | "assistant",
   content: string,
   conversationId: string
-) {
+): Promise<boolean> {
   const { error } = await supabase.from("chat_messages").insert({
     user_id: userId,
     role,
@@ -25,7 +25,9 @@ async function saveMessage(
   })
   if (error) {
     console.error("[/api/ai/chat] saveMessage error:", error)
+    return false
   }
+  return true
 }
 
 async function loadRecentMessages(
@@ -103,11 +105,13 @@ export async function POST(request: Request) {
           },
         })
 
-        // 持久化（不阻塞响应流）
-        void Promise.all([
+        // 持久化：await 完成后再发 done，避免流先于写库结束导致丢历史；
+        // 写库失败不影响本次回答，仅在 meta.persisted 中如实反馈。
+        const [userSaved, assistantSaved] = await Promise.all([
           saveMessage(userId, "user", message, effectiveConversationId),
           saveMessage(userId, "assistant", result.answer, effectiveConversationId),
         ])
+        const persisted = userSaved && assistantSaved
 
         // done 事件：引用来源、模式、工具列表、k 值（供调试）
         controller.enqueue(
@@ -121,6 +125,7 @@ export async function POST(request: Request) {
               conversationId: effectiveConversationId,
               retrievalK: result.retrievalK,
               retrievalKReason: result.retrievalKReason,
+              persisted,
             },
           })
         )

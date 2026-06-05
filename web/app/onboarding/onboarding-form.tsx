@@ -91,7 +91,7 @@ export default function OnboardingForm() {
     if (isLoaded && userId && isReassess) {
       const loadUserSettings = async () => {
         setIsLoadingSettings(true)
-        const settings = await getUserSettings(userId)
+        const settings = await getUserSettings()
         if (settings) {
           setFormData({
             gender: (settings.gender as "male" | "female") || "male",
@@ -159,7 +159,7 @@ export default function OnboardingForm() {
 
     setIsLoading(true)
     try {
-      const result = await saveOnboardingData(userId, formData, recommendation)
+      const result = await saveOnboardingData(formData, recommendation)
       if (result.success) {
         router.push("/")
       } else {

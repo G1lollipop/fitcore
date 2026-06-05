@@ -267,7 +267,7 @@ python eval/evaluate.py      # 需要服务已在 :8000 运行；LLM-as-Judge �
 
 `app/actions/*.ts` 是 `'use server'` 模块，直接读写 Supabase：
 
-- `dashboardActions.ts` 今日统计 / 周趋势 / 喝水
+- `dashboard.ts` 今日统计 / 周趋势 / 喝水
 - `logFood.ts` `saveDietLog.ts` `updateDietLog.ts` `parseFoodFromPhoto.ts` 饮食
 - `logWorkout.ts` 训练；`quickLog.ts` 自然语言快速记录
 - `plans.ts` `exercises.ts` 计划与动作库

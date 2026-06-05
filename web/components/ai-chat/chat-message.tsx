@@ -32,10 +32,17 @@ export function ChatMessage({ msg }: ChatMessageProps) {
               ? 'bg-primary text-primary-foreground rounded-tr-sm'
               : 'bg-secondary text-foreground rounded-tl-sm'
           )}
+          // Announce assistant replies (including streamed updates) to screen
+          // readers; user messages don't need to be re-read.
+          aria-live={!isUser ? 'polite' : undefined}
+          role={!isUser ? 'status' : undefined}
         >
           {msg.content}
           {msg.isStreaming && (
-            <span className="inline-block w-0.5 h-3.5 bg-foreground/60 ml-0.5 align-middle animate-pulse" />
+            <span
+              aria-hidden="true"
+              className="inline-block w-0.5 h-3.5 bg-foreground/60 ml-0.5 align-middle animate-pulse"
+            />
           )}
         </div>
 

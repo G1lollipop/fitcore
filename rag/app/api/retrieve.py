@@ -3,14 +3,18 @@ POST /v1/retrieve — pure retrieval (vector + BM25 + optional rerank), no LLM.
 """
 
 import asyncio
+import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.api.deps import rate_limit, require_api_key
+from app.core.settings import get_settings
 from app.schemas.retrieve import RetrieveChunk, RetrieveRequest, RetrieveResponse
 from app.services.citations import build_citations
 from app.services.rag_service import RagService
 from app.services.retrieval.adaptive_k import compute_retrieval_k
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -19,7 +23,11 @@ def _get_rag_service() -> RagService:
     return get_rag_service()
 
 
-@router.post("/v1/retrieve", response_model=RetrieveResponse)
+@router.post(
+    "/v1/retrieve",
+    response_model=RetrieveResponse,
+    dependencies=[Depends(require_api_key), Depends(rate_limit)],
+)
 async def retrieve_v1(request: RetrieveRequest):
     """
     纯检索端点：向量召回 + 重排序，不调 LLM，供 Agent 工具调用。
@@ -38,7 +46,7 @@ async def retrieve_v1(request: RetrieveRequest):
 
         docs = await asyncio.wait_for(
             asyncio.to_thread(rag.retrieve, request.query, k),
-            timeout=30.0,
+            timeout=get_settings().rag_retrieve_timeout_sec,
         )
         citations = build_citations(docs)
         chunks = [
@@ -52,8 +60,8 @@ async def retrieve_v1(request: RetrieveRequest):
             for c in citations
         ]
         return RetrieveResponse(chunks=chunks)
-    except Exception as e:
-        print(f"Error in /v1/retrieve API: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error in /v1/retrieve")
+        raise HTTPException(status_code=500, detail="internal error")

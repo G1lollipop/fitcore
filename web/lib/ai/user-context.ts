@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabaseClient"
 
 import type { Database } from "@/lib/database.types"
 import type { UserContextPayload } from "@/lib/ai/types"
+import type { DietLogItem, WorkoutLogItem } from "@/app/actions/types"
 
 type UserSettingsRow = Database["public"]["Tables"]["user_settings"]["Row"]
 type DailyStatsRow = Database["public"]["Tables"]["daily_stats"]["Row"]
@@ -58,8 +59,8 @@ export async function buildUserContext(userId: string): Promise<UserContextPaylo
       currentPlanId: settings?.current_plan_id ?? null,
     },
     logs: {
-      dietLogs: (dailyStats?.diet_logs as any[]) ?? [],
-      workoutLogs: (dailyStats?.workout_logs as any[]) ?? [],
+      dietLogs: (dailyStats?.diet_logs as unknown as DietLogItem[]) ?? [],
+      workoutLogs: (dailyStats?.workout_logs as unknown as WorkoutLogItem[]) ?? [],
     },
   }
 }

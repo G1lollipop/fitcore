@@ -160,6 +160,14 @@ export function useChatStream({
             if (event) applyEvent(event, aiMsgId, setMessages, onAssistantDone)
           }
         }
+
+        // Flush any trailing block that wasn't terminated by "\n\n" (e.g. the
+        // final `done`/`error` event on chunk boundaries) so we never drop it.
+        const tail = buffer.trim()
+        if (tail) {
+          const event = parseSSEBlock(tail)
+          if (event) applyEvent(event, aiMsgId, setMessages, onAssistantDone)
+        }
       } catch (error) {
         setMessages((prev) =>
           prev.map((m) =>

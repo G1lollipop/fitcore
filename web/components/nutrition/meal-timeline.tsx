@@ -215,7 +215,7 @@ function MealRow({ log, userId, onChange, accent }: MealRowProps) {
     if (!userId || isPending) return
     setIsRemoving(true)
     startTransition(async () => {
-      const result = await deleteDietLog(userId, log.id)
+      const result = await deleteDietLog(log.id)
       if (!result.success) {
         setIsRemoving(false)
         toast({

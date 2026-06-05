@@ -6,7 +6,10 @@ import * as React from 'react'
 import type { ToastActionElement, ToastProps } from '@/components/ui/toast'
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+// Delay before a dismissed toast is dropped from state (after its close
+// animation). The shadcn template ships 1_000_000ms (~16min), which leaks
+// dismissed toasts in memory; 5s is enough to cover the exit transition.
+const TOAST_REMOVE_DELAY = 5000
 
 type ToasterToast = ToastProps & {
   id: string

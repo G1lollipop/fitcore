@@ -97,6 +97,16 @@ class KnowledgeBaseService(object):
                 base_metadata=metadata,
             )
         else:
+            # Replace-by-source: delete any existing chunks from this file
+            # before re-adding, so a forced re-ingest doesn't append duplicates
+            # (which would also skew the in-memory BM25 corpus). Supabase path
+            # already does this via delete_chunks_for_source above.
+            try:
+                self.chroma.delete(where={"source": filename})
+            except Exception as exc:  # noqa: BLE001
+                # First ingest (nothing to delete) or older chroma without
+                # where-delete: safe to continue with the add.
+                print(f"[kb] chroma delete-by-source skipped for {filename}: {exc}")
             self.chroma.add_texts(
                 knowledge_chunks,
                 metadatas=[metadata for _ in knowledge_chunks],

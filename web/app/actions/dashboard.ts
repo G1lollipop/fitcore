@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
+import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
+import { calculateTodayWorkout, type PlanInput } from '@/lib/plans/today-workout';
 import type {
   DashboardData,
   DietLogItem,
@@ -15,6 +17,12 @@ import type {
   WorkoutLogItem,
   YesterdayWorkoutLog,
 } from './types';
+
+/** Shape of the nested `user_settings → workout_plans → days → exercises` join. */
+type TodaySettingsJoin = {
+  current_plan_start_date: string | null;
+  workout_plans: (PlanInput & { id: string; name: string }) | null;
+};
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
 type DailyStatsInsert = Database['public']['Tables']['daily_stats']['Insert'];
@@ -53,7 +61,7 @@ export type TodayWorkoutInfo = {
 
 async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
   try {
-    const { data: settingsWithPlan, error } = await (supabase as any)
+    const queryResult = await supabase
       .from('user_settings')
       .select(`
         current_plan_start_date,
@@ -88,6 +96,9 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
       .eq('user_id', userId)
       .single();
 
+    const settingsWithPlan = queryResult.data as unknown as TodaySettingsJoin | null;
+    const error = queryResult.error;
+
     if (error && error.code !== 'PGRST116') {
       console.warn('[getTodayWorkoutData] 获取用户设置失败', { error: error.message });
     }
@@ -97,97 +108,34 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
     }
 
     const plan = settingsWithPlan.workout_plans;
-    const days = plan.workout_days || [];
-    
-    if (days.length === 0) {
-      return { plan, todayDay: null, exercises: [] };
-    }
 
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const todayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    
-    const restDays: number[] = (plan as any).rest_days || [];
-    
-    const sortedDays = [...days].sort((a: any, b: any) => (a.day_order || 0) - (b.day_order || 0));
-    
-    let todayDay: any = null;
-    let isRestDay = false;
-    
-    if (restDays.length > 0 && restDays.includes(todayIndex + 1)) {
-      isRestDay = true;
-      if (sortedDays.length > 0) {
-        todayDay = {
-          ...sortedDays[0],
-          name: '休息日',
-        };
-      }
-    } else {
-      if (restDays.length > 0) {
-        let adjustedIndex = 0;
-        let dayCount = 0;
-        
-        for (let i = 0; i <= todayIndex; i++) {
-          if (!restDays.includes(i + 1)) {
-            dayCount++;
-          }
-        }
-        
-        adjustedIndex = (dayCount - 1) % sortedDays.length;
-        if (adjustedIndex < 0) adjustedIndex = 0;
-        
-        todayDay = sortedDays[adjustedIndex] || sortedDays[0];
-      } else {
-        todayDay = sortedDays.find((d: any) => d.day_order === todayIndex + 1) || sortedDays[todayIndex % sortedDays.length];
-      }
+    // Single source of truth for the (rest-day aware) day-selection + exercise
+    // formatting logic — shared with plans.getTodayWorkout and my-plans.tsx.
+    const result = calculateTodayWorkout(plan);
+    if (!result) {
+      return { plan: { id: plan.id, name: plan.name }, todayDay: null, exercises: [] };
     }
-
-    if (!todayDay) {
-      todayDay = sortedDays[0];
-    }
-
-    const exercises = (todayDay?.plan_exercises || []).map((pe: any) => {
-      const sets = pe.target_sets || 0;
-      const repsMin = pe.target_reps_min;
-      const repsMax = pe.target_reps_max;
-      const weight = pe.target_weight_kg;
-      
-      let exerciseText = pe.exercises?.name || '未知动作';
-      if (sets > 0) {
-        exerciseText += ` ${sets}组`;
-        if (repsMin && repsMax) {
-          exerciseText += ` ${repsMin}-${repsMax}次`;
-        } else if (repsMin) {
-          exerciseText += ` ${repsMin}次`;
-        }
-        if (weight) {
-          exerciseText += ` ${weight}kg`;
-        }
-      }
-      
-      return {
-        id: pe.id,
-        text: exerciseText,
-        exerciseId: pe.exercises?.id,
-        exerciseName: pe.exercises?.name,
-        sets: pe.target_sets,
-        repsMin: pe.target_reps_min,
-        repsMax: pe.target_reps_max,
-        weight: pe.target_weight_kg,
-      };
-    });
 
     return {
       plan: {
         id: plan.id,
         name: plan.name,
       },
-      todayDay: {
-        id: todayDay?.id,
-        name: isRestDay ? '休息日' : todayDay?.name,
-        isRestDay,
-      },
-      exercises: isRestDay ? [] : exercises,
+      todayDay: result.todayDay
+        ? {
+            id: result.todayDay.id,
+            name: result.isRestDay ? '休息日' : result.todayDay.name ?? '',
+            isRestDay: result.isRestDay,
+          }
+        : null,
+      exercises: result.exercises.map((e) => ({
+        id: e.id,
+        text: e.text,
+        sets: e.sets ?? undefined,
+        repsMin: e.repsMin ?? undefined,
+        repsMax: e.repsMax ?? undefined,
+        weight: e.weight ?? undefined,
+      })),
     };
   } catch (error) {
     console.error('[getTodayWorkoutData] 异常', { error: String(error) });
@@ -196,16 +144,16 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
 }
 
 export async function logWater(
-  userId: string,
   amountMl: number
 ): Promise<{ success: boolean; newAmount?: number; error?: string }> {
-  if (!userId || amountMl <= 0) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+  if (amountMl <= 0) {
     return { success: false, error: '缺少必要参数' };
   }
 
   const today = getTodayDate();
-
-  console.log('[logWater] Querying daily_stats for user:', userId, 'date:', today);
 
   const queryResult = await supabase
     .from('daily_stats')
@@ -227,7 +175,6 @@ export async function logWater(
 
     const updateResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .update({ water_intake: newWaterIntake })
       .eq('id', existingRecord.id);
 
@@ -255,11 +202,8 @@ export async function logWater(
       workout_logs: [],
     };
 
-    console.log('[logWater] Inserting new record:', JSON.stringify(insertData, null, 2));
-
     const insertResult = await supabase
       .from('daily_stats')
-      // @ts-ignore - Supabase types issue
       .insert(insertData)
       .select();
 
@@ -275,24 +219,25 @@ export async function logWater(
   }
 }
 
-export async function getUserGoals(userId: string): Promise<UserGoals | null> {
+export async function getUserGoals(): Promise<UserGoals | null> {
+  const userId = await getUserIdOrNull();
   if (!userId) return null;
-
-  console.log('[getUserGoals] Querying for user:', userId);
 
   const { data, error } = await supabase
     .from('user_settings')
     .select('*')
     .eq('user_id', userId)
-    .single() as { data: UserSettingsRow | null; error: null };
+    .single();
 
-  if (error) {
-    console.log('[getUserGoals] Query error:', JSON.stringify(error, null, 2));
+  // PGRST116 = no rows; treat as "no settings yet" and fall through to
+  // defaults. Any other error is a real failure.
+  if (error && error.code !== 'PGRST116') {
+    console.error('[getUserGoals] Query error:', error.message);
     return null;
   }
 
-  if (!data) {
-    console.log('[getUserGoals] No data found, returning defaults');
+  const row = data as UserSettingsRow | null;
+  if (!row) {
     return {
       target_calories: 2500,
       target_protein: 150,
@@ -303,15 +248,16 @@ export async function getUserGoals(userId: string): Promise<UserGoals | null> {
   }
 
   return {
-    target_calories: data.target_calories || 2500,
-    target_protein: data.target_protein || 150,
-    target_carbs: data.target_carbs || 300,
-    target_fat: data.target_fat || 80,
+    target_calories: row.target_calories || 2500,
+    target_protein: row.target_protein || 150,
+    target_carbs: row.target_carbs || 300,
+    target_fat: row.target_fat || 80,
     water_goal: 2500,
   };
 }
 
-export async function getWeeklyActivity(userId: string): Promise<WeeklyActivityData> {
+export async function getWeeklyActivity(): Promise<WeeklyActivityData> {
+  const userId = await getUserIdOrNull();
   if (!userId) {
     return {
       values: [0, 0, 0, 0, 0, 0, 0],
@@ -390,8 +336,9 @@ function emptyTrend(today: Date): WeeklyTrendData {
  * 7 ordered (monday→sunday) trend cells with intake, burn, and workout
  * minutes per day. Used by the dashboard bento weekly heat-row.
  */
-export async function getWeeklyTrend(userId: string): Promise<WeeklyTrendData> {
+export async function getWeeklyTrend(): Promise<WeeklyTrendData> {
   const today = new Date();
+  const userId = await getUserIdOrNull();
   if (!userId) return emptyTrend(today);
 
   const { start, end } = getWeekBounds(today);
@@ -444,13 +391,14 @@ export async function getWeeklyTrend(userId: string): Promise<WeeklyTrendData> {
   return { days, weekLabel: getWeekLabel(today), todayIndex, maxKcal };
 }
 
-export async function getWeeklyWorkoutStats(userId: string): Promise<WeeklyWorkoutStats> {
+export async function getWeeklyWorkoutStats(): Promise<WeeklyWorkoutStats> {
   const defaultResult: WeeklyWorkoutStats = {
     daysThisWeek: 0,
     daysLastWeek: 0,
     change: 0,
   };
 
+  const userId = await getUserIdOrNull();
   if (!userId) return defaultResult;
 
   const today = new Date();
@@ -492,7 +440,8 @@ export async function getWeeklyWorkoutStats(userId: string): Promise<WeeklyWorko
   };
 }
 
-export async function getYesterdayWorkout(userId: string): Promise<YesterdayWorkoutLog> {
+export async function getYesterdayWorkout(): Promise<YesterdayWorkoutLog> {
+  const userId = await getUserIdOrNull();
   if (!userId) return [];
 
   const yesterday = new Date();
@@ -516,23 +465,23 @@ export async function getYesterdayWorkout(userId: string): Promise<YesterdayWork
   }));
 }
 
-export async function getDashboardData(userId: string): Promise<DashboardData | null> {
+export async function getDashboardData(): Promise<DashboardData | null> {
+  const userId = await getUserIdOrNull();
   if (!userId) return null;
 
   const today = getTodayDate();
 
-  const [goals, dailyStatsResult, weeklyActivity, weeklyTrend, weeklyWorkoutStats, yesterdayWorkout, todayWorkout] = await Promise.all([
-    getUserGoals(userId),
+  const [goals, dailyStatsResult, weeklyTrend, weeklyWorkoutStats, yesterdayWorkout, todayWorkout] = await Promise.all([
+    getUserGoals(),
     supabase
       .from('daily_stats')
       .select('*')
       .eq('user_id', userId)
       .eq('date', today)
       .single(),
-    getWeeklyActivity(userId),
-    getWeeklyTrend(userId),
-    getWeeklyWorkoutStats(userId),
-    getYesterdayWorkout(userId),
+    getWeeklyTrend(),
+    getWeeklyWorkoutStats(),
+    getYesterdayWorkout(),
     getTodayWorkoutData(userId),
   ]);
 
@@ -566,7 +515,6 @@ export async function getDashboardData(userId: string): Promise<DashboardData | 
       diet_logs: (dailyStats?.diet_logs as DietLogItem[] | null) ?? [],
       workout_logs: (dailyStats?.workout_logs as WorkoutLogItem[] | null) ?? [],
     },
-    weeklyActivity,
     weeklyTrend,
     weeklyWorkoutStats,
     yesterdayWorkout,

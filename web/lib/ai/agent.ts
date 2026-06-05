@@ -155,15 +155,15 @@ function formatUserContext(ctx: UserContextPayload): string {
 
   if (logs.dietLogs.length > 0) {
     lines.push(`\n【今日饮食记录（最近5条）】`)
-    logs.dietLogs.slice(-5).forEach((log: any) => {
-      lines.push(`- ${log.name || log.food_name || "食物"}: ${log.calories || 0}kcal`)
+    logs.dietLogs.slice(-5).forEach((log) => {
+      lines.push(`- ${log.food_name || "食物"}: ${log.calories || 0}kcal`)
     })
   }
 
   if (logs.workoutLogs.length > 0) {
     lines.push(`\n【今日运动记录（最近5条）】`)
-    logs.workoutLogs.slice(-5).forEach((log: any) => {
-      lines.push(`- ${log.name || log.exercise_name || "运动"}: ${log.duration || 0}分钟`)
+    logs.workoutLogs.slice(-5).forEach((log) => {
+      lines.push(`- ${log.workout_name || "运动"}: ${log.duration_minutes || 0}分钟`)
     })
   }
 

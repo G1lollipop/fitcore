@@ -3,14 +3,46 @@
 import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { logger, createModuleLogger } from '@/lib/logger';
+import { authedUserId } from '@/lib/auth/require-user';
+import { calculateTodayWorkout } from '@/lib/plans/today-workout';
+import { planMetaSchema, firstZodError } from '@/lib/validation/schemas';
+
+type PlanExerciseInsert = Database['public']['Tables']['plan_exercises']['Insert'];
+type WorkoutDayInsert = Database['public']['Tables']['workout_days']['Insert'];
 
 const planLogger = createModuleLogger('PlanAPI');
 
-export async function getUserPlansLight(userId: string) {
+/**
+ * Verifies the given plan exists and is owned by `userId`.
+ * Returns null on success, or a failure result to return to the caller.
+ */
+async function assertPlanOwner(
+  planId: string,
+  userId: string
+): Promise<{ success: false; error: string } | null> {
+  const { data, error } = await supabase
+    .from('workout_plans')
+    .select('creator_id')
+    .eq('id', planId)
+    .single();
+
+  if (error || !data) {
+    return { success: false, error: '计划不存在' };
+  }
+  if (data.creator_id !== userId) {
+    return { success: false, error: 'FORBIDDEN' };
+  }
+  return null;
+}
+
+export async function getUserPlansLight() {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     planLogger.info('获取用户创建的计划（轻量）', { userId });
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('workout_plans')
       .select(`
         id,
@@ -67,11 +99,14 @@ export async function getUserPlansLight(userId: string) {
   }
 }
 
-export async function getSubscribedPlansLight(userId: string) {
+export async function getSubscribedPlansLight() {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     planLogger.info('获取用户订阅的计划（轻量）', { userId });
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('workout_plans')
       .select(`
         id,
@@ -109,11 +144,14 @@ export async function getSubscribedPlansLight(userId: string) {
   }
 }
 
-export async function getCurrentPlanLight(userId: string) {
+export async function getCurrentPlanLight() {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     planLogger.info('获取用户当前计划（轻量）', { userId });
 
-    const { data: settingsWithPlan, error } = await (supabase as any)
+    const { data: settingsWithPlan, error } = await supabase
       .from('user_settings')
       .select(`
         current_plan_id,
@@ -164,7 +202,7 @@ export async function getSystemTemplatesLight() {
   try {
     planLogger.info('获取系统模板（轻量）');
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('workout_plans')
       .select(`
         id,
@@ -202,7 +240,7 @@ export async function getSystemTemplates() {
   try {
     planLogger.info('获取系统模板');
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('workout_plans')
       .select(`
         *,
@@ -230,11 +268,14 @@ export async function getSystemTemplates() {
   }
 }
 
-export async function getUserPlans(userId: string) {
+export async function getUserPlans() {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     planLogger.info('获取用户创建的计划', { userId });
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('workout_plans')
       .select(`
         *,
@@ -263,11 +304,14 @@ export async function getUserPlans(userId: string) {
   }
 }
 
-export async function getSubscribedPlans(userId: string) {
+export async function getSubscribedPlans() {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     planLogger.info('获取用户订阅的计划', { userId });
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('workout_plans')
       .select(`
         *,
@@ -296,11 +340,14 @@ export async function getSubscribedPlans(userId: string) {
   }
 }
 
-export async function getCurrentPlan(userId: string) {
+export async function getCurrentPlan() {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     planLogger.info('获取用户当前计划', { userId });
 
-    const { data: settingsWithPlan, error } = await (supabase as any)
+    const { data: settingsWithPlan, error } = await supabase
       .from('user_settings')
       .select(`
         current_plan_id,
@@ -341,10 +388,13 @@ export async function getCurrentPlan(userId: string) {
 }
 
 export async function getPlanById(planId: string) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
-    planLogger.info('获取计划详情', { planId });
+    planLogger.info('获取计划详情', { planId, userId });
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('workout_plans')
       .select(`
         *,
@@ -359,9 +409,15 @@ export async function getPlanById(planId: string) {
       .eq('id', planId)
       .single();
 
-    if (error) {
-      planLogger.error('获取计划详情失败', { error: error.message, planId });
-      throw new Error(error.message);
+    if (error || !data) {
+      planLogger.error('获取计划详情失败', { error: error?.message, planId });
+      return { success: false, error: '计划不存在' };
+    }
+
+    // Allow the owner, or anyone for read-only system templates.
+    if (data.creator_id !== userId && data.plan_type !== 'system_template') {
+      planLogger.warn('越权访问计划', { planId, userId });
+      return { success: false, error: 'FORBIDDEN' };
     }
 
     return { success: true, data };
@@ -381,13 +437,21 @@ export async function createPlan(
     duration_weeks?: number | null
     time_per_session_minutes?: number | null
     is_template?: boolean
-  },
-  userId: string
+  }
 ) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+
+  const parsed = planMetaSchema.safeParse(plan);
+  if (!parsed.success) {
+    return { success: false, error: firstZodError(parsed.error) };
+  }
+
   try {
     planLogger.info('创建计划', { userId, planName: plan.name });
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('workout_plans')
       .insert({
         ...plan,
@@ -414,10 +478,14 @@ export async function updatePlan(
   planId: string,
   updates: Record<string, unknown>
 ) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const ownerCheck = await assertPlanOwner(planId, a.userId);
+  if (ownerCheck) return ownerCheck;
   try {
     planLogger.info('更新计划', { planId, updates });
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('workout_plans')
       .update({
         ...updates,
@@ -441,10 +509,14 @@ export async function updatePlan(
 }
 
 export async function deletePlan(planId: string) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const ownerCheck = await assertPlanOwner(planId, a.userId);
+  if (ownerCheck) return ownerCheck;
   try {
     planLogger.info('删除计划', { planId });
 
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('workout_plans')
       .delete()
       .eq('id', planId);
@@ -462,13 +534,18 @@ export async function deletePlan(planId: string) {
   }
 }
 
-export async function setCurrentPlan(userId: string, planId: string) {
+export async function setCurrentPlan(planId: string) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+  const ownerCheck = await assertPlanOwner(planId, userId);
+  if (ownerCheck) return ownerCheck;
   try {
     planLogger.info('设置当前计划', { userId, planId });
 
     const today = new Date().toISOString().split('T')[0];
 
-    const { data: settings, error: fetchError } = await (supabase as any)
+    const { data: settings, error: fetchError } = await supabase
       .from('user_settings')
       .select('user_id')
       .eq('user_id', userId)
@@ -480,7 +557,7 @@ export async function setCurrentPlan(userId: string, planId: string) {
     }
 
     if (settings) {
-      const { error: updateError } = await (supabase as any)
+      const { error: updateError } = await supabase
         .from('user_settings')
         .update({
           current_plan_id: planId,
@@ -493,7 +570,7 @@ export async function setCurrentPlan(userId: string, planId: string) {
         throw new Error(updateError.message);
       }
     } else {
-      const { error: insertError } = await (supabase as any)
+      const { error: insertError } = await supabase
         .from('user_settings')
         .insert({
           user_id: userId,
@@ -521,13 +598,15 @@ export async function setCurrentPlan(userId: string, planId: string) {
 
 export async function copyTemplateToUser(
   templateId: string,
-  userId: string,
   newPlanName?: string
 ) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     planLogger.info('复制模板到用户计划', { templateId, userId });
 
-    const { data: template, error: fetchError } = await (supabase as any)
+    const { data: template, error: fetchError } = await supabase
       .from('workout_plans')
       .select('*')
       .eq('id', templateId)
@@ -538,7 +617,7 @@ export async function copyTemplateToUser(
       throw new Error(fetchError?.message || 'Template not found');
     }
 
-    const { data: newPlan, error: createError } = await (supabase as any)
+    const { data: newPlan, error: createError } = await supabase
       .from('workout_plans')
       .insert({
         name: newPlanName || template.name,
@@ -562,7 +641,7 @@ export async function copyTemplateToUser(
       throw new Error(createError.message);
     }
 
-    const { data: templateDays, error: daysError } = await (supabase as any)
+    const { data: templateDays, error: daysError } = await supabase
       .from('workout_days')
       .select(`
         *,
@@ -576,7 +655,7 @@ export async function copyTemplateToUser(
     }
 
     if (templateDays && templateDays.length > 0) {
-      const daysToInsert = templateDays.map((day: any) => ({
+      const daysToInsert: WorkoutDayInsert[] = templateDays.map((day) => ({
         plan_id: newPlan.id,
         name: day.name,
         day_order: day.day_order,
@@ -585,7 +664,7 @@ export async function copyTemplateToUser(
         estimated_duration_minutes: day.estimated_duration_minutes,
       }));
 
-      const { data: insertedDays, error: batchInsertError } = await (supabase as any)
+      const { data: insertedDays, error: batchInsertError } = await supabase
         .from('workout_days')
         .insert(daysToInsert)
         .select();
@@ -593,12 +672,12 @@ export async function copyTemplateToUser(
       if (batchInsertError) {
         planLogger.warn('批量插入训练日失败', { error: batchInsertError.message });
       } else if (insertedDays && insertedDays.length > 0) {
-        const allExercises: any[] = [];
-        
-        insertedDays.forEach((newDay: any, index: number) => {
+        const allExercises: PlanExerciseInsert[] = [];
+
+        insertedDays.forEach((newDay, index) => {
           const originalDay = templateDays[index];
           if (originalDay.plan_exercises && originalDay.plan_exercises.length > 0) {
-            originalDay.plan_exercises.forEach((pe: any) => {
+            originalDay.plan_exercises.forEach((pe) => {
               allExercises.push({
                 day_id: newDay.id,
                 exercise_id: pe.exercise_id,
@@ -615,7 +694,7 @@ export async function copyTemplateToUser(
         });
 
         if (allExercises.length > 0) {
-          const { error: exercisesError } = await (supabase as any)
+          const { error: exercisesError } = await supabase
             .from('plan_exercises')
             .insert(allExercises);
 
@@ -626,11 +705,11 @@ export async function copyTemplateToUser(
       }
     }
 
-    await setCurrentPlan(userId, newPlan.id);
+    await setCurrentPlan(newPlan.id);
 
     planLogger.info('复制模板成功', { newPlanId: newPlan.id });
     
-    const { data: fullPlan, error: fullPlanError } = await (supabase as any)
+    const { data: fullPlan, error: fullPlanError } = await supabase
       .from('workout_plans')
       .select(`
         *,
@@ -671,7 +750,6 @@ export interface CustomPlanDay {
 }
 
 export async function createCustomPlan(
-  userId: string,
   planData: {
     name: string;
     description?: string;
@@ -682,6 +760,15 @@ export async function createCustomPlan(
     days: CustomPlanDay[];
   }
 ) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+
+  const parsed = planMetaSchema.safeParse(planData);
+  if (!parsed.success) {
+    return { success: false, error: firstZodError(parsed.error) };
+  }
+
   try {
     planLogger.info('创建自定义计划', { userId, planName: planData.name });
 
@@ -689,7 +776,7 @@ export async function createCustomPlan(
       .map((day, index) => (day.rest_day ? index + 1 : null))
       .filter((d): d is number => d !== null);
 
-    const { data: newPlan, error: createError } = await (supabase as any)
+    const { data: newPlan, error: createError } = await supabase
       .from('workout_plans')
       .insert({
         name: planData.name,
@@ -711,8 +798,8 @@ export async function createCustomPlan(
       throw new Error(createError.message);
     }
 
-    const daysToInsert: any[] = [];
-    const dayExercisesMap: Map<number, any[]> = new Map();
+    const daysToInsert: WorkoutDayInsert[] = [];
+    const dayExercisesMap: Map<number, Omit<PlanExerciseInsert, 'day_id'>[]> = new Map();
 
     for (let i = 0; i < planData.days.length; i++) {
       const day = planData.days[i];
@@ -745,7 +832,7 @@ export async function createCustomPlan(
     if (daysToInsert.length > 0) {
       planLogger.info('准备插入训练日', { count: daysToInsert.length, days: daysToInsert.map(d => ({ name: d.name, day_order: d.day_order })) });
       
-      const { data: insertedDays, error: batchInsertError } = await (supabase as any)
+      const { data: insertedDays, error: batchInsertError } = await supabase
         .from('workout_days')
         .insert(daysToInsert)
         .select();
@@ -753,12 +840,12 @@ export async function createCustomPlan(
       if (batchInsertError) {
         planLogger.error('批量创建训练日失败', { error: batchInsertError.message });
       } else {
-        planLogger.info('训练日插入成功', { count: insertedDays?.length, insertedDays: insertedDays?.map((d: any) => ({ id: d.id, name: d.name, day_order: d.day_order })) });
+        planLogger.info('训练日插入成功', { count: insertedDays?.length, insertedDays: insertedDays?.map((d) => ({ id: d.id, name: d.name, day_order: d.day_order })) });
         
         if (insertedDays && insertedDays.length > 0) {
-          const allExercises: any[] = [];
+          const allExercises: PlanExerciseInsert[] = [];
 
-          insertedDays.forEach((insertedDay: any) => {
+          insertedDays.forEach((insertedDay) => {
             const exercises = dayExercisesMap.get(insertedDay.day_order);
             if (exercises) {
               planLogger.info('为训练日添加动作', { dayId: insertedDay.id, day_order: insertedDay.day_order, exerciseCount: exercises.length });
@@ -775,7 +862,7 @@ export async function createCustomPlan(
 
           if (allExercises.length > 0) {
             planLogger.info('准备插入动作', { count: allExercises.length });
-            const { error: exercisesError } = await (supabase as any)
+            const { error: exercisesError } = await supabase
               .from('plan_exercises')
               .insert(allExercises);
 
@@ -791,7 +878,7 @@ export async function createCustomPlan(
 
     planLogger.info('创建自定义计划成功', { planId: newPlan.id, dayCount: planData.days.length });
     
-    const { data: fullPlan, error: fullPlanError } = await (supabase as any)
+    const { data: fullPlan, error: fullPlanError } = await supabase
       .from('workout_plans')
       .select(`
         *,
@@ -818,11 +905,14 @@ export async function createCustomPlan(
   }
 }
 
-export async function getTodayWorkout(userId: string) {
+export async function getTodayWorkout() {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
   try {
     planLogger.info('获取今日训练', { userId });
 
-    const { data: settingsWithPlan, error } = await (supabase as any)
+    const { data: settingsWithPlan, error } = await supabase
       .from('user_settings')
       .select(`
         current_plan_start_date,
@@ -868,7 +958,7 @@ export async function getTodayWorkout(userId: string) {
 
     const plan = settingsWithPlan.workout_plans;
     const days = plan.workout_days || [];
-    
+
     if (days.length === 0) {
       return { success: true, data: { plan, todayDay: null, exercises: [] } };
     }
@@ -876,91 +966,27 @@ export async function getTodayWorkout(userId: string) {
     const today = new Date();
     const dayOfWeek = today.getDay();
     const todayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    
-    const restDays: number[] = (plan as any).rest_days || [];
-    
-    const sortedDays = [...days].sort((a: any, b: any) => (a.day_order || 0) - (b.day_order || 0));
-    
-    let todayDay: any = null;
-    let isRestDay = false;
-    
-    if (restDays.length > 0 && restDays.includes(todayIndex + 1)) {
-      isRestDay = true;
-      // 所有 workout_days 都是训练日，取第一个作为展示
-      if (sortedDays.length > 0) {
-        todayDay = {
-          ...sortedDays[0],
-          name: '休息日',
-        };
-      }
-    } else {
-      const workoutDayIndex = todayIndex;
-      
-      if (restDays.length > 0) {
-        let adjustedIndex = 0;
-        let dayCount = 0;
-        
-        for (let i = 0; i <= todayIndex; i++) {
-          if (!restDays.includes(i + 1)) {
-            dayCount++;
-          }
-        }
-        
-        adjustedIndex = (dayCount - 1) % sortedDays.length;
-        if (adjustedIndex < 0) adjustedIndex = 0;
-        
-        todayDay = sortedDays[adjustedIndex] || sortedDays[0];
-      } else {
-        todayDay = sortedDays.find((d: any) => d.day_order === todayIndex + 1) || sortedDays[todayIndex % sortedDays.length];
-      }
-    }
+    const sortedDays = [...days].sort((a, b) => (a.day_order || 0) - (b.day_order || 0));
 
-    if (!todayDay) {
-      todayDay = sortedDays[0];
-    }
+    // Shared day-selection + exercise formatting (see lib/plans/today-workout).
+    const result = calculateTodayWorkout(plan);
+    // result.todayDay is one of `days` at runtime; widen to the richer selected
+    // row type so we can read focus_muscles (absent from the helper's narrow type).
+    const todayDay = (result?.todayDay ?? null) as (typeof days)[number] | null;
+    const isRestDay = result?.isRestDay ?? false;
+    const exercises = result?.exercises ?? [];
 
-    const exercises = (todayDay?.plan_exercises || []).map((pe: any) => {
-      const sets = pe.target_sets || 0;
-      const repsMin = pe.target_reps_min;
-      const repsMax = pe.target_reps_max;
-      const weight = pe.target_weight_kg;
-      
-      let exerciseText = pe.exercises?.name || '未知动作';
-      if (sets > 0) {
-        exerciseText += ` ${sets}组`;
-        if (repsMin && repsMax) {
-          exerciseText += ` ${repsMin}-${repsMax}次`;
-        } else if (repsMin) {
-          exerciseText += ` ${repsMin}次`;
-        }
-        if (weight) {
-          exerciseText += ` ${weight}kg`;
-        }
-      }
-      
-      return {
-        id: pe.id,
-        text: exerciseText,
-        exerciseId: pe.exercises?.id,
-        exerciseName: pe.exercises?.name,
-        sets: pe.target_sets,
-        repsMin: pe.target_reps_min,
-        repsMax: pe.target_reps_max,
-        weight: pe.target_weight_kg,
-      };
-    });
-
-    planLogger.info('获取今日训练成功', { 
-      planId: plan.id, 
-      dayName: todayDay?.name, 
+    planLogger.info('获取今日训练成功', {
+      planId: plan.id,
+      dayName: todayDay?.name,
       exerciseCount: exercises.length,
       isRestDay,
       todayIndex,
     });
 
-    return { 
-      success: true, 
-      data: { 
+    return {
+      success: true,
+      data: {
         plan: {
           id: plan.id,
           name: plan.name,
@@ -972,10 +998,10 @@ export async function getTodayWorkout(userId: string) {
           isRestDay: isRestDay,
           focusMuscles: todayDay?.focus_muscles,
         },
-        exercises: isRestDay ? [] : exercises,
+        exercises,
         dayIndex: todayIndex + 1,
         totalDays: plan.frequency_per_week || sortedDays.length,
-      } 
+      },
     };
   } catch (error) {
     planLogger.error('获取今日训练异常', { error: String(error) });

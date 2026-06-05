@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { supabase } from "@/lib/supabaseClient"
+import { getWorkoutHistory } from "@/app/actions/history"
 import {
   summarizeMonth,
   topMuscleGroups,
@@ -37,26 +37,7 @@ export function TrainingHistory({ userId, onLogSuccess }: TrainingHistoryProps) 
       const startStr = startDate.toISOString().split('T')[0]
       const endStr = endDate.toISOString().split('T')[0]
 
-      const { data, error } = await supabase
-        .from('daily_stats')
-        .select('date, workout_logs, workout_duration, calories_burned')
-        .eq('user_id', userId)
-        .gte('date', startStr)
-        .lte('date', endStr)
-        .gt('workout_duration', 0)
-
-      if (error) {
-        console.error('加载训练数据失败:', error)
-        return
-      }
-
-      const grouped: Record<string, WorkoutLogItem[]> = {}
-      data?.forEach((row: any) => {
-        const logs = (row.workout_logs as WorkoutLogItem[] | null) ?? []
-        if (logs.length > 0) {
-          grouped[row.date] = logs
-        }
-      })
+      const grouped = await getWorkoutHistory(startStr, endStr)
       setWorkoutData(grouped)
     } catch (error) {
       console.error('加载训练数据失败:', error)

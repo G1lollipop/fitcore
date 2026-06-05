@@ -69,10 +69,15 @@ def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
 
     settings = get_settings()
+    cors_origins = settings.allowed_origins or ["*"]
+    # Browsers reject `Access-Control-Allow-Origin: *` together with
+    # credentials, and a wildcard + credentials is unsafe anyway. Only allow
+    # credentials when origins are explicitly listed.
+    allow_credentials = cors_origins != ["*"]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.allowed_origins or ["*"],
-        allow_credentials=True,
+        allow_origins=cors_origins,
+        allow_credentials=allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )

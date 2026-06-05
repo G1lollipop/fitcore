@@ -74,10 +74,13 @@ class DocxParser(BaseFileParser):
             }
     
     def can_parse(self, filename: str, mime_type: Optional[str] = None) -> bool:
-        """判断是否为 DOCX 文件"""
+        """判断是否为 DOCX 文件。
+
+        注意：python-docx 只能读 OOXML 格式的 .docx，无法解析旧版二进制 .doc
+        （application/msword）。因此这里不再认领 .doc，避免把旧格式误路由到本
+        解析器后抛出令人困惑的失败。
+        """
         if mime_type:
-            return mime_type in [
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/msword',
-            ]
-        return filename.lower().endswith(('.docx', '.doc'))
+            return mime_type == \
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        return filename.lower().endswith('.docx')

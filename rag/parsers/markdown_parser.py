@@ -29,7 +29,7 @@ class MarkdownParser(BaseFileParser):
             # 统计 Markdown 元素
             metadata['heading_count'] = text.count('#')
             metadata['code_block_count'] = text.count('```')
-            metadata['link_count'] = text.count('[') and text.count('](')
+            metadata['link_count'] = text.count('](')
             
             return {
                 'text': text,

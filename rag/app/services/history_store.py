@@ -9,10 +9,16 @@ O(messages-being-added).
 
 import json
 import os
+import re
+from pathlib import Path
 from typing import Sequence
 
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, message_to_dict, messages_from_dict
+
+# Session ids become filenames, so restrict them to a safe, fixed alphabet to
+# prevent path traversal / arbitrary file writes (e.g. "../../etc/passwd").
+_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
 
 def get_history(session_id):
@@ -21,10 +27,21 @@ def get_history(session_id):
 
 class FileChatMessageHistory(BaseChatMessageHistory):
     def __init__(self, session_id, storage_path):
+        if not isinstance(session_id, str) or not _SESSION_ID_RE.match(session_id):
+            raise ValueError("invalid session id")
+
         self.session_id = session_id
         self.storage_path = storage_path
 
-        self.file_path = os.path.join(self.storage_path, self.session_id)
+        storage_root = Path(storage_path).resolve()
+        file_path = (storage_root / session_id).resolve()
+
+        # Defense in depth: even with the regex above, ensure the resolved path
+        # stays inside the storage directory.
+        if storage_root != file_path.parent:
+            raise ValueError("invalid session id")
+
+        self.file_path = str(file_path)
 
         os.makedirs(self.storage_path, exist_ok=True)
 

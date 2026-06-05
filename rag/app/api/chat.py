@@ -6,9 +6,11 @@ Both endpoints share one ChatRequest; the legacy adapter just unwraps.
 """
 
 import asyncio
+import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.api.deps import rate_limit, require_api_key
 from app.core.settings import get_settings
 from app.infra.supabase_client import vector_backend
 from app.schemas.chat import (
@@ -18,6 +20,7 @@ from app.schemas.chat import (
 )
 from app.services.rag_service import RagService
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -35,12 +38,20 @@ def _get_rag_service() -> RagService:
     return get_rag_service()
 
 
-@router.post("/v1/chat", response_model=StructuredChatResponse)
+@router.post(
+    "/v1/chat",
+    response_model=StructuredChatResponse,
+    dependencies=[Depends(require_api_key), Depends(rate_limit)],
+)
 async def chat_v1(request: ChatRequest):
     settings = get_settings()
+    # Validate inputs up-front so client errors map to 422 (not retried as 500).
+    try:
+        query = _resolve_query(request)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     try:
         rag = _get_rag_service()
-        query = _resolve_query(request)
         last_exc: Exception | None = None
         result: dict | None = None
         for attempt in range(settings.rag_chat_retries):
@@ -56,6 +67,9 @@ async def chat_v1(request: ChatRequest):
                     timeout=settings.rag_chat_timeout_sec,
                 )
                 break
+            except ValueError:
+                # Client error (bad input) — don't waste retries / LLM calls.
+                raise
             except Exception as e:
                 last_exc = e
                 if attempt >= settings.rag_chat_retries - 1:
@@ -71,11 +85,16 @@ async def chat_v1(request: ChatRequest):
             retrievalMeta=result.get("retrieval_meta", {"retrievedCount": 0}),
             retrievalBackend=rb,
         )
-    except Exception as e:
-        print(f"Error in /v1/chat API: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+    except ValueError as e:
+        # e.g. invalid session id surfaced from the history store.
+        raise HTTPException(status_code=422, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        # Log the full trace server-side; return a stable, opaque message so we
+        # never leak stack traces / internal details to clients.
+        logger.exception("Error in /v1/chat")
+        raise HTTPException(status_code=500, detail="internal error")
 
 
 @router.post("/api/chat", response_model=LegacyChatResponse)

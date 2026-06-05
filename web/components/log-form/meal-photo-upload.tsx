@@ -197,8 +197,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
 
         // ── High confidence: auto-save, then offer optional adjustment.
         const saveResult = await saveDietLog(
-          toDietLogItem(parsed, new Date().toISOString()),
-          userId
+          toDietLogItem(parsed, new Date().toISOString())
         );
         loading.dismiss();
 
@@ -275,8 +274,8 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
     };
 
     const result = isUpdate
-      ? await updateDietLog(editing.savedLogId!, next, userId)
-      : await saveDietLog(next, userId);
+      ? await updateDietLog(editing.savedLogId!, next)
+      : await saveDietLog(next);
 
     if (!result.success) {
       setSaving(false);
