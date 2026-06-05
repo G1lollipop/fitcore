@@ -5,7 +5,7 @@ Two responsibilities:
   1. Set safe env vars BEFORE app.main is imported (Settings is lru_cached and
      freezes its values on first read; once frozen, tests can't change backend
      selection without resetting the cache — so we set them upfront).
-  2. Inject a stub RagService so tests don't hit DashScope or Supabase.
+  2. Inject a stub RagService so tests don't hit Gemini or Supabase.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ RAG_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAG_ROOT))
 
 # Test env: set BEFORE importing anything that builds Settings.
-os.environ["DASHSCOPE_API_KEY"] = "test-key"
+os.environ["GOOGLE_AI_STUDIO_API_KEY"] = "test-key"
 os.environ["VECTOR_BACKEND"] = "chroma"
 os.environ["RERANKER_ENABLED"] = "false"
 os.environ["ALLOWED_ORIGINS"] = "*"

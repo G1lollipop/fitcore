@@ -7,14 +7,13 @@ Usage (from repo root):
   .\\.venv\\Scripts\\python scripts\\ingest_seed_kb.py --force
 
 Notes:
-- Requires DASHSCOPE_API_KEY (DashScope embeddings).
+- Requires GOOGLE_AI_STUDIO_API_KEY (Gemini embeddings).
 - Default: md5 de-dup in ./md5.text (identical content skipped — 切到 Supabase 后若仍显示「跳过」请用 --force)。
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from glob import glob
 from pathlib import Path
@@ -36,8 +35,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if not os.getenv("DASHSCOPE_API_KEY"):
-        print("[ingest] Missing DASHSCOPE_API_KEY. Set it in Rag/.env or your environment.")
+    from app.core.settings import get_settings  # noqa: WPS433
+
+    if not get_settings().llm_api_key:
+        print(
+            "[ingest] Missing GOOGLE_AI_STUDIO_API_KEY. Set it in rag/.env or your environment."
+        )
         return 2
 
     from app.infra.supabase_client import supabase_configured, vector_backend  # noqa: WPS433

@@ -1,9 +1,10 @@
 """
 Process-wide embedding client, with optional caching layer.
 
-DashScopeEmbeddings is a thin HTTP client — safe to share across threads,
-and constructing it twice (once per RagService, once per KnowledgeBaseService)
-was pure waste. This module gives all consumers the same instance.
+GoogleGenerativeAIEmbeddings is a thin HTTP client — safe to share across
+threads, and constructing it twice (once per RagService, once per
+KnowledgeBaseService) was pure waste. This module gives all consumers the same
+instance.
 
 When a CacheManager is supplied, the returned client wraps embed_query in
 a cache lookup. embed_documents is intentionally NOT cached — ingest paths
@@ -17,35 +18,42 @@ from __future__ import annotations
 import threading
 from typing import Optional
 
-from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_core.embeddings import Embeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-from app.core import constants as config
+from app.core.settings import get_settings
 from app.infra.cache import CacheManager
 
 
-_raw_embedding: Optional[DashScopeEmbeddings] = None
+_raw_embedding: Optional[Embeddings] = None
 _embedding_lock = threading.Lock()
 
 
-def _get_raw_embedding() -> DashScopeEmbeddings:
+def _get_raw_embedding() -> Embeddings:
     global _raw_embedding
     if _raw_embedding is not None:
         return _raw_embedding
     with _embedding_lock:
         if _raw_embedding is None:
-            _raw_embedding = DashScopeEmbeddings(model=config.embedding_model_name)
+            settings = get_settings()
+            _raw_embedding = GoogleGenerativeAIEmbeddings(
+                model=settings.embedding_model,
+                google_api_key=settings.llm_api_key or None,
+                # Matryoshka truncation so the vector length matches the store's
+                # configured dimension (Supabase migration's vector(N)).
+                output_dimensionality=settings.embedding_dim,
+            )
     return _raw_embedding
 
 
 class CachedEmbeddings(Embeddings):
-    """Wraps a DashScopeEmbeddings to cache embed_query results in a CacheManager.
+    """Wraps an Embeddings to cache embed_query results in a CacheManager.
 
     Implements LangChain's Embeddings interface so any retriever consuming an
     Embeddings instance accepts this transparently.
     """
 
-    def __init__(self, inner: DashScopeEmbeddings, cache_manager: CacheManager):
+    def __init__(self, inner: Embeddings, cache_manager: CacheManager):
         self._inner = inner
         self._cm = cache_manager
 
@@ -65,8 +73,8 @@ class CachedEmbeddings(Embeddings):
 def get_embedding(cache_manager: Optional[CacheManager] = None) -> Embeddings:
     """Returns the shared embedding client.
 
-    Without a cache_manager → raw DashScopeEmbeddings (preserves previous
-    zero-arg behavior used by ingest in kb_service).
+    Without a cache_manager → raw GoogleGenerativeAIEmbeddings (preserves
+    previous zero-arg behavior used by ingest in kb_service).
     With a cache_manager → CachedEmbeddings wrapper. The wrapper itself is
     cheap (two attributes), so callers can construct it on every retriever
     build without singleton concerns.

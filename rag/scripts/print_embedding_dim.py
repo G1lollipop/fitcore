@@ -1,14 +1,16 @@
 """
-Print DashScope embedding dimension for the configured model (validates SQL vector(1024)).
+Print the embedding dimension for the configured Gemini model.
+
+Use it to confirm EMBEDDING_DIM (and the Supabase migration's vector(N)) match
+what the API actually returns.
 
 Usage:
-  cd Rag
-  .venv\\Scripts\\python scripts\\print_embedding_dim.py
+  cd rag
+  ./.venv/bin/python scripts/print_embedding_dim.py
 """
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -19,19 +21,23 @@ from dotenv import load_dotenv
 
 load_dotenv(RAG_ROOT / ".env")
 
-from app.core import constants as config  # noqa: E402
-from langchain_community.embeddings import DashScopeEmbeddings  # noqa: E402
+from app.core.settings import get_settings  # noqa: E402
+from app.infra.embeddings import get_embedding  # noqa: E402
 
 
 def main() -> int:
-    if not os.getenv("DASHSCOPE_API_KEY"):
-        print("Missing DASHSCOPE_API_KEY")
+    settings = get_settings()
+    if not settings.llm_api_key:
+        print("Missing GOOGLE_AI_STUDIO_API_KEY")
         return 2
-    emb = DashScopeEmbeddings(model=config.embedding_model_name)
+    emb = get_embedding()
     v = emb.embed_query("dimension check")
-    print(f"model={config.embedding_model_name} dim={len(v)}")
-    print("Supabase migration vector(N) 中的 N 必须等于上述 dim。")
-    return 0
+    print(
+        f"model={settings.embedding_model} "
+        f"configured_dim={settings.embedding_dim} actual_dim={len(v)}"
+    )
+    print("Supabase migration vector(N) 中的 N 必须等于 actual_dim。")
+    return 0 if len(v) == settings.embedding_dim else 1
 
 
 if __name__ == "__main__":

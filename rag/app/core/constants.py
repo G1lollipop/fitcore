@@ -19,7 +19,7 @@ separators = ["\n\n", "\n", ".", "!", "?", "。", "！", "？", " ", ""]
 max_split_char_number = 1000
 
 # ── Embedding model ───────────────────────────────────────────────────────
-# Hardcoded — DashScope's text-embedding-v4 is the only model the Supabase
-# migration's vector(1024) is dimensioned for. Changing this requires also
-# rerunning the SQL migration with the new dim.
-embedding_model_name = "text-embedding-v4"
+# The embedding model + output dimension now live in app.core.settings
+# (EMBEDDING_MODEL / EMBEDDING_DIM) because the dimension must stay in sync with
+# the Supabase migration's vector(N) and is therefore env-tunable. See
+# app/infra/embeddings.py.

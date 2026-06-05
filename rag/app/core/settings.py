@@ -11,7 +11,7 @@ to the process environment after first read are intentionally NOT picked up;
 this matches the previous behavior where `os.getenv(...)` calls evaluated at
 import time froze the value.
 
-We deliberately do NOT mark DASHSCOPE_API_KEY / SUPABASE_* as required —
+We deliberately do NOT mark the LLM API key / SUPABASE_* as required —
 loading the package without a real API key (e.g. when running tests, or
 importing for static analysis) used to work, and we keep that property.
 Validation happens where the value is actually used (when ChatOpenAI runs, or
@@ -24,7 +24,7 @@ import json
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -50,13 +50,32 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── DashScope (Qwen) ──────────────────────────────────────────────────
-    dashscope_api_key: str = Field(default="", alias="DASHSCOPE_API_KEY")
-    rag_chat_model: str = Field(default="qwen3.5-flash", alias="RAG_CHAT_MODEL")
-    dashscope_base_url: str = Field(
-        default="https://dashscope.aliyuncs.com/compatible-mode/v1",
-        alias="DASHSCOPE_BASE_URL",
+    # ── LLM: Google Gemini (chat + embeddings) ────────────────────────────
+    # Chat runs through Gemini's OpenAI-compatible endpoint (so langchain-openai's
+    # ChatOpenAI works unchanged); embeddings use the native google client.
+    # A single key powers both. We accept several env names so the same Gemini
+    # key works whether it was provisioned as GOOGLE_AI_STUDIO_API_KEY (matches
+    # the web app), GEMINI_API_KEY, or the legacy DASHSCOPE_API_KEY slot.
+    llm_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "GOOGLE_AI_STUDIO_API_KEY", "GEMINI_API_KEY", "DASHSCOPE_API_KEY"
+        ),
     )
+    rag_chat_model: str = Field(default="gemini-2.5-flash", alias="RAG_CHAT_MODEL")
+    llm_base_url: str = Field(
+        default="https://generativelanguage.googleapis.com/v1beta/openai/",
+        validation_alias=AliasChoices("LLM_BASE_URL", "DASHSCOPE_BASE_URL"),
+    )
+
+    # ── Embeddings (Gemini) ───────────────────────────────────────────────
+    # embedding_dim MUST equal the Supabase migration's vector(N). Gemini's
+    # gemini-embedding-001 supports Matryoshka truncation; 768 is a recommended
+    # output size and keeps the pgvector index small.
+    embedding_model: str = Field(
+        default="models/gemini-embedding-001", alias="EMBEDDING_MODEL"
+    )
+    embedding_dim: int = Field(default=768, alias="EMBEDDING_DIM", gt=0)
 
     # ── Vector store backend ──────────────────────────────────────────────
     vector_backend: str = Field(default="chroma", alias="VECTOR_BACKEND")
@@ -122,7 +141,7 @@ class Settings(BaseSettings):
             return v
         return _normalize_pasted_secret(v)
 
-    @field_validator("rag_api_key", mode="before")
+    @field_validator("rag_api_key", "llm_api_key", mode="before")
     @classmethod
     def _normalize_api_key(cls, v: Any) -> Any:
         if not isinstance(v, str):
