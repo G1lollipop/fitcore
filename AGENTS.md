@@ -56,7 +56,48 @@ cd rag
 
 ## Cursor Cloud specific instructions
 
-- 云端 VM 通过 `.cursor/environment.json` 的 `install` 命令安装前后端依赖（`web/` npm + `rag/` venv）。
-- 后端依赖在 `rag/.venv`，运行后端命令请使用 `rag/.venv/bin/...`。
-- 密钥不在仓库内，由 Cursor Dashboard 的 Secrets 注入为环境变量；前后端同名 key 已在 Dashboard 用不同变量名区分。
-- 默认基础镜像若 Node / Python 版本不匹配（需 Node 20、Python 3.11），可在 `.cursor/Dockerfile` 中固定版本并在 `environment.json` 用 `build` 引用。
+### 依赖与镜像
+
+- VM 启动时由 `.cursor/environment.json` 的 `install` 刷新依赖；基础镜像见 `.cursor/Dockerfile`（Node 20 + `python3-venv`）。
+- 后端一律用 `rag/.venv/bin/...`，不要依赖全局 Python。
+- `ruff` 不在 `requirements-dev.txt` 里；需要 lint 时：`rag/.venv/bin/pip install ruff && rag/.venv/bin/ruff check .`
+
+### 环境变量（Secrets → 本地文件）
+
+Secrets 由 Cursor Dashboard 注入进程环境，**不会**自动写入 `.env` / `.env.local`。启动服务前需从 example 复制并填入：
+
+```bash
+cp rag/.env.example rag/.env
+cp web/.env.local.example web/.env.local
+# 将 Dashboard Secrets 写入对应变量（至少 Clerk、Supabase、DASHSCOPE、OPENAI/DashScope key）
+```
+
+| 用途 | 文件 | 必填变量 |
+|------|------|----------|
+| RAG 服务 | `rag/.env` | `DASHSCOPE_API_KEY`；云端建议 `RERANKER_ENABLED=false` |
+| Next.js | `web/.env.local` | Clerk 两把 key、Supabase URL + `SUPABASE_SERVICE_ROLE_KEY`、`RAG_SERVICE_URL=http://127.0.0.1:8000`、`OPENAI_API_KEY` |
+
+无有效 Clerk key 时 `npm run dev` 能启动但页面会 500（`Publishable key not valid`）。
+
+### 启动顺序
+
+1. **RAG**（`:8000`）：`cd rag && ./.venv/bin/uvicorn backend_api:app --host 0.0.0.0 --port 8000`
+2. **（首次）灌库**：`./.venv/bin/python scripts/ingest_seed_kb.py`（需有效 `DASHSCOPE_API_KEY`）
+3. **前端**（`:3000`）：`cd web && npm run dev`
+
+健康检查：`curl http://127.0.0.1:8000/v1/health` → `{"status":"healthy"}`
+
+长期运行的 dev server 建议用 tmux session（例如 `rag-dev-server`、`web-dev-server`），避免单发后台进程难以复查日志。
+
+### 验证命令（不改代码）
+
+| 子项目 | 命令 |
+|--------|------|
+| 后端测试 | `cd rag && ./.venv/bin/python -m pytest` |
+| 后端 lint | `cd rag && ./.venv/bin/ruff check .`（有若干既有 style 告警，非阻塞） |
+| 前端 lint / 类型 | `cd web && npm run lint && npm run typecheck` |
+| 前端构建 | `cd web && npm run build`（不依赖 Clerk 运行时，可离线验证编译） |
+
+### 外部 SaaS（本地不启动）
+
+Clerk、Supabase、DashScope 为托管服务；完整 E2E（登录、dashboard、AI 对话）必须配置上述 Secrets。
