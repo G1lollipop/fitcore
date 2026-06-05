@@ -1,9 +1,10 @@
 /**
  * Server-side Google Gemini client.
  *
- * Used exclusively by the meal-photo vision tool. Kept separate from the
- * existing OpenAI/DashScope client so the two AI vendors can coexist without
- * either's failures affecting the other.
+ * Used by the meal-photo vision tool. The chat/parsing flows talk to Gemini
+ * through its OpenAI-compatible endpoint (see lib/openaiClient.ts); this native
+ * client is kept for the vision API, which the compat layer doesn't cover as
+ * cleanly (inline image data + forced JSON mime type).
  *
  * IMPORTANT: this module reads GOOGLE_AI_STUDIO_API_KEY from process.env, so
  * it MUST only be imported from server-side code (Server Actions, API routes).

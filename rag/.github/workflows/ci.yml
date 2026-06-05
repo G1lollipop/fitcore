@@ -50,7 +50,7 @@ jobs:
         env:
           # Tests should not hit external APIs. If any test reaches for these
           # vars, set them as repo secrets and reference them here.
-          DASHSCOPE_API_KEY: ci-dummy
+          GOOGLE_AI_STUDIO_API_KEY: ci-dummy
           SUPABASE_URL: https://ci-dummy.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ci-dummy
           VECTOR_BACKEND: chroma

@@ -5,7 +5,7 @@ AI 驱动的健身教练应用。前后端合并为一个 monorepo 管理：
 ```
 Fitcore/
 ├── web/   # 前端：Next.js 16 (App Router) + React 19 + Clerk + Supabase
-└── rag/   # 后端：FastAPI + LangChain RAG 检索服务（DashScope/Qwen）
+└── rag/   # 后端：FastAPI + LangChain RAG 检索服务（Google Gemini）
 ```
 
 ## 整体架构
@@ -17,7 +17,7 @@ flowchart TD
     Actions["Server Actions<br/>(web/app/actions/*)"]
     ChatAPI["/api/ai/chat (SSE)<br/>route.ts"]
     Supabase[("Supabase<br/>日志/计划/统计/聊天")]
-    LLM["DashScope·Qwen + Gemini<br/>(LLM / 视觉)"]
+    LLM["Google Gemini<br/>(对话 / 解析 / 视觉 / embedding)"]
     RAG["RAG 服务 FastAPI (rag/)<br/>/v1/retrieve · /v1/chat"]
 
     Browser -->|"受保护路由"| Clerk
@@ -51,7 +51,7 @@ python -m venv .venv
 .venv/Scripts/pip install -r requirements-dev.txt   # Windows
 # source .venv/bin/activate && pip install -r requirements-dev.txt  # macOS/Linux
 
-cp .env.example .env          # 至少配置 DASHSCOPE_API_KEY
+cp .env.example .env          # 至少配置 GOOGLE_AI_STUDIO_API_KEY
 python scripts/ingest_seed_kb.py   # 灌入种子知识库（首次）
 uvicorn backend_api:app --host 0.0.0.0 --port 8000
 ```
@@ -80,11 +80,11 @@ monorepo 下前后端分别部署，互不干扰：
 
 仓库根目录已有 `render.yaml`（Blueprint），其中 `rootDir: rag` 指向后端子目录。
 在 Render 用 **Blueprint** 方式连接本仓库即可自动识别；
-标记为 `sync: false` 的密钥（`DASHSCOPE_API_KEY`、`SUPABASE_*`、`UPSTASH_*` 等）在 Render Dashboard 手动填写。
+标记为 `sync: false` 的密钥（`GOOGLE_AI_STUDIO_API_KEY`、`SUPABASE_*`、`UPSTASH_*` 等）在 Render Dashboard 手动填写。
 
 > 前端的 `RAG_SERVICE_URL` 需指向 Render 上后端服务的公网地址。
 
 ## 技术栈
 
 - **前端**：Next.js 16、React 19、TypeScript、Tailwind CSS 4、shadcn/ui、Clerk、Supabase
-- **后端**：Python 3.11、FastAPI、LangChain 1.x、DashScope（Qwen + text-embedding-v4）、Chroma / Supabase pgvector
+- **后端**：Python 3.11、FastAPI、LangChain 1.x、Google Gemini（gemini-2.5-flash + gemini-embedding-001）、Chroma / Supabase pgvector

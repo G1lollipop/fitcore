@@ -8,7 +8,7 @@ RAG 评估 Pipeline
 
 前置条件：
     1. RAG 后端已启动（python backend_api.py）
-    2. 设置好 DASHSCOPE_API_KEY 环境变量（或在 .env 里）
+    2. 设置好 GOOGLE_AI_STUDIO_API_KEY 环境变量（或在 .env 里）
 
 评估维度（LLM-as-Judge，每项 1-5 分，最终归一化到 0-1）：
     - relevance     : 回答是否切题
@@ -56,13 +56,13 @@ DATASET_PATH = Path(__file__).parent / "golden_dataset.json"
 
 
 def _build_judge_llm() -> ChatOpenAI:
-    """与 RagService 一致：走 DashScope 的 OpenAI 兼容端点 (qwen3.5-* 只在该端点可用)。"""
-    if not _settings.dashscope_api_key:
-        raise RuntimeError("DASHSCOPE_API_KEY 未配置；评判器无法调用 LLM")
+    """与 RagService 一致：走 Gemini 的 OpenAI 兼容端点。"""
+    if not _settings.llm_api_key:
+        raise RuntimeError("LLM API key 未配置 (GOOGLE_AI_STUDIO_API_KEY)；评判器无法调用 LLM")
     return ChatOpenAI(
         model=JUDGE_MODEL,
-        api_key=_settings.dashscope_api_key,
-        base_url=_settings.dashscope_base_url,
+        api_key=_settings.llm_api_key,
+        base_url=_settings.llm_base_url,
         temperature=0,
     )
 
@@ -107,7 +107,7 @@ def call_rag(question: str, session_id: str) -> dict:
 
 def judge_answer(question: str, answer: str, expected_keywords: list[str]) -> dict:
     """
-    用 DashScope（Qwen）作为评判 LLM，对回答质量打分。
+    用 Gemini 作为评判 LLM，对回答质量打分。
     每项满分 5 分，最终归一化到 [0, 1]。
     """
     if not answer.strip():

@@ -9,7 +9,7 @@ Two layers:
   2. RagService caches that None decision (sticky _compression_attempted) so we
      don't re-run the build path per request.
 
-These are pure unit tests — no chroma, no embeddings, no DashScope.
+These are pure unit tests — no chroma, no embeddings, no Gemini.
 """
 
 from __future__ import annotations
@@ -98,7 +98,7 @@ def test_returns_none_on_init_failure(monkeypatch):
 
 def _make_bare_rag_service():
     """Construct just enough of RagService to exercise _get_compression_retriever
-    without booting embeddings / ChromaDB / DashScope."""
+    without booting embeddings / ChromaDB / Gemini."""
     from app.services.rag_service import RagService
 
     svc = RagService.__new__(RagService)

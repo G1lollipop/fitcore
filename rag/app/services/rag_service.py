@@ -51,12 +51,14 @@ class RagService(object):
         # re-enter the build path (and re-print its降级 message) per query.
         self._compression_attempted: bool = False
         self.prompt_template = RAG_CHAT_PROMPT
-        if not settings.dashscope_api_key:
-            raise RuntimeError("DASHSCOPE_API_KEY is not set; cannot build chat model")
+        if not settings.llm_api_key:
+            raise RuntimeError(
+                "LLM API key is not set (GOOGLE_AI_STUDIO_API_KEY); cannot build chat model"
+            )
         self.chat_model = ChatOpenAI(
             model=settings.rag_chat_model,
-            api_key=settings.dashscope_api_key,
-            base_url=settings.dashscope_base_url,
+            api_key=settings.llm_api_key,
+            base_url=settings.llm_base_url,
         )
         self.chain = self.__get_chain()
 

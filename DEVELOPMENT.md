@@ -28,13 +28,13 @@ FitCore 是 AI 驱动的健身教练应用，前后端分离、合并在一个 m
 浏览器
   ├── Server Actions ─────────────► Supabase（日志 / 计划 / 统计等业务数据 CRUD）
   └── fetch /api/ai/chat (SSE) ───► Next 服务端 Agent (web/lib/ai/agent.ts)
-                                      ├── DashScope / Qwen（对话 + 工具调用）
+                                      ├── Google Gemini（对话 + 工具调用）
                                       ├── Gemini（拍照识别饭菜的视觉工具）
                                       ├── Supabase（用户上下文、聊天记录）
                                       └── RAG 服务 POST /v1/retrieve ──► FastAPI (rag/)
                                                                           ├── 向量检索 + BM25 融合
                                                                           ├── 可选 CrossEncoder 重排
-                                                                          └── Qwen 生成（/v1/chat 路径）
+                                                                          └── Gemini 生成（/v1/chat 路径）
 ```
 
 要点：
@@ -107,8 +107,7 @@ Fitcore/
 
 - **Clerk**（鉴权）
 - **Supabase**（业务数据库；若后端用 pgvector 也复用）
-- **DashScope / 阿里云百炼**（Qwen 对话 + `text-embedding-v4` 向量）
-- **Google AI Studio**（Gemini 视觉，仅拍照识别饭菜功能）
+- **Google AI Studio (Gemini)**（对话 + 结构化解析 + 视觉 + `gemini-embedding-001` 向量，一个 key 覆盖全部）
 - **Upstash Redis**（可选，后端检索缓存）
 
 ---
@@ -131,8 +130,8 @@ pip install -r requirements-dev.txt   # = 生产依赖 + pytest（不含重排�
 # 可选：本地启用 CrossEncoder 重排序
 # pip install torch sentence-transformers
 
-cp .env.example .env                   # 至少填 DASHSCOPE_API_KEY
-python scripts/print_embedding_dim.py  # 确认向量维度（默认 1024）
+cp .env.example .env                   # 至少填 GOOGLE_AI_STUDIO_API_KEY
+python scripts/print_embedding_dim.py  # 确认向量维度（默认 768）
 python scripts/ingest_seed_kb.py       # 灌入 data/fitcore_kb_*.txt 种子知识库
 
 uvicorn backend_api:app --host 0.0.0.0 --port 8000 --reload
@@ -165,9 +164,10 @@ npm run dev
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
 | `RAG_SERVICE_URL` | ✅ | 后端 RAG 服务地址（本地默认 `http://127.0.0.1:8000`） |
 | `RAG_CLIENT_TIMEOUT_MS` | | RAG 调用超时（默认 120000，冷启动时调大） |
-| `OPENAI_API_KEY` | ✅ | DashScope 兼容 key（Agent / NLP 解析用） |
-| `AI_CHAT_MODEL` / `AI_FAST_MODEL` | | 模型名（默认 `qwen3.5-flash`） |
-| `GOOGLE_AI_STUDIO_API_KEY` | | Gemini key，仅拍照识别饭菜功能 |
+| `GOOGLE_AI_STUDIO_API_KEY` | ✅ | Gemini key，覆盖对话/解析/视觉全部 AI 功能 |
+| `AI_CHAT_MODEL` / `AI_FAST_MODEL` | | 模型名（默认 `gemini-2.5-flash`） |
+| `GEMINI_VISION_MODEL` | | 拍照识别饭菜的视觉模型（默认 `gemini-2.5-flash`） |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | | 可选：指向其他 OpenAI 兼容供应商时覆盖 Gemini 默认 |
 | `GEMINI_VISION_MODEL` | | 默认 `gemini-2.5-flash` |
 | `AI_CHAT_DEBUG_META` / `RAG_VECTOR_BACKEND` | | 调试用，响应 meta 附带检索后端信息 |
 
@@ -175,9 +175,10 @@ npm run dev
 
 | 变量 | 必填 | 说明 |
 |------|------|------|
-| `DASHSCOPE_API_KEY` | ✅ | Qwen 对话 + 向量 |
-| `RAG_CHAT_MODEL` | | 默认 `qwen3.5-flash` |
-| `DASHSCOPE_BASE_URL` | | OpenAI 兼容端点（新版 Qwen 仅此端点可用） |
+| `GOOGLE_AI_STUDIO_API_KEY` | ✅ | Gemini key（chat + embedding 共用；也接受 `GEMINI_API_KEY` / `DASHSCOPE_API_KEY`） |
+| `RAG_CHAT_MODEL` | | 默认 `gemini-2.5-flash` |
+| `EMBEDDING_MODEL` / `EMBEDDING_DIM` | | embedding 模型与维度（默认 `models/gemini-embedding-001` / `768`，须与 migration 一致） |
+| `LLM_BASE_URL` | | OpenAI 兼容 chat 端点（默认 Gemini） |
 | `VECTOR_BACKEND` | ✅ | `chroma`（本地默认）或 `supabase`（pgvector） |
 | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | △ | 仅 `VECTOR_BACKEND=supabase` 时必填 |
 | `RERANKER_ENABLED` | | `true` 启用重排序（需 torch）；云端必须 `false` |
@@ -221,7 +222,7 @@ npm run dev
         → [可选] CrossEncoder 重排 (RERANKER_ENABLED=true)
         → 自适应 topK ∈ {3,5,8}（compute_retrieval_k，调用方可强制 1–20）
         → 拼接 [资料N] 上下文 + 引用
-        → Qwen 生成（注入 userContext 个性化 + 文件型会话历史）
+        → Gemini 生成（注入 userContext 个性化 + 文件型会话历史）
 ```
 
 关键文件：`app/services/rag_service.py`（编排）、`app/services/retrieval/*`（检索后端）、`app/infra/embeddings.py`、`app/prompts/rag_chat.py`。
@@ -231,7 +232,7 @@ npm run dev
 1. 解析：`parsers/`（TXT/PDF/DOCX/MD/HTML）
 2. 去重：MD5（`app/ingest/md5_store.py` → `./md5.text`）
 3. 切分：`RecursiveCharacterTextSplitter`（chunk 1000 / overlap 100，见 `app/core/constants.py`）
-4. 向量化：`text-embedding-v4`（1024 维）
+4. 向量化：`gemini-embedding-001`（默认 768 维，可调 `EMBEDDING_DIM`）
 5. 写入：Chroma（`./chroma`）或 Supabase（`rag_kb_chunks`）
 
 ```bash
@@ -244,7 +245,7 @@ python scripts/ingest_seed_kb.py --force    # 切换向量后端 / 重灌时强�
 ### 6.4 向量后端切换
 
 - **Chroma（默认）**：零配置，数据落在 `./chroma`。
-- **Supabase pgvector**：先执行 `supabase/migrations/20260415120000_rag_kb_chunks.sql`，设 `VECTOR_BACKEND=supabase` + `SUPABASE_*`，再 `ingest_seed_kb.py --force`。若维度不是 1024，改 migration 里的 `vector(1024)`。
+- **Supabase pgvector**：先执行 `supabase/migrations/20260415120000_rag_kb_chunks.sql`，设 `VECTOR_BACKEND=supabase` + `SUPABASE_*`，再 `ingest_seed_kb.py --force`。若维度不是 768，改 migration 里的 `vector(768)`（或调 `EMBEDDING_DIM`）。
 
 ### 6.5 测试与评估
 
@@ -333,7 +334,7 @@ npx shadcn@latest add <component>
 
 ### 后端 → Render
 - 仓库根 `render.yaml` 已配 `rootDir: rag` + Docker；用 **Blueprint** 方式连接仓库
-- 标 `sync: false` 的密钥（`DASHSCOPE_API_KEY`、`SUPABASE_*`、`UPSTASH_*`、`ALLOWED_ORIGINS`）在 Render Dashboard 手填
+- 标 `sync: false` 的密钥（`GOOGLE_AI_STUDIO_API_KEY`、`SUPABASE_*`、`UPSTASH_*`、`ALLOWED_ORIGINS`）在 Render Dashboard 手填
 - 免费实例内存受限，`RERANKER_ENABLED` 保持 `false`，`VECTOR_BACKEND=supabase`
 
 > 已有 Vercel / Render 项目时，无需重建：改「连接仓库 + Root Directory」即可，环境变量保留。Render 免费版有冷启动（闲置后首次请求需数十秒唤醒）。

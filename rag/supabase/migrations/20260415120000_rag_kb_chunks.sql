@@ -1,8 +1,9 @@
 -- Fitcore RAG: knowledge chunks + pgvector similarity search.
 -- Run in Supabase SQL Editor (Dashboard → SQL) or via CLI link.
 --
--- IMPORTANT: vector(1024) must match DashScope text-embedding-v4 default output length.
--- If your embeddings differ, change 1024 everywhere below (and recreate the table if already applied).
+-- IMPORTANT: vector(768) must match the configured Gemini embedding output
+-- length (gemini-embedding-001 truncated to EMBEDDING_DIM=768). If you change
+-- EMBEDDING_DIM, change 768 everywhere below and recreate the table / RPC.
 
 create extension if not exists vector;
 
@@ -12,7 +13,7 @@ create table if not exists public.rag_kb_chunks (
   chunk_index int not null,
   title text,
   content text not null,
-  embedding vector(1024) not null,
+  embedding vector(768) not null,
   doc_metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   unique (source, chunk_index)
@@ -31,7 +32,7 @@ create index if not exists rag_kb_chunks_source_idx on public.rag_kb_chunks (sou
 
 -- RPC for PostgREST: used by RAG service (service_role).
 create or replace function public.match_rag_kb_chunks(
-  query_embedding vector(1024),
+  query_embedding vector(768),
   match_count int default 10
 )
 returns table (

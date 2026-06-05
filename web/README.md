@@ -31,7 +31,7 @@ flowchart TD
     end
 
     subgraph Pipeline ["检索 Pipeline"]
-        Vec["向量检索\nDashScope Embeddings\ntext-embedding-v4"]
+        Vec["向量检索\nGemini Embeddings\ngemini-embedding-001"]
         BM25["BM25 关键词检索"]
         Ensemble["Ensemble Retriever\n权重 50/50"]
         Rerank["CrossEncoder 重排序\nbge-reranker-base"]
@@ -43,9 +43,9 @@ flowchart TD
         Chroma[("Chroma\n本地向量库")]
     end
 
-    subgraph LLM ["LLM · Alibaba DashScope"]
-        Qwen1["qwen3.5-flash\nAgent 规划（低温度）"]
-        Qwen2["qwen3.5-flash\n流式生成（高温度）"]
+    subgraph LLM ["LLM · Google Gemini"]
+        Qwen1["gemini-2.5-flash\nAgent 规划（低温度）"]
+        Qwen2["gemini-2.5-flash\n流式生成（高温度）"]
     end
 
     User -->|"输入消息"| Widget
@@ -85,8 +85,8 @@ flowchart TD
 | **后端框架** | FastAPI · Uvicorn (Python) |
 | **RAG 框架** | LangChain 1.2 · LangChain Community |
 | **向量数据库** | Supabase pgvector（生产）· Chroma（本地） |
-| **Embedding 模型** | DashScope text-embedding-v4（1024 维） |
-| **Chat 模型** | Alibaba Qwen (默认 qwen3.5-flash，可通过环境变量切换) via DashScope |
+| **Embedding 模型** | Gemini gemini-embedding-001（默认 768 维，可调 EMBEDDING_DIM） |
+| **Chat 模型** | Google Gemini (默认 gemini-2.5-flash，可通过环境变量切换) via OpenAI 兼容端点 |
 | **重排序** | HuggingFace CrossEncoder (bge-reranker-base) |
 | **数据库** | Supabase PostgreSQL |
 | **部署** | Vercel（前端）· 自有服务器（RAG 后端） |
@@ -178,7 +178,7 @@ Fitcore/
 
 ```bash
 cd fitcore-web
-cp .env.local.example .env.local   # 填写 Clerk / Supabase / DashScope key
+cp .env.local.example .env.local   # 填写 Clerk / Supabase / Gemini key
 npm install
 npm run dev
 ```
@@ -187,7 +187,7 @@ npm run dev
 
 ```bash
 cd Rag
-cp .env.example .env               # 填写 DASHSCOPE_API_KEY 等
+cp .env.example .env               # 填写 GOOGLE_AI_STUDIO_API_KEY 等
 pip install -r requirements.txt
 python backend_api.py              # 启动在 :8000
 ```
@@ -212,22 +212,27 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=   # 服务端专用（server action + middleware），绕过 RLS，禁止暴露到浏览器
-OPENAI_API_KEY=          # DashScope API Key（OpenAI 兼容）
-OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-AI_CHAT_MODEL=qwen3.5-flash
-AI_FAST_MODEL=qwen3.5-flash
+GOOGLE_AI_STUDIO_API_KEY=    # 一个 Gemini key 覆盖对话/解析/视觉全部 AI 功能
+AI_CHAT_MODEL=gemini-2.5-flash
+AI_FAST_MODEL=gemini-2.5-flash
+GEMINI_VISION_MODEL=gemini-2.5-flash
 RAG_SERVICE_URL=http://your-rag-server:8000
+# 可选：指向其他 OpenAI 兼容供应商（设置后覆盖 Gemini 默认）
+# OPENAI_API_KEY=
+# OPENAI_BASE_URL=
 ```
 
 ### RAG 后端 (`Rag/.env`)
 
 ```env
-DASHSCOPE_API_KEY=
-RAG_CHAT_MODEL=qwen3.5-flash
+GOOGLE_AI_STUDIO_API_KEY=        # Gemini key（chat + embedding 共用）
+RAG_CHAT_MODEL=gemini-2.5-flash
+EMBEDDING_MODEL=models/gemini-embedding-001
+EMBEDDING_DIM=768                # 必须与 Supabase migration 的 vector(N) 一致
 VECTOR_BACKEND=supabase          # 或 chroma
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 RERANKER_ENABLED=true
 RERANKER_MODEL_NAME=             # HuggingFace model id，或留空用本地路径
-EVAL_JUDGE_MODEL=qwen3.5-flash
+EVAL_JUDGE_MODEL=gemini-2.5-flash
 ```
