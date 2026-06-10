@@ -77,6 +77,18 @@ class Settings(BaseSettings):
     )
     embedding_dim: int = Field(default=768, alias="EMBEDDING_DIM", gt=0)
 
+    # ── Chunking (ingest-time text splitting) ─────────────────────────────
+    # "semantic" = embedding-based SemanticChunker (splits at meaning shifts;
+    # better for long-form docs, costs extra embedding calls at ingest).
+    # "recursive" = RecursiveCharacterTextSplitter (fast, char-based).
+    # Falls back to recursive if langchain-experimental isn't installed.
+    chunking_strategy: str = Field(default="semantic", alias="CHUNKING_STRATEGY")
+    # Breakpoint detection for SemanticChunker: percentile | standard_deviation
+    # | interquartile | gradient.
+    semantic_breakpoint_type: str = Field(
+        default="percentile", alias="SEMANTIC_BREAKPOINT_TYPE"
+    )
+
     # ── Vector store backend ──────────────────────────────────────────────
     vector_backend: str = Field(default="chroma", alias="VECTOR_BACKEND")
     supabase_url: str = Field(default="", alias="SUPABASE_URL")

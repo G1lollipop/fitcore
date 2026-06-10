@@ -7,11 +7,49 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from langchain_chroma import Chroma
+from langchain_core.embeddings import Embeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.core import constants as config
+from app.core.settings import get_settings
 from app.infra.cache import CacheManager
 from app.infra.embeddings import get_embedding
+
+
+def _build_text_splitter(embedding: Embeddings):
+    """Return the configured text splitter.
+
+    CHUNKING_STRATEGY=semantic uses the embedding-based SemanticChunker, which
+    splits where the meaning shifts (better recall on long docs). It needs
+    langchain-experimental (ingest-only dep) — if that's missing or fails to
+    init, we transparently fall back to the recursive char splitter so ingest
+    never breaks. Both expose split_text(text) -> list[str].
+    """
+    settings = get_settings()
+    if (settings.chunking_strategy or "").strip().lower() == "semantic":
+        try:
+            from langchain_experimental.text_splitter import SemanticChunker
+
+            print(
+                "[kb] chunking=semantic "
+                f"(breakpoint_threshold_type={settings.semantic_breakpoint_type})"
+            )
+            return SemanticChunker(
+                embedding,
+                breakpoint_threshold_type=settings.semantic_breakpoint_type,
+            )
+        except Exception as exc:  # noqa: BLE001 (ingest path — degrade gracefully)
+            print(
+                f"[kb] SemanticChunker unavailable ({exc}); "
+                "falling back to RecursiveCharacterTextSplitter"
+            )
+
+    return RecursiveCharacterTextSplitter(
+        chunk_size=config.chunk_size,
+        chunk_overlap=config.chunk_overlap,
+        separators=config.separators,
+        length_function=len,
+    )
 from app.infra.supabase_client import (
     get_supabase_client,
     supabase_configured,
@@ -42,12 +80,7 @@ class KnowledgeBaseService(object):
                 embedding_function=self._embedding,
                 persist_directory=config.persist_directory,
             )
-        self.spliter = RecursiveCharacterTextSplitter(
-            chunk_size=config.chunk_size,
-            chunk_overlap=config.chunk_overlap,
-            separators=config.separators,
-            length_function=len,
-        )
+        self.spliter = _build_text_splitter(self._embedding)
 
     def upload_by_str(
         self,

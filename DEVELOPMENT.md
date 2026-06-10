@@ -231,7 +231,7 @@ npm run dev
 
 1. 解析：`parsers/`（TXT/PDF/DOCX/MD/HTML）
 2. 去重：MD5（`app/ingest/md5_store.py` → `./md5.text`）
-3. 切分：`RecursiveCharacterTextSplitter`（chunk 1000 / overlap 100，见 `app/core/constants.py`）
+3. 切分：默认 `SemanticChunker`（语义切片，`CHUNKING_STRATEGY=semantic`，按 embedding 语义断点切；缺 `langchain-experimental` 时自动回退到 `RecursiveCharacterTextSplitter` 1000/100）
 4. 向量化：`gemini-embedding-001`（默认 768 维，可调 `EMBEDDING_DIM`）
 5. 写入：Chroma（`./chroma`）或 Supabase（`rag_kb_chunks`）
 

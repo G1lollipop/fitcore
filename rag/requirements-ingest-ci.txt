@@ -18,3 +18,5 @@ PyYAML>=6.0.0
 # Source fetching (scripts/fetch_sources.py): HTML extraction + PDF download
 trafilatura>=1.6.0
 requests>=2.31.0
+# Semantic chunking (CHUNKING_STRATEGY=semantic) for ingest
+langchain-experimental>=0.3.0

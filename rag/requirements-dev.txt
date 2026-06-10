@@ -11,3 +11,5 @@ pytest-asyncio>=1.3.0
 # Knowledge-base source fetching (scripts/fetch_sources.py)
 trafilatura>=1.6.0
 PyYAML>=6.0.0
+# Semantic chunking (CHUNKING_STRATEGY=semantic)
+langchain-experimental>=0.3.0
