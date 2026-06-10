@@ -27,7 +27,7 @@ load_dotenv(RAG_ROOT / ".env")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Ingest fitcore_kb_*.txt into vector store")
+    parser = argparse.ArgumentParser(description="Ingest data/kb_*.txt + auto_*.txt into vector store")
     parser.add_argument(
         "--force",
         action="store_true",
@@ -60,8 +60,11 @@ def main() -> int:
     cache_manager = CacheManager()
     service = KnowledgeBaseService(cache_manager=cache_manager)
 
+    # KB files: curated summaries (kb_*.txt) plus auto-fetched sources
+    # (auto_*.txt produced by scripts/fetch_sources.py).
     patterns = [
-        str(RAG_ROOT / "data" / "fitcore_kb_*.txt"),
+        str(RAG_ROOT / "data" / "kb_*.txt"),
+        str(RAG_ROOT / "data" / "auto_*.txt"),
     ]
 
     files: list[Path] = []

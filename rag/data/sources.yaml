@@ -1,0 +1,85 @@
+# Knowledge-base source registry (authoritative, license-clean English sources).
+#
+# How this is used:
+#   - `curated: true`  → a hand-written, verified summary already lives in
+#       data/<curated_file>. scripts/fetch_sources.py SKIPS these (no dup).
+#   - `fetch: true`    → scripts/fetch_sources.py downloads the URL, extracts
+#       clean text (HTML via trafilatura, PDF via pypdf) and writes
+#       data/auto_<id>.txt with a provenance header. These then get embedded by
+#       scripts/ingest_seed_kb.py like any other data/*.txt file.
+#
+# Only add sources that are freely licensed (CC-BY / public domain / official
+# guidelines). Do NOT add paywalled/copyrighted content (Examine, MASS, etc.).
+
+sources:
+  # ── Curated ISSN position stands (summaries committed in data/) ──────────
+  - id: issn_protein
+    title: "ISSN Position Stand: Protein and Exercise"
+    url: https://pmc.ncbi.nlm.nih.gov/articles/PMC5477153/
+    type: html
+    license: CC BY 4.0
+    tags: [protein, hypertrophy, fat loss, recovery]
+    curated: true
+    curated_file: kb_01_protein_and_exercise.txt
+
+  - id: issn_creatine
+    title: "ISSN Position Stand: Creatine Supplementation and Exercise"
+    url: https://pmc.ncbi.nlm.nih.gov/articles/PMC2048496/
+    type: html
+    license: CC BY
+    tags: [creatine, supplements, strength, lean mass]
+    curated: true
+    curated_file: kb_02_creatine_supplementation.txt
+
+  - id: issn_nutrient_timing
+    title: "ISSN Position Stand: Nutrient Timing"
+    url: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5596471/
+    type: html
+    license: CC BY 4.0
+    tags: [nutrient timing, carbohydrate, protein, glycogen]
+    curated: true
+    curated_file: kb_03_nutrient_timing.txt
+
+  - id: issn_caffeine
+    title: "ISSN Position Stand: Caffeine and Exercise Performance"
+    url: https://jissn.biomedcentral.com/articles/10.1186/s12970-020-00383-4
+    type: html
+    license: CC BY 4.0
+    tags: [caffeine, ergogenic aid, endurance, strength]
+    curated: true
+    curated_file: kb_04_caffeine_and_performance.txt
+
+  - id: issn_diets_body_composition
+    title: "ISSN Position Stand: Diets and Body Composition"
+    url: https://link.springer.com/article/10.1186/s12970-017-0174-y
+    type: html
+    license: CC BY 4.0
+    tags: [fat loss, muscle gain, calorie balance, adherence]
+    curated: true
+    curated_file: kb_05_diets_and_body_composition.txt
+
+  # ── Auto-fetched sources (fetch_sources.py downloads + extracts) ─────────
+  # Toggle `fetch: true` and run scripts/fetch_sources.py to pull these.
+  - id: issn_review_2018
+    title: "ISSN Exercise & Sports Nutrition Review Update: Research & Recommendations"
+    url: https://link.springer.com/article/10.1186/s12970-018-0242-y
+    type: html
+    license: CC BY 4.0
+    tags: [nutrition, supplements, macronutrients, hydration]
+    fetch: true
+
+  - id: who_physical_activity_2020
+    title: "WHO Guidelines on Physical Activity and Sedentary Behaviour (2020)"
+    url: https://iris.who.int/bitstream/handle/10665/336656/9789240015128-eng.pdf
+    type: pdf
+    license: CC BY-NC-SA 3.0 IGO
+    tags: [physical activity, public health, exercise guidelines]
+    fetch: true
+
+  - id: dietary_guidelines_2020_2025
+    title: "Dietary Guidelines for Americans, 2020-2025"
+    url: https://www.dietaryguidelines.gov/sites/default/files/2020-12/Dietary_Guidelines_for_Americans_2020-2025.pdf
+    type: pdf
+    license: Public Domain (US Government work)
+    tags: [diet, nutrition, public health, food groups]
+    fetch: true

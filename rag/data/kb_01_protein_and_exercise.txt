@@ -1,0 +1,39 @@
+Title: Protein Intake for Exercising Individuals
+Source: ISSN Position Stand — Protein and Exercise (Jäger et al., 2017)
+URL: https://pmc.ncbi.nlm.nih.gov/articles/PMC5477153/
+DOI: 10.1186/s12970-017-0177-8
+License: CC BY 4.0 (Journal of the International Society of Sports Nutrition)
+Tags: protein; muscle protein synthesis; hypertrophy; fat loss; recovery; nutrition
+
+Summary (evidence-based position of the International Society of Sports Nutrition):
+
+1. Resistance exercise and protein ingestion both stimulate muscle protein synthesis (MPS) and are synergistic when protein is consumed shortly before or after training.
+
+2. For building and maintaining muscle, an overall daily protein intake of 1.4–2.0 g protein per kg body weight per day is sufficient for most exercising individuals. This falls within the Institute of Medicine's Acceptable Macronutrient Distribution Range.
+
+3. Higher intakes of 2.3–3.1 g/kg/day may be needed to preserve lean body mass in resistance-trained people during a calorie deficit (cutting/fat loss).
+
+4. There is novel evidence that intakes above 3.0 g/kg/day may improve body composition (more fat loss) in resistance-trained individuals, with no harm to healthy people.
+
+5. To maximize MPS per meal, aim for roughly 0.25 g/kg body weight per serving, or an absolute dose of 20–40 g of high-quality protein.
+
+6. Each protein dose should ideally contain 700–3000 mg of leucine plus a full spread of essential amino acids (EAAs).
+
+7. Distribute protein evenly across the day, roughly every 3–4 hours.
+
+8. Timing is flexible: the anabolic effect of a training session lasts at least 24 hours, though it diminishes as time passes. Pre- or post-workout protein both work — choose what fits your tolerance and schedule.
+
+9. Whole foods can meet protein needs, but supplements (e.g., whey, casein) are a practical way to hit quality and quantity targets while controlling calories.
+
+10. Rapidly digested proteins high in EAAs and leucine are most effective at stimulating MPS. Prioritize complete protein sources that contain all EAAs.
+
+11. Endurance athletes should first secure adequate carbohydrate for performance; added protein can help offset muscle damage and support recovery.
+
+12. A pre-sleep dose of casein (30–40 g) increases overnight MPS and metabolic rate without impairing fat breakdown.
+
+Practical takeaways:
+- Most lifters: target ~1.6 g/kg/day as a solid default; go higher (up to ~2.4 g/kg) when dieting to protect muscle.
+- Spread intake across 3–5 meals of 20–40 g each.
+- Don't obsess over a narrow "anabolic window"; total daily protein and consistency matter most.
+
+Disclaimer: General fitness/nutrition education, not medical advice. People with kidney disease or other medical conditions should consult a physician before changing protein intake.

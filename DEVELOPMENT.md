@@ -79,7 +79,7 @@ Fitcore/
 │   │   ├── ingest/           # MD5 去重 / Supabase 写入
 │   │   └── core/             # settings.py / constants.py
 │   ├── parsers/              # TXT/PDF/DOCX/MD/HTML 解析
-│   ├── data/                 # 种子知识库 fitcore_kb_*.txt
+│   ├── data/                 # 知识库：kb_*.txt（策选）+ auto_*.txt（自动抓取）+ sources.yaml
 │   ├── scripts/              # ingest_seed_kb / print_embedding_dim / download_reranker
 │   ├── eval/                 # LLM-as-Judge 评估
 │   ├── supabase/migrations/  # pgvector 表 + RPC
@@ -132,7 +132,7 @@ pip install -r requirements-dev.txt   # = 生产依赖 + pytest（不含重排�
 
 cp .env.example .env                   # 至少填 GOOGLE_AI_STUDIO_API_KEY
 python scripts/print_embedding_dim.py  # 确认向量维度（默认 768）
-python scripts/ingest_seed_kb.py       # 灌入 data/fitcore_kb_*.txt 种子知识库
+python scripts/ingest_seed_kb.py       # 灌入 data/kb_*.txt + auto_*.txt 知识库
 
 uvicorn backend_api:app --host 0.0.0.0 --port 8000 --reload
 ```
@@ -236,11 +236,15 @@ npm run dev
 5. 写入：Chroma（`./chroma`）或 Supabase（`rag_kb_chunks`）
 
 ```bash
-python scripts/ingest_seed_kb.py            # 灌入 data/fitcore_kb_*.txt
+python scripts/fetch_sources.py             # 可选：按 data/sources.yaml 抓取权威英文源 → data/auto_*.txt
+python scripts/ingest_seed_kb.py            # 灌入 data/kb_*.txt + auto_*.txt
 python scripts/ingest_seed_kb.py --force    # 切换向量后端 / 重灌时强制覆盖
 ```
 
-> 想新增知识：把文件放到 `data/` 并命名为 `fitcore_kb_*.txt`（当前灌库脚本只匹配该前缀），或扩展脚本的匹配规则。
+> 知识库数据源（英文、循证、可免费用）登记在 `data/sources.yaml`：
+> - `kb_*.txt`：人工策选的高信号摘要（如 ISSN 立场声明），直接提交在仓库里。
+> - `auto_*.txt`：`scripts/fetch_sources.py` 按清单自动抓取（HTML→trafilatura，PDF→pypdf）并带出处头部。
+> 想新增知识：在 `sources.yaml` 加一条 `fetch: true` 的权威来源后跑 `fetch_sources.py`，或直接把 `kb_*.txt` 放进 `data/`。只收录 CC-BY / 公共领域 / 官方指南，避免版权内容。
 
 ### 6.4 向量后端切换
 

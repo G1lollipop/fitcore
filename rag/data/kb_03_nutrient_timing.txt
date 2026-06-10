@@ -1,0 +1,35 @@
+Title: Nutrient Timing (Carbohydrate & Protein)
+Source: ISSN Position Stand — Nutrient Timing (Kerksick et al., 2017)
+URL: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5596471/
+DOI: 10.1186/s12970-017-0189-4
+License: CC BY 4.0 (Journal of the International Society of Sports Nutrition)
+Tags: nutrient timing; carbohydrate; protein; glycogen; recovery; meal frequency
+
+Summary (evidence-based position of the International Society of Sports Nutrition):
+
+1. Nutrient timing — planned intake of whole foods, fortified foods, and supplements — can enhance recovery and tissue repair, augment muscle protein synthesis (MPS), and improve mood after high-volume or intense exercise.
+
+2. Glycogen stores are maximized by a high-carbohydrate diet (8–12 g carbohydrate/kg/day) and are depleted most by high-volume exercise.
+
+3. If glycogen must be restored quickly (< 4 h recovery), consider: aggressive carbohydrate refeeding (1.2 g/kg/h, favoring high-glycemic >70 sources); adding caffeine (3–8 mg/kg); or combining carbohydrate (0.8 g/kg/h) with protein (0.2–0.4 g/kg/h).
+
+4. During long (>60 min) high-intensity exercise, consume ~30–60 g carbohydrate/h in a 6–8% carbohydrate-electrolyte solution every 10–15 min. If carbohydrate intake is inadequate, adding protein can help performance and reduce muscle damage.
+
+5. Carbohydrate during resistance training promotes stable blood glucose and higher glycogen; combined with protein it can reduce muscle damage and improve adaptations.
+
+6. Meeting total daily protein — ideally as evenly spaced feedings (~every 3 h) — should be the primary emphasis for exercising individuals.
+
+7. About 10 g of essential amino acids (free form or within a 20–40 g protein bolus) maximally stimulates MPS.
+
+8. Pre- and/or post-exercise protein (with or without carbohydrate) supports strength and body-composition gains. The size/timing of a pre-workout meal affects how much post-workout protein is needed.
+
+9. A 20–40 g protein dose (0.25–0.40 g/kg/dose) every 3–4 hours most favorably affects MPS and is linked to better body composition and performance.
+
+10. Casein (~30–40 g) before sleep acutely raises overnight MPS and metabolic rate without impairing fat breakdown.
+
+Practical takeaways:
+- Total daily intake (calories, protein, carbs) is the foundation; timing is the fine-tuning on top.
+- The "anabolic window" is wider than once believed — getting protein within a few hours of training is sufficient for most.
+- Time carbs around hard or long sessions for performance and recovery.
+
+Disclaimer: General fitness/nutrition education, not medical advice.

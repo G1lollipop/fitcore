@@ -70,7 +70,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-ingest-ci.txt
 
-      - name: Ingest seed KB to Supabase
+      # Best-effort: pull the auto-fetch sources listed in data/sources.yaml
+      # (fetch: true) into data/auto_*.txt. A broken source URL must not block
+      # ingesting the curated kb_*.txt, so this step never fails the job.
+      - name: Fetch auto sources (best-effort)
+        continue-on-error: true
+        run: python scripts/fetch_sources.py
+
+      - name: Ingest KB to Supabase
         env:
           VECTOR_BACKEND: supabase
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

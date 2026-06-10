@@ -1,0 +1,33 @@
+Title: Creatine Monohydrate Supplementation
+Source: ISSN Position Stand — Creatine Supplementation and Exercise (Buford et al., 2007); updated safety & efficacy review (Kreider et al., 2017)
+URL: https://pmc.ncbi.nlm.nih.gov/articles/PMC2048496/
+DOI: 10.1186/1550-2783-4-6
+License: CC BY (Journal of the International Society of Sports Nutrition)
+Tags: creatine; supplements; strength; power; lean mass; loading; safety
+
+Summary (evidence-based position of the International Society of Sports Nutrition):
+
+1. Creatine monohydrate is the most effective ergogenic nutritional supplement currently available for increasing high-intensity exercise capacity and lean body mass during training.
+
+2. Creatine monohydrate supplementation is not only safe but may be beneficial for injury prevention and the management of certain medical conditions when taken within recommended guidelines.
+
+3. There is no scientific evidence that short- or long-term creatine monohydrate use harms otherwise healthy individuals. Long-term studies (up to 30 g/day for 5 years) report it is safe and well tolerated.
+
+4. Creatine monohydrate is the most extensively studied and clinically effective form for muscle uptake and improving high-intensity exercise capacity. Newer "advanced" forms are not proven superior.
+
+5. Adding carbohydrate, or carbohydrate plus protein, to creatine increases muscle creatine retention, though the performance benefit over creatine alone may be small.
+
+Dosing:
+- Fast method ("loading"): ~0.3 g/kg/day for 5–7 days (e.g., ~5 g taken 4×/day), then 3–5 g/day to maintain elevated stores.
+- Slower method (no loading): 3 g/day for ~28 days reaches similar muscle stores; the ergogenic effect just appears more gradually.
+
+Common myths that are NOT supported by evidence:
+- "All weight gained is just water." (Lean mass gains are real.)
+- "Creatine causes kidney damage / renal distress." (Not in healthy individuals.)
+- "Creatine causes cramping or dehydration." (Not supported.)
+
+Practical takeaways:
+- Creatine monohydrate, 3–5 g/day, is a cheap, safe, well-evidenced staple for strength/power and muscle.
+- Loading is optional — it just fills muscle stores faster. Daily timing doesn't matter much; consistency does.
+
+Disclaimer: General fitness/nutrition education, not medical advice. Consult a physician if you have kidney disease or other medical conditions.

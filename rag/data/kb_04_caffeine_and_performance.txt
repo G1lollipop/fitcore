@@ -1,0 +1,31 @@
+Title: Caffeine and Exercise Performance
+Source: ISSN Position Stand — Caffeine and Exercise Performance (Guest et al., 2021)
+URL: https://jissn.biomedcentral.com/articles/10.1186/s12970-020-00383-4
+DOI: 10.1186/s12970-020-00383-4
+License: CC BY 4.0 (Journal of the International Society of Sports Nutrition)
+Tags: caffeine; ergogenic aid; endurance; strength; dosing; pre-workout
+
+Summary (evidence-based position of the International Society of Sports Nutrition):
+
+1. Caffeine acutely improves many aspects of exercise performance: muscular endurance, strength, movement velocity, sprinting, jumping, throwing, and a wide range of aerobic and anaerobic sport-specific actions (benefits are small to moderate and not universal across all studies).
+
+2. Effective dose is 3–6 mg/kg body mass. Minimal effective doses may be as low as 2 mg/kg. Very high doses (e.g., 9 mg/kg) do not add benefit and raise side-effect risk.
+
+3. Most common timing is ~60 min before exercise for caffeine in capsule/anhydrous form. Optimal timing depends on the source — e.g., caffeine chewing gum may act faster.
+
+4. Caffeine is ergogenic for both trained and untrained individuals.
+
+5. Caffeine benefits endurance exercise in heat and at altitude (well supported at 3–6 mg/kg, and 4–6 mg/kg respectively).
+
+6. Individual responses vary due to genetics (e.g., CYP1A2, ADORA2A) and habitual intake; some people are non-responders or experience side effects (anxiety, jitters, GI upset, disrupted sleep).
+
+7. Anhydrous caffeine (capsules, powder) is more reliably ergogenic than coffee, though coffee can also be effective.
+
+8. Caffeine can improve cognitive aspects of performance such as attention and alertness, especially when sleep-deprived.
+
+Practical takeaways:
+- A typical pre-workout dose is ~3 mg/kg (e.g., ~200 mg for a 70 kg person) taken ~45–60 min before training.
+- Avoid late-day caffeine to protect sleep (which itself drives recovery and performance).
+- Find your personal tolerance; more is not better.
+
+Disclaimer: General fitness/nutrition education, not medical advice. Those with cardiovascular conditions, anxiety disorders, during pregnancy, or sensitivity should consult a physician.
