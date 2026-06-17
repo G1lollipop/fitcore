@@ -109,6 +109,12 @@ class KnowledgeBaseService(object):
         else:
             knowledge_chunks = [data]
 
+        # Drop empty / whitespace-only chunks — the embedding API rejects empty
+        # content ("contains an empty Part"), and they add no retrieval value.
+        knowledge_chunks = [c for c in knowledge_chunks if c and c.strip()]
+        if not knowledge_chunks:
+            return "[跳过]切分后无有效内容"
+
         metadata = {
             "source": filename,
             "create_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

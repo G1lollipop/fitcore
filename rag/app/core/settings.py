@@ -78,11 +78,13 @@ class Settings(BaseSettings):
     embedding_dim: int = Field(default=768, alias="EMBEDDING_DIM", gt=0)
 
     # ── Chunking (ingest-time text splitting) ─────────────────────────────
-    # "semantic" = embedding-based SemanticChunker (splits at meaning shifts;
-    # better for long-form docs, costs extra embedding calls at ingest).
-    # "recursive" = RecursiveCharacterTextSplitter (fast, char-based).
-    # Falls back to recursive if langchain-experimental isn't installed.
-    chunking_strategy: str = Field(default="semantic", alias="CHUNKING_STRATEGY")
+    # "recursive" = RecursiveCharacterTextSplitter (fast, char-based) — DEFAULT.
+    # "semantic"  = embedding-based SemanticChunker (splits at meaning shifts).
+    #   ⚠️ Semantic embeds every sentence, which easily blows the Gemini FREE
+    #   tier embedding limit (100 req/min → HTTP 429). Only enable it on a paid
+    #   tier or for a tiny corpus. Falls back to recursive if langchain-
+    #   experimental isn't installed.
+    chunking_strategy: str = Field(default="recursive", alias="CHUNKING_STRATEGY")
     # Breakpoint detection for SemanticChunker: percentile | standard_deviation
     # | interquartile | gradient.
     semantic_breakpoint_type: str = Field(
