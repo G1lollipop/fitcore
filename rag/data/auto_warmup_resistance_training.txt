@@ -1,0 +1,226 @@
+Title: Warm-up and Re-warm-up Insights into Resistance Training
+Source URL: https://opensportssciencesjournal.com/VOLUME/18/ELOCATOR/e1875399X429130/FULLTEXT/
+License: CC BY 4.0
+Tags: warm-up; mobility; injury prevention; resistance training
+
+All published articles of this journal are available on ScienceDirect.
+Warm-up and Re-warm-up Insights into Resistance Training: Usual Practices among Strength and Conditioning Coaches and Athletes
+Abstract
+Introduction
+The warm-up enhances both physiological readiness and psychological focus, contributing to injury prevention and performance improvement. Despite its benefits, warm-up practices are often applied based on common sense, with insufficient scientific evidence to support them. This study aimed to characterize warm-up and re-warm-up practices among athletes and strength and conditioning coaches during strength training.
+Methods
+A cross-sectional descriptive survey of warm-up and re-warm-up resistance training routines was conducted. One hundred six participants (31.04 ± 9.53 years) responded to a survey designed to gather information on demographic details, roles (i.e., athlete and/or coach), and warm-up and re-warm-up recommended practices.
+Results
+Sex did not influence warm-up or re-warm-up routines, suggesting similar habits adopted by male and female athletes (warm-up practice: 93.9% and 95.0% respectively; no re-warm-up: 81.8% and 85.0%, respectively). The results confirmed a widespread adherence to general and specific warm-up routines across explanatory variables, as sex (males and females: 63.1%) and professional roles (both: 68.2%). In contrast, re-warm-up strategies were less chosen (male 18.2%, female 15.0%). Dual-role individuals were more likely to implement re-warm-up strategies (p = 0.036).
+Discussion
+Moreover, with each additional year of age, the chance of a person performing re-warm-up decreases (18.3%), a coach has a 33.6% greater possibility of conducting a re-warm-up when compared to an athlete, and individuals with dual roles have approximately 5.5 times greater chance of re-warm-up when compared to athletes.
+Conclusion
+This study provides useful insights into modern practices for athletes and coaches to review and update their individual warm-up and re-warm-up practices.
+1. INTRODUCTION
+For every type of training, it is well recognized that Warm-Up (WU) is an essential element to prepare the participant for the following actions and to optimize their performance [1, 2]. The WU activities performed before the main training session appear to enhance both physiological readiness and psychological focus, contributing to injury prevention and performance improvement [1, 3, 4]. However, over the years, the benefits of WU were assumed to be the absolute truth, where it is often applied based on common sense with insufficient scientific evidence to sustain them [1, 2].
+Resistance training is foundational to athletic development, improving muscle strength, power, endurance, and overall physical capacity [1, 2]. Effective strength training sessions require appropriate exercise selection, load management, recovery time, and appropriate preparation routines such as WU and recently discussed Re-Warm-Up (RWU) strategies [2, 5]. Literature has been confronted by controversial results that WU designs (e.g., typology, volume, intensity) need to be further documented [5, 6]. Each athlete is used to WU before any resistance training to acquire greater performance levels in each session [5, 6]. Recent research reported that specific WUs performed at loads close to the maximum (90% of maximal dynamic 1RM load) were positively effective in developing maximal dynamic strength [7]. Earlier meta-analyses have shown that well-designed WU routines can significantly improve sprinting, jumping, and strength performance when intensity, duration, and specificity are well-adjusted [4, 8]. Contemporary research has demonstrated that metabolic optimization through specific WU protocols can significantly enhance basketball free-throw performance, indicating that sport-specific considerations are essential [9]. Although strength performance seems to be improved when WU is applied, the optimal load (e.g., intensity and/or volume) of the exercises during the WU remains unknown [2, 7, 10].
+WU protocols are typically divided into two phases: a general phase, involving low-intensity aerobic activity and dynamic mobility drills; and a specific phase, where movements closely replicate the biomechanical and metabolic requirements of the main training session [11, 12]. In strength training, the particular phase often includes submaximal sets of the primary lifts, promoting neuromuscular activation while minimizing fatigue [1]. However, the effects of WU can quickly dissipate if followed by periods of inactivity, such as prolonged rest intervals or unpredictable pauses during training sessions [13, 14]. In this sense, RWU strategies have gained interest in guaranteeing physiological readiness during these passive periods. RWU refers to short, low-intensity activities performed between efforts or during longer pauses, aiming to preserve muscle temperature and neuromuscular activation [15, 16]. Although RWU strategies have been explored in intermittent team sports, such as football and rugby, their application to resistance training settings remains uncertain in the literature [15, 16]. Additionally, contrary to these modalities, resistance training sessions frequently include rest intervals of 2–5 minutes between sets, or even longer in group settings with shared equipment [17, 18]. These pauses may decrease muscle temperature and compromise performance, particularly in exercises requiring maximal power output [17, 18]. Some studies suggest that RWU activities, such as bodyweight movements, elastic band exercises, or isometric contractions, can mitigate these declines and preserve performance throughout the session [18].
+From a practical perspective, the integration of RWU into resistance training is influenced by contextual and behavioral factors such as athlete education, coaching strategies, space facilities, time constraints, and cultural norms within the training environment [19]. Several strength and conditioning coaches and athletes remain unaware of the potential benefits of re-warm-up (RWU), or lack clear guidelines to implement such strategies effectively [1, 2]. Furthermore, controversy in practice may be due to the absence of structured protocols supported by applied research in resistance training contexts [2].Therefore, to bridge the gap between theoretical knowledge and applied resistance training practice, it is essential to know and understand how WU and RWU routines are currently used by sports professionals, athletes, and strength and conditioning coaches. Descriptive studies of real-world training behaviors can offer valuable insights into these practices' prevalence, structure, and rationale, supporting useful and effective future recommendations [2].
+Accordingly, the aim of this present study was to characterize WU and RWU practices among athletes and strength and conditioning coaches during resistance training. Based on applying a structured questionnaire and quantitative and qualitative data analysis, this study seeks to identify prevailing trends, motivations, and potential barriers to the WU and RWU implementation. To our knowledge, this is the first comprehensive questionnaire of WU and RWU practices developed in the resistance training context. It was hypothesized that WU would be reported as a necessary and commonly used practice instead of RWU. Ultimately, these findings may provide evidence-informed guidelines, encourage the adoption of effective performance strategies in strength training environments, and provide insights about the magnitude of the impact of WU and RWU routines in resistance training performance.
+2. MATERIALS AND METHODS
+2.1. Study Design
+This exploratory study was designed to provide comprehensive descriptive information concerning WU and RWU practices of athletes and strength and conditioning coaches in the context of resistance training. An observational study design was used with data collected through a self-administered questionnaire consisting of 15 multiple-choice questions and 7 open-ended questions. The open-ended items provided qualitative insights into the structure and rationale of WU and RWU protocols, while the closed-ended responses enabled quantitative analysis of trends and behavioral patterns. The questionnaire was designed to capture routines adopted by athletes and strength and conditioning coaches and the decision-making processes underlying these practices in real-world training environments. The development of standardized WU guidelines in sports sciences research should empower athletes, conditioning coaches, and sports sciences professionals [20].
+2.2. Participants
+One hundred six participants (n = 40 female adults, mean ± SD, 30.97 ± 9.59 years; n = 66 male adults, 31.04 ± 9.57 years) presently practicing resistance training as athletes or coaches in Portugal were informed of the benefits and risks of the research and provided their written informed consent to participate in the study. Participation was entirely voluntary. Eligibility criteria required individuals to be at least 18 years of age and actively engaged in resistance training either as athletes or coaches. A convenience sampling approach was employed, with participants recruited via social media, digital platforms, and academic networks (Fig. 1). The ethical approval of this study was obtained from the Human Research Ethics Committee at the University of Beira Interior (CE-UBI-Pj-2021-018), and the study was conducted in accordance with the Declaration of Helsinki.
+2.3. Data Collection Instrument
+The questionnaire (Appendix) was developed by the research team in consultation with three expert coaches in strength and conditioning training (holding National level coaching license), and was designed to determine the current WU and RWU practices of Portuguese strength and conditioning coaches and athletes during the resistance training sessions.
+To provide face validity and guarantee a reliable questionnaire and appropriateness for use within this population, a pilot test of the questionnaire was conducted with three coaches (National level coaching license) before the start of the study. The feedback from the pilot test was used to refine the questions and language, ensuring the use of contemporary strength coaching terminology (no pilot study data were incorporated into the present research). The questionnaire was applied using Google Forms and was available from March 24 to April 18, 2025. The questionnaire was structured into three main sections: (1) Demographic information about the resistance training athletes and/or coaches: age, gender, and geographic location, (2) Sport and professional experience: years of experience in training context, and role (i.e., athlete and/or strength and conditioning coach), and (3) WU and RWU recommended practices detailed information of athletes and/or strength and conditioning coach: frequency of use, types of strategies adopted, reasons for implementation or omission, protocols including specific exercises, volume, intensity, and recovery intervals, and finally, the athletes and/or strength and conditioning coaches were invited to describe any WUs they used employ and any external factors they felt could influence the potential benefits of a WU or RWU routines.
+2.4. Procedures
+Participants were initially contacted via email sent to the Portuguese health clubs database. The email included an introductory letter outlining the purposes of the study and a link to a Google Forms document containing the informed consent form and the questionnaire. Participants completed the questionnaire independently. There was no interference from the researcher team member during the process of filling out the questionnaire. These efforts to standardize contact procedures were implemented to reduce potential extraneous factors that could influence participants’ responses.
+2.5. Statistical Analysis
+A cross-sectional descriptive survey of WU and RWU resistance training routines was conducted. A priori sample size calculation and statistical power analysis (power of 0.80 with an α=0.05) were developed. Questionnaire responses were exported from Google Forms and organized using Microsoft Excel. All fixed-response and open-ended question data were analyzed using frequencies to determine the percentage response from the cohort of athletes and/or strength and conditioning coaches. Qualitative responses were analyzed through thematic coding to identify recurring patterns in WU and RWU strategies. The relationship between sex (female, male) and the practice of WU and RWU, as well as the type (general, specific, both), duration (<5 minutes, 5-10 minutes, 11-15 minutes, >15 minutes) and intensity (low, moderate, high) of the WU and RWU were analyzed using Chi-Square Test. Similarly, the relationship between professional role (coach, athletes, both) and these same variables was also assessed. A Binomial Logistic Regression models were used to determine the association between the participants’ use of RWU (yes vs. no) and the explanatory variables: age, sex, professional role, years of experience, and type of WU. The forward stepwise (likelihood ratio) selection method was considered, and the results were reported using the Odds Ratio (OR) estimates and their 95% Confidence Intervals (CI). To assess the model’s explanatory power, Nagelkerke’s R2 was used. Its interpretation was based on the following criteria: 0.02-0.13 small, 0.13-0.26 medium, and >0.26 large effect size [21]. The model’s goodness of fit was assessed through the Hosmer-Lemeshow test, and the area under the Receiver Operating Characteristic (ROC) Curve (AUC) was used to evaluate the discriminant capacity of the model. Statistical analyses were conducted using the statistical software IBM SPSS for Windows version 30.0 (IBM. Corp., Armonk, NY), and the significance level was set at p ≤ 0.05.
+3. RESULTS
+Most surveyed participants (> 90%), regardless of sex, considered the inclusion of WU fundamental before resistance training. On the other hand, using RWU was not frequent among males and females, with less than 20% of participants reporting its use. No significant relationship between sex and the practice of WU or RWU during the resistance training was found (Table 1).
+In the participants’ universe, more than half used both types of WU (i.e., general and specific WU) in their preparation for resistance training (63.1%). No significant relationship was found between sex and the type of WU (p = 0.505). Regarding to duration of the WU, the majority of the male participants opted to perform between 5-10 minutes, with less emphasis on using < than 5 minutes or more than 15 minutes for WU. Females were exposed to similar options to apply in the WU duration (> 40% chose 5-10 minutes to WU). No significant relationship was found between sex and the duration of the WU used when performing resistance training (Table 2). About the intensity of WU, there was no relationship between males and females (p = 0.895). However, males and females prefer to perform low (48.5% and 45.0%, respectively) and moderate intensity of WU (50.0% and 52.5%, respectively), with few reports of high intensity (1.50% and 2.50%, respectively).
+When observing the practice of WU, regardless of the professional role, it is notorious that it is a relevant practice that is needed to implement before resistance training (> 90%). When analyzing the practice of RWU by professional role, participants who acted both as athletes and strength and conditioning coaches showed the highest adherence (34.8%), compared to athletes and strength and conditioning coaches only. The application of the Chi-Square test revealed a statistically significant association between professional roles and the likelihood of performing RWU (p = 0.036) (Table 3). Most participants reported performing both general and specific WU (63.1%). This trend was consistent among those who were athletes (62.0%) and those who combined the roles of athlete and strength and conditioning coach (68.2%).
+| Sex | WU before Resistance Training | p-value | RWU during Resistance Training | p-value | ||||
+|---|---|---|---|---|---|---|---|---|
+| Yes (%) | No (%) | Yes (%) | No (%) | |||||
+| Male | 62 (93.9) | 4 (6.1) | 0.819 | 12 (18.2) | 54 (81.8) | - | ||
+| Female | 38 (95.0) | 2 (5.0) | 6 (15.0) | 34 (85.0) | 0.672 | |||
+| Total | 100 (94.3) | 6 (5.7) | 18 (17.0) | 88 (83.0) | - | |||
+| Sex | Duration of the WU | ||||
+|---|---|---|---|---|---|
+| <5 Minutes (%) | [5-10 Minutes] (%) | [11-15 Minutes] (%) | >15 Minutes (%) | p-value | |
+| Male | 7.0 (10.6) | 39.0 (59.1) | 17.0 (25.8) | 3.0 (4.5) | 0.278 | 
+| Female | 8.0 (20.0) | 17.0 (42.5) | 14.0 (35.0) | 1.0 (2.5) | |
+| Total | 15.0 (14.2) | 56.0 (52.8) | 31.0 (29.2) | 4.0 (3.8) | - | 
+| Role | |||
+|---|---|---|---|
+| Practice of RWU | |||
+| Yes (%) | No (%) | p-value | |
+| Coach | 1.0 (10.0) | 9.0 (90.0) | 0.036 | 
+| Athlete | 9.9 (12.3) | 64.0(87.7) | |
+| Both | 8.0 (34.8) | 15.0 (65.2) | |
+Among coaches exclusively, 40.0% reported performing only specific WU. The Chi-Square test did not show a statistically significant relationship between professional role and the type of WU performed (p = 0.286). When considering the duration of the WU, independently of the professional role, athletes, coaches, or both, reported a preference between 5-10 minutes (52.8% of the total sample). No relationship was found between the participants’ professional role and the duration chosen to perform the WU before resistance training (p = 0.203). If analyzing the intensity of the WU, it is noticeable that high intensity is less chosen (1.9% of the sample), and prevalence was on the low and moderate intensities (47.2% and 50.9% of the sample, respectively), regardless of the professional role (p= 0.554).
+The binary logistic regression model identified age and professional role as statistically significant variables (Table 4). The results showed that with each additional year of age, the chance of a person performing RWU decreases by 18.3% (OR = 0.817). A coach has a 33.6% greater possibility of performing RWU compared to an athlete (OR = 1.336), and those who are both athletes and coaches have approximately 5.5 times greater possibility of performing RWU compared to those who are athletes only (OR = 5.473).The model presents an Nagelkerke’s R2 = 0.332, corresponding to a large effect size. The model showed an adequate fit (p =Hosmer-Lemeshow = 0.953) and a good discriminator capacity (AUC = 0.808).
+Regarding the WU prescribed by coaches and/or athletes with more than 10 years of experience and those with less than 10 years of experience, responses were content analyzed, resulting in the creation of four higher-order themes. Table 5 lists these higher-order themes, the total number of strength and conditioning coaches and/or athletes’ responses to each theme, and select representative raw data within each higher-order theme.
+| - | Coefficient | p-value | OR | CI 95% OR | 
+|---|---|---|---|---|
+| Constant | 3.420 | 0.031 | 30.560 | - | 
+| Age | -0.202 | 0.002 | 0.817 | [0.718; 0.929] | 
+| Coach | 0.290 | 0.808 | 1.336 | [0.129; 13.831] | 
+| Both (coach & athlete) | 1.700 | 0.012 | 5.473 | [1.449; 20.676] | 
+| Strength and conditioning coaches and/or athletes with more than 10 years of experience in training | ||
+|---|---|---|
+| Higher-order Themes | Number of Responses | Select Raw Data representing Responses to the Question | 
+| General activation/cardio exercises | 11 | 3-10 minutes rowing/bicycle/treadmill | 
+| Dynamic exercises | 15 | circuit (jumping rope/ burpees/ jumping jacks/planks) (intensity: low to moderate) | 
+| Mobility (general and/or specific) | 24 | Articular mobility | 
+| Specific exercises (similar to the training exercises) | 20 | Specific exercises (modality/similar to the main training with elastic resistance bands/ body weight/bar/equipment) - volume 3x10 repetitions (no weight, 30-40% 1RM, 50-65% 1RM) | 
+| Strength and conditioning coaches and/or athletes with less than 10 years of experience in training | ||
+| Higher-order Themes | Number of Responses | Select Raw Data representing Responses to the Question | 
+| General activation/cardio exercises | 26 | 5-10 minutes rowing/bicycle/treadmill | 
+| Dynamic exercises | 24 | circuit (jumping rope/burpees/jumping jacks/planks/mountain climbers) (intensity: low to moderate) | 
+| Mobility (general and/or specific) | 53 | Articular mobility | 
+| Specific exercises (similar to the training exercises) | 45 | Specific exercises (modality/similar to the main training with elastic resistance bands/ body weight/bar/equipment) - volume 3x8 repetitions (no weight, 40-45% 1RM, 50-65% 1RM / no weight, 40-45% 1RM, 60-70% 1RM) | 
+4. DISCUSSION
+This study aimed to characterize WU and RWU practices among athletes and strength and conditioning coaches during resistance training. In this sense, a questionnaire was applied. The results suggest that sex did not significantly influence the adoption of WU or RWU routines, indicating similar practices among male and female athletes. In addition, there was broad adherence to general and specific WU protocols across sex and professional roles. In contrast, RWU strategies were significantly less frequently adopted. Finally, individuals with dual roles as both athletes and strength and conditioning coaches were more likely to implement RWU strategies.
+The present study observed high WU routine adherence among male and female participants prior to resistance training sessions. This aligns with existing literature emphasizing the universal recognition of WU benefits across sex, including increased muscle temperature, enhanced neuromuscular efficiency, and improved psychological readiness [10, 22]. However, the implementation of RWU strategies was notably less prevalent. RWU activities are crucial for maintaining performance levels during extended rest periods or between training sets, as they help sustain muscle temperature and readiness [12]. Moreover, a comprehensive systematic review related to WU, post-WU, and RWU strategies revealed the importance of avoiding or reducing rest periods, and the inclusion of an active RWU of 5 minutes with explosive tasks or small-sided games appears essential to perform well in sporting activities [12]. The low adoption rates observed may stem from a lack of awareness or understanding of these benefits among practitioners. It's important to note that while both sexes benefit from WU routines, studies have indicated that females may experience greater relative increases in upper-body strength following resistance training, despite males having higher absolute gains due to greater initial muscle mass [23]. Contemporary authors found few differences at the skeletal muscle level between sexes, which helped explain our finding that both sexes have advantages from WU and RWU routines [23]. However, hormonal fluctuations (menstrual cycle), daily physical activity (minutes), and exercise recovery (neuromuscular fatigue) may play an important role in explaining differences between sexes on muscular strength performance [23]. This suggests that tailored WU and RWU protocols considering sex-specific physiological responses could further optimize training outcomes.
+Analyzing the data based on participants' professional roles-athletes, coaches, or dual role individuals, revealed notable differences in WU practices. Individuals serving as athletes and strength and conditioning coaches demonstrated higher engagement in RWU routines than those solely identified as athletes or strength and conditioning coaches. This suggests that dual role individuals may possess a more comprehensive understanding of training methodologies, leading to more holistic WU strategies [24]. Regarding the structure of WU routines, most participants favored a combination of general and specific WU exercises. This approach is supported by research indicating that combined WUs enhance performance by increasing core temperature and preparing particular muscle groups for upcoming activities [4]. Accordingly, Suárez-Iglesias et al. [25] reported that Elite, Sub-elite, and Regional Spanish basketball players opted to perform stretching /joint mobility exercises as a WU structure before the match. Moreover, recent studies have highlighted the benefits of specific RWU strategies [12, 26, 27]. Complementarily, the importance of comprehensive WU routines, including RWU strategies and injury prevention programs, to optimize performance and reduce injury risk should be included in educational programs in sports sciences [25, 28]. For instance, incorporating change-of-direction exercises in RWU sessions has significantly enhanced agility and ball shooting velocity in well-trained soccer players [27]. Additionally, Nikolaidis et al. [29] highlighted the importance of developing a detailed intervention exercise program targeting body characteristics in young basketball players to avoid detrimental effects on performance. These findings underscore the importance of tailoring WU and RWU protocols to the specific demands of the sport and the athlete's role.
+In this study, curious possibilities were obtained, as for each additional year of age, the chance of a person performing RWU decreases. A strength and conditioning coach has a greater possibility of performing RWU when compared to an athlete, and those who are both coaches and athletes have a greater chance of RWU when compared to those who are athletes only. Contrarily, recent authors [25] manifested that the practice of RWU is less used independently of the competition level (elite, sub-elite, and regional basketball players). Their findings indicated that athletes were twice as likely not to use RWU, citing the main reasons as a “perceived lack of need”, “competing demands,” and “time constraints” during breaks, neglecting the known benefits of active RWU strategies on explosive performance [12, 25, 26]. These results underscore the importance of educating athletes, in particular, about the benefits of implementing RWU strategies to enhance performance during periods of inactivity. Two WU protocols were developed based on years of experience with resistance training. For individuals with more than 10 years of experience, the general activation/cardio exercises phase consisted of 3 to 10 minutes of rowing, cycling, or treadmill walking, while those with less than 10 years of experience performed 5 to 10 minutes of the same activities. All participants performed a dynamic exercise circuit composed of jumping rope, burpees, jumping jacks, planks, and mountain climbers at low to moderate intensity. In addition, general and/or specific joint mobility exercises were advised for all. The specific phase of the WU included exercises that resembled the main training movements and were performed using elastic resistance bands, body weight, barbell, or training equipment. For individuals with more than 10 years of experience, the protocol involved 3 sets of 10 repetitions at either body weight, 30-40% of 1RM, or 50-65% 1RM. For those with less than 10 years of experience, the protocol included 3 sets of 8 repetitions at body weight, 40–45% 1RM, or 50–65% 1RM / 40–45% 1RM, 60–70% 1RM. This combined evidence should provide evidence-informed guidelines for sports professionals, athletes, and strength and conditioning coaches, and reduce the heterogeneous WUs structures, study designs, and routines offered by the literature [1, 30, 31].
+To the best of our knowledge, this study is unique in its comparative analysis of WU and RWU practices pronounced by athletes and strength and conditioning coaches, considering variables such as sex, professional role, and practice of WU and RWU. In this sense, sex did not significantly influence WU or RWU routines, suggesting that male and female athletes similarly adopt these habits. The results confirmed a widespread adherence to general and specific WU routines across explanatory variables, as sex and professional roles, reflecting a general awareness of their benefits in enhancing performance and reducing injury risk. In contrast, RWU strategies were significantly less chosen, despite their known benefits in maintaining muscle readiness during intra-session rest periods, providing better performance, and reducing the risk of injuries. Notably, individuals with dual roles (athlete-coach) were likelier to implement RWU strategies, highlighting the importance of both professional experience in promoting evidence-based training practices. However, the overall low rates of RWU practices emphasize the need for further education and dissemination of best practices in strength and conditioning contexts.
+5. LIMITATIONS AND FUTURE STUDIES
+Some limitations should be noted in this study: (i) a small sample size was used, and (ii) the sample was restricted to Portuguese participants, whereas a larger sample with more nationalities would provide stronger evidence and greater external validity regarding WU and RWU routines. Even aware of the study’s limitations, the present findings are reliable and relevant for strength and conditioning coaches, athletes, and researchers to use and update their training sessions. Future research should explore the effectiveness of different RWU modalities across varying resistance training protocols and populations. Additionally, intervention-based studies could assess how structured educational programs influence these practices in recreational and professional training environments. Ultimately, integrating targeted WU and RWU strategies tailored to the athlete's profile, role, and sport-specific demands should be considered a critical component of resistance training program design.
+CONCLUSION
+The present results seem to provide useful insights into modern practices. Athletes and strength and conditioning coaches can use these bullet points to review their individual WU and RWU practices, developing a viable and effective source for innovative designs and protocols for resistance training sessions. Complementarily, providing evidence-informed guidelines for sports-related conditions appears to be relevant to prevent musculoskeletal injuries. Moreover, the findings highlight the need for increased education and awareness regarding the benefits of RWU strategies. Implementing targeted educational programs and workshops can bridge this knowledge gap, promoting the adoption of comprehensive WU and RWU routines across all practitioner levels. Additionally, fostering collaboration between coaches and athletes can facilitate knowledge exchange and best practices, enhancing overall training effectiveness. Encouraging dual role experiences may contribute to more informed and holistic training approaches. Moreover, integrating specific RWU strategies, such as exercise sequences/order, can provide immediate performance benefits, particularly in sports requiring agility and rapid movements. Strength and conditioning coaches and sports professionals should consider incorporating these strategies and proposals into training sessions to maximize performance outcomes.
+AUTHOR’S CONTRIBUTIONS
+The authors confirm their contributions to the paper as follows. P.P.N.: Study conception and design were carried out; L.F.: Data collection was performed; R.F.: Methodology was developed; D.M., H.P.N., A.R.A., M.C.M., and D.A.M.: Draft manuscript was prepared; C.N.: Data analysis or interpretation was conducted. All authors reviewed the results and approved the final version of the manuscript.
+LIST OF ABBREVIATIONS
+| AUC | = Area Under Curve | 
+| CI | = Confidence Interval | 
+| OD | = Odds Ratio | 
+| RWU | = Re-Warm-Up | 
+| ROC | = Receiver Operating Characteristic | 
+| WU | = Warm-Up | 
+ETHICS APPROVAL AND CONSENT TO PARTICIPATE
+The ethical approval of this study was obtained from the Human Research Ethics Committee at the University of Beira Interior, Portugal (CE-UBI-Pj-2021-018).
+HUMAN AND ANIMAL RIGHTS
+All procedures performed in studies involving human participants were in accordance with the ethical standards of institutional and/or research committee and with the 1975 Declaration of Helsinki, as revised in 2013.
+CONSENT FOR PUBLICATION
+All participants voluntarily provided their written informed consent to participate in the study.
+AVAILABILITY OF DATA AND MATERIALS
+The data supporting the findings of the article will be available from the corresponding author [H.P.N] upon reasonable request.
+FUNDING
+This work was funded by National Funds by FCT - Foundation for Science and Technology under the following project UID/04045, Research Center in Sports Sciences, Health Sciences, and Human Development.
+CONFLICT OF INTEREST
+Dr. Ricardo Ferraz is the Editorial Advisory Board Member of The Open Sports Sciences Journal.
+ACKNOWLEDGEMENTS
+The authors would like to thank all the participants in the study.
+Warm-up and/or Re-warm-up in Gym/Fitness Center Context
+If you are a strength and conditioning coach or athlete, you are invited to participate in this questionnaire. Its main objective is to characterize the warm-up and re-warm-up strategies currently used in resistance training by coaches/athletes. This questionnaire is part of a scientific investigation conducted by XXXX, a Ph.D. student in Sports Sciences at the XXXXXX (XXX). The present study aims to gather information on the importance, structure, load, and context of warm-up/re-warm-up applications. The questionnaire is anonymous, and the collected data will be used exclusively for research purposes.
+We appreciate your participation in advance!
+Estimated completion time: Less than 10 minutes.
+For any additional clarification, you may contact us via email at:
+xxxxxxxx@hotmail.com
+Informed Consent for Participation in Research Studies
+By completing this questionnaire, I understand that:
+1. Participation in this study is voluntary, and I may withdraw at any time.
+2. No advantages, disadvantages, costs, or risks are expected during participation.
+3. The collected data will be deleted after the study's completion and presentation.
+4. The results may be published, but anonymity will be preserved.
+Email: __________________________________________
+I. Demographic Data
+Age (years): __________________
+Sex:
+ ☐ Male
+ ☐ Female
+ ☐ Other
+Location: ____________________
+Academic Qualifications:
+ ☐ High School
+ ☐ Bachelor’s Degree
+ ☐ Master’s Degree
+ ☐ Ph.D.
+ ☐ Other
+Field of Academic Qualifications:
+ ☐ Sports Sciences/Sports
+ ☐ Other: ________________________
+Role:
+ ☐ Coach
+ ☐ Athlete
+ ☐ Both
+Years of experience as a coach/athlete: ____________
+Sport(s) you practice: _______________________________
+II. Warm-up Characterization
+How important do you consider warm-up is for your training?
+ ☐ Very Important
+ ☐ Important
+ ☐ Slightly Important
+ ☐ Not Important
+Do you usually perform a warm-up before resistance training?
+ ☐ Yes
+ ☐ No
+If yes, how do you structure your warm-up? (if not, leave blank)
+☐ Only general warm-up (non-sport-specific exercises, such as light jogging, joint mobility, or dynamic stretching)
+☐ Only specific warm-up (exercises directly related to strength training, such as sets with reduced load or movements similar to the main workout)
+☐ Both (general + specific)
+What are the main objectives of your warm-up? (you can select more than one option)
+☐ Increase body temperature
+ ☐ Improve mobility and flexibility
+ ☐ Activate specific muscle groups
+☐ Prevent injuries
+ ☐ Enhance training performance
+ ☐ Other
+What is the average duration of your warm-up?
+☐ Less than 5 minutes
+ ☐ 5-10 minutes
+ ☐ 10-15 minutes
+ ☐ More than 15 minutes
+What is the intensity of your warm-up?
+ ☐ Low (up to ~40% 1RM | up to ~50% HRmax | Very light perceived effort)
+ ☐ Moderate (~40-70% 1RM | ~50-70% HRmax | Moderate perceived effort)
+ ☐ High (above 70% 1RM | above 70% HRmax | High perceived effort)
+If possible, specify the intensity of your warm-up (% of 1 RM, HRmax, RPE, etc.):
+____________________________________________________________________________________________________________________
+What types of exercises do you include in your warm-up? (you can select more than one option):
+☐ Cardiorespiratory (running, cycling, etc.)
+ ☐ Joint mobility
+ ☐ Dynamic stretching
+ ☐ Specific training exercises
+ ☐ Muscle activation with light loads
+ ☐ Other
+Is there a gap between the warm-up and the start of the main workout?
+ ☐ Yes
+ ☐ No
+If yes, what is the average during of this gap?
+ ☐ Less than 2 minutes
+ ☐ 2-5 minutes
+ ☐ More than 5 minutes
+Do you perform a warm-up for all types of strength training?
+☐ Yes
+ ☐ No
+If not, in what situations do you choose not to warm up? _________________________________________
+III. Re-warm-up
+Do you usually perform a re-warm-up between sets or exercises?
+ ☐ Yes
+ ☐ No
+If yes, in what situations do you consider a re-warm-up necessary?
+ ☐ High-intensity training (≥85% 1RM | ≥90% HRmax | Maximum or near-maximum effort)
+ ☐ Training with long rest intervals (>2 min between sets | >5 min between exercises)
+ ☐ When there is a long break in training (>10 min without activity)
+ ☐After changes in exercises or equipment (exercises with very different movement patterns)
+ ☐ Other
+How do you perform the re-warm-up? (you can select more than one option)
+ ☐ Bodyweight movements
+ ☐ Specific training exercises
+ ☐ Sets with reduced load
+ ☐ Dynamic stretching
+ ☐ Other
+If not, what is the main reason for not performing a re-warm-up?
+ ☐ I consider it unnecessary
+☐ Lack of time during training
+ ☐ I don’t see an impact on performance
+ ☐ It has never been a practice I've adopted
+ ☐ Other
+In what situations would you consider including a re-warm-up?
+ ☐ Training with long pauses between sets (>2 min between sets | >5 min between exercises)
+ ☐ Increasing load during training (progression to ≥85% 1RM | Near-maximum effort)
+ ☐ When necessary to avoid performance loss (long breaks >10 min | Maintaining muscle activation)
+ ☐ I do not consider it necessary in any situation
+ ☐ Other

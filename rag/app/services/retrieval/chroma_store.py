@@ -56,10 +56,12 @@ class VectorStoreService(object):
         bm25_retriever = BM25Retriever.from_documents(documents)
         bm25_retriever.k = 10
 
-        # 3. 混合检索 (Ensemble)
+        # 3. 混合检索 (Ensemble)。权重由 RETRIEVAL_VECTOR_WEIGHT 控制（默认 0.5/0.5）。
+        from app.core.settings import get_settings
+
         ensemble_retriever = EnsembleRetriever(
             retrievers=[chroma_retriever, bm25_retriever],
-            weights=[0.5, 0.5]
+            weights=get_settings().ensemble_weights,
         )
 
         docs_hash = self.cache_manager.vector_store_cache._compute_docs_hash(docs_list)

@@ -91,6 +91,14 @@ class Settings(BaseSettings):
         default="percentile", alias="SEMANTIC_BREAKPOINT_TYPE"
     )
 
+    # ── Hybrid retrieval fusion ───────────────────────────────────────────
+    # EnsembleRetriever 里向量检索的权重（BM25 权重 = 1 - 该值）。默认 0.5/0.5。
+    # 注意：跨语言场景（如中文 query + 英文语料）下 BM25 词法匹配几乎失效，
+    # 离线评估显示等权重融合反而劣于纯向量；此时应调高向量权重（如 0.8~1.0）。
+    retrieval_vector_weight: float = Field(
+        default=0.5, alias="RETRIEVAL_VECTOR_WEIGHT", ge=0.0, le=1.0
+    )
+
     # ── Vector store backend ──────────────────────────────────────────────
     vector_backend: str = Field(default="chroma", alias="VECTOR_BACKEND")
     supabase_url: str = Field(default="", alias="SUPABASE_URL")
@@ -165,6 +173,12 @@ class Settings(BaseSettings):
     @property
     def allowed_origins(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins_raw.split(",") if o.strip()]
+
+    @property
+    def ensemble_weights(self) -> list[float]:
+        """[向量权重, BM25 权重]，供 EnsembleRetriever 使用。"""
+        v = self.retrieval_vector_weight
+        return [v, 1.0 - v]
 
     @property
     def reranker_model_ref(self) -> str | None:

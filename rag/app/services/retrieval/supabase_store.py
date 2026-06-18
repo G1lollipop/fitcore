@@ -115,9 +115,11 @@ class SupabaseVectorStoreService:
         bm25_retriever = BM25Retriever.from_documents(documents)
         bm25_retriever.k = 10
 
+        from app.core.settings import get_settings
+
         ensemble_retriever = EnsembleRetriever(
             retrievers=[pg_retriever, bm25_retriever],
-            weights=[0.5, 0.5],
+            weights=get_settings().ensemble_weights,
         )
 
         docs_hash = self.cache_manager.vector_store_cache._compute_docs_hash(docs_list)

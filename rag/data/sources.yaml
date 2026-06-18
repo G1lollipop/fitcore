@@ -83,3 +83,41 @@ sources:
     license: Public Domain (US Government work)
     tags: [diet, nutrition, public health, food groups]
     fetch: true
+
+  # ── Resistance-training programming / technique sources (CC-BY only) ──────
+  # Added to broaden KB beyond nutrition so retrieval eval (Recall/nDCG) has
+  # real coverage for training-volume / frequency / periodization / concurrent
+  # / warm-up questions. All verified CC-BY (no NonCommercial/NoDerivs).
+  - id: rt_hypertrophy_umbrella
+    title: "Resistance Training Variables for Optimization of Muscle Hypertrophy: An Umbrella Review"
+    # Frontiers 原始全文（PMC 镜像挡爬虫，trafilatura 抽不到正文）。
+    url: https://www.frontiersin.org/journals/sports-and-active-living/articles/10.3389/fspor.2022.949021/full
+    type: html
+    license: CC BY 4.0
+    tags: [resistance training, volume, frequency, hypertrophy, periodization, progressive overload]
+    fetch: true
+
+  - id: periodized_rt_minireview
+    title: "Periodized Resistance Training for Enhancing Skeletal Muscle Hypertrophy and Strength: A Mini-Review"
+    url: https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2019.00013/full
+    type: html
+    license: CC BY 4.0
+    tags: [periodization, progressive overload, strength, hypertrophy, programming]
+    fetch: true
+
+  - id: concurrent_training_review
+    title: "Compatibility of Concurrent Aerobic and Strength Training for Skeletal Muscle Size and Function: An Updated Systematic Review and Meta-Analysis (Schumann et al., 2021)"
+    # MDPI 原文挡爬虫；改用机构库的真实直链 PDF（Sports Medicine, CC BY 4.0）。
+    url: https://researchonline.jcu.edu.au/71546/1/Schumann2021_Article_CompatibilityOfConcurrentAerob.pdf
+    type: pdf
+    license: CC BY 4.0
+    tags: [concurrent training, interference effect, cardio, strength, hypertrophy]
+    fetch: true
+
+  - id: warmup_resistance_training
+    title: "Warm-up and Re-warm-up Insights into Resistance Training"
+    url: https://opensportssciencesjournal.com/VOLUME/18/ELOCATOR/e1875399X429130/FULLTEXT/
+    type: html
+    license: CC BY 4.0
+    tags: [warm-up, mobility, injury prevention, resistance training]
+    fetch: true

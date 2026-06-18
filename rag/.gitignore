@@ -18,6 +18,7 @@ md5.text
 
 # 评估报告（运行时产物，指标已汇总进 README）
 eval/eval_report_*.json
+eval/retrieval_report_*.json
 
 # 内部开发文档
 docs/

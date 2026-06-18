@@ -1,0 +1,963 @@
+Title: Compatibility of Concurrent Aerobic and Strength Training for Skeletal Muscle Size and Function: An Updated Systematic Review and Meta-Analysis (Schumann et al., 2021)
+Source URL: https://researchonline.jcu.edu.au/71546/1/Schumann2021_Article_CompatibilityOfConcurrentAerob.pdf
+License: CC BY 4.0
+Tags: concurrent training; interference effect; cardio; strength; hypertrophy
+
+Vol.:(0123456789)
+Sports Medicine 
+https://doi.org/10.1007/s40279-021-01587-7
+SYSTEMATIC REVIEW
+Compatibility of Concurrent Aerobic and Strength Training 
+for Skeletal Muscle Size and Function: An Updated Systematic Review 
+and Meta‑Analysis
+Moritz Schumann1  · Joshua F. Feuerbacher1 · Marvin Sünkeler1 · Nils Freitag1,2 · Bent R. Rønnestad3 · Kenji Doma4 · 
+Tommy R. Lundberg5,6 
+Accepted: 16 October 2021 
+© The Author(s) 2021
+Abstract
+Background Both athletes and recreational exercisers often perform relatively high volumes of aerobic and strength training 
+simultaneously. However, the compatibility of these two distinct training modes remains unclear.
+Objective This systematic review assessed the compatibility of concurrent aerobic and strength training compared with 
+strength training alone, in terms of adaptations in muscle function (maximal and explosive strength) and muscle mass. 
+Subgroup analyses were conducted to examine the influence of training modality, training type, exercise order, training 
+frequency, age, and training status.
+Methods A systematic literature search was conducted according to the PRISMA (Preferred Reporting Items for Systematic 
+Reviews and Meta-Analyses) guidelines. PubMed/MEDLINE, ISI Web of Science, Embase, CINAHL, SPORTDiscus, and 
+Scopus were systematically searched (12 August 2020, updated on 15 March 2021). Eligibility criteria were as follows. 
+Population: healthy adults of any sex and age; Intervention: supervised concurrent aerobic and strength training for at least 
+4 weeks; Comparison: identical strength training prescription, with no aerobic training; Outcome: maximal strength, explo-
+sive strength, and muscle hypertrophy.
+Results A total of 43 studies were included. The estimated standardised mean differences (SMD) based on the random-effects 
+model were − 0.06 (95% confidence interval [CI] − 0.20 to 0.09; p  = 0.446), − 0.28 (95% CI − 0.48 to − 0.08; p = 0.007), 
+and − 0.01 (95% CI − 0.16 to 0.18; p = 0.919) for maximal strength, explosive strength, and muscle hypertrophy, respectively. 
+Attenuation of explosive strength was more pronounced when concurrent training was performed within the same session 
+(p = 0.043) than when sessions were separated by at least 3 h (p > 0.05). No significant effects were found for the other mod-
+erators, i.e. type of aerobic training (cycling vs. running), frequency of concurrent training (> 5 vs. < 5 weekly sessions), 
+training status (untrained vs. active), and mean age (< 40 vs. > 40 years).
+Conclusion Concurrent aerobic and strength training does not compromise muscle hypertrophy and maximal strength devel-
+opment. However, explosive strength gains may be attenuated, especially when aerobic and strength training are performed 
+in the same session. These results appeared to be independent of the type of aerobic training, frequency of concurrent train-
+ing, training status, and age.
+PROSPERO: CRD42020203777.
+ * Moritz Schumann 
+ m.schumann@dshs-koeln.de
+Extended author information available on the last page of the article
+1 Introduction 
+Performing aerobic and strength training concurrently is 
+an integrative part of physical training aimed at improving 
+both athletic performance and health. The recommendation 
+to perform both aerobic and strength training is important 
+because these activities to some extent induce distinct adap-
+tations and health benefits [1, 2]. For example, aerobic train-
+ing promotes increased aerobic capacity (i.e. central adap-
+tations) and metabolic changes in skeletal muscle, such as 
+increased mitochondrial density and capillarisation [3]. Con-
+versely, regular strength training results in muscle hyper -
+trophy and increased strength and power [4 ] but may also 
+improve bone mineral density [5]. The role of skeletal mus-
+cle in health maintenance has received increased attention
+
+M. Schumann et al.
+Key Points 
+Concurrent aerobic and strength training is recom-
+mended to improve physical fitness and health; however, 
+the compatibility of these two distinct training modes 
+remains unclear.
+In this meta-analysis, we report that concurrent training 
+does not interfere with adaptations in maximal strength 
+and muscle hypertrophy, regardless of the type of aero-
+bic training (cycling vs. running), frequency of concur-
+rent training (> 5 vs. < 5 weekly sessions), training status 
+(untrained vs. active), mean age (< 40 vs. > 40 years), 
+and training modality (same session vs. same day vs. dif-
+ferent day training).
+However, concurrent training may attenuate gains in 
+explosive strength, which is exacerbated when aerobic 
+and strength training are performed within the same 
+training session.
+To date, few attempts have been made to quantitatively 
+synthesise the literature concerning concurrent aerobic and 
+strength training. The first meta-analysis conducted a decade 
+ago by Wilson et al. [14] showed that peak power was attenu-
+ated with concurrent training compared with strength train-
+ing alone, whereas the development of muscle hypertrophy 
+and maximal strength were not compromised. A more recent 
+meta-analysis aimed to compare the effect of concurrent aero-
+bic and strength training with strength training alone on the 
+development of maximal strength in untrained, moderately 
+trained, and trained individuals [ 15]. The results suggested 
+that concurrent training may have a negative effect on lower 
+body strength development in trained individuals but not in 
+moderately trained or untrained individuals. While this study 
+updated information on the effect of training status on maxi-
+mal strength development, several other important outcome 
+variables related to muscle mass and function have not been 
+examined in a meta-analysis since 2012. Therefore, the aim of 
+the current study was to systematically assess the compatibility 
+of concurrent aerobic and strength training on adaptations in 
+maximal strength, explosive strength, and muscle hypertrophy 
+by means of pooled analyses. Subgroup analysis was also con-
+ducted to examine the influence of aerobic training type, train-
+ing modality, exercise order, concurrent training frequency, 
+age, and training status. An updated literature synthesis on this 
+topic is relevant to physicians, physiotherapists, exercise sci-
+entists, and sports practitioners designing programmes aimed 
+at developing both aerobic and strength qualities for health 
+purposes, rehabilitation, and/or fitness performance.
+2  Methods
+2.1  Systematic Literature Search
+A systematic literature search was conducted according 
+to the PRISMA (Preferred Reporting Items for System-
+atic Reviews and Meta-Analyses) guidelines and was reg-
+istered with PROSPERO (the International Database of 
+Prospectively Registered Systematic Reviews in Health 
+and Social Care; CRD42020203777). The PubMed/MED-
+LINE, ISI Web of Science, Embase, CINAHL, SPORTDis-
+cus, and Scopus databases were systematically searched 
+using a search string specifically adapted to the search 
+requirements of each database (Table S1 in the electronic 
+supplementary material [ESM]).
+The search was conducted on 12 August 2020 and 
+updated on 15 March 2021. The literature search process 
+was performed independently by two researchers and 
+included saving the online search, removing duplicates, 
+and screening titles, abstracts, and full texts. Potential 
+conflicts were resolved by consulting with a third author. 
+In addition, a grey literature search was performed by 
+in the last decade, with muscle tissue being understood as 
+a secretory organ that releases several hundred myokines 
+related to the function of other organs, such as the brain, adi-
+pose tissue, bone, liver, gut, pancreas, vascular bed, and skin 
+[6]. In addition, the role of muscle power has recently been 
+highlighted as being strongly associated with a lower risk of 
+fall-related injuries in older adults [7, 8], further underlining 
+the importance of both muscle mass and muscle function as 
+indicators of physical health and independence in daily life.
+Aside from the health perspective, many sports require 
+the athlete to simultaneously incorporate divergent training 
+modalities, including aerobic and strength training, into their 
+training regimen. Considering that both athletes and recrea-
+tional exercisers often perform relatively high volumes (and/
+or frequencies) of aerobic training alongside resistance-type 
+training, it is pertinent to revisit the compatibility of aerobic 
+and strength training. Aerobic training has been shown to 
+interfere with the development of maximal strength when the 
+overall training volume is high [9 ]. In contrast, no interfer -
+ence in maximal strength was observed when training volume 
+was reduced to two weekly aerobic and strength training ses-
+sions, respectively [10–12]. Importantly, however, even low 
+volumes of concurrent aerobic training have been shown to 
+decrease gains in rapid force production [10, 13], which could 
+translate into reduced muscle power-related benefits. Identi-
+fying additional moderators hypothesised in the literature to 
+potentially influence neuromuscular adaptations to concurrent 
+aerobic and strength training (such as type of aerobic training, 
+concurrent training modality, age, and training status) could 
+further aid in fine-tuning exercise guidelines for health and/or 
+fitness performance.
+
+Compatibility of Concurrent Aerobic and Strength Training
+screening Google Scholar and the reference lists of previ-
+ously identified eligible full texts. Figure  1 is a flowchart 
+of the search process and study selection.
+2.2  Eligibility Criteria
+Inclusion criteria were defined based on the PICO (Popu-
+lation, Intervention, Control and Outcomes) criteria [16]. 
+The population included healthy adults with no restrictions 
+in terms of sex and age. The intervention had to consist 
+of supervised combined aerobic and strength training for 
+at least 4 weeks. As a comparator, eligible studies had to 
+include a group receiving the identical strength-training 
+prescription with no aerobic training. Outcomes of interest 
+included maximal strength, explosive strength, and mus-
+cle hypertrophy. The exercise tests had to be specific to the 
+training performed. For maximal strength, both isometric 
+and isoinertial measurements were accepted. For explo-
+sive strength, any form of jump test, isometric rate of force 
+development (RFD), or dynamic power measurements 
+were considered eligible. For muscle hypertrophy, objec-
+tive measurements of whole-muscle cross-sectional area or 
+muscle thickness (e.g. ultrasound, computed tomography 
+[CT] or magnetic resonance imaging [MRI]) were required. 
+In addition, segmental lean mass as determined by dual-
+energy X-ray absorptiometry (DXA) was accepted if values 
+were reported separately for segments that were engaged in 
+training.
+Fig. 1  Flowchart of the search process and the study selection
+
+M. Schumann et al.
+Exclusion criteria included language other than English 
+or German, abstracts and dissertations, cross-sectional stud-
+ies assessing only acute exercise responses, and observa-
+tional studies.
+2.3  Data Extraction
+Data extraction was performed independently by two 
+authors. The following data were extracted from each 
+included study: (1) general characteristics (e.g. author[s], 
+year of publication and aim of the study), (2) participant 
+information (e.g. sample size, training status, and age), (3) 
+intervention data for all groups (e.g. intervention duration, 
+type of intervention), and (4) specific outcomes (e.g. meas-
+ures of maximal and explosive strength and hypertrophy). 
+If the mean and standard deviation of each group were not 
+specified, we requested baseline and post-intervention data 
+from the authors of the primary studies. If data were pre-
+sented within a graph and no additional data were provided 
+upon request, mean and standard deviation were extracted 
+using WebPlotDigitizer version 4.4 (Pacifica, CA, USA) 
+[17].
+2.4  Data Synthesis and Analyses
+Standardised mean differences (SMD) were calculated, and 
+an inverse variance-weighted random-effects model was 
+fitted to the effect sizes (ES). Additionally, log variability 
+ratios were calculated, and an inverse variance-weighted 
+random-effects model was fitted to the ES. Meta-analyses 
+were performed using R (3.6.2), RStudio (1.2.5033), and 
+the metafor package (version 2.4.0) [18]. ES were calculated 
+for pre-test post-test control group designs using the previ-
+ously recommended raw score standardisation [19, 20]. Fur-
+thermore, the exact sampling variance of ES was computed 
+according to recommendations [19].
+Heterogeneity (i.e. τ2) was estimated using the restricted 
+maximum-likelihood estimator [21]. To complete the hetero-
+geneity analyses, the Q-test for heterogeneity [22] and the 
+I2 statistic [23] were also calculated. Studentised residuals 
+and Cook’s distances were examined to assess whether stud-
+ies might be outliers and/or overly influential [24]. Studies 
+with a studentised residual greater than the 100 × (1–0.05/
+(2 × k))th percentile of a standard normal distribution were 
+declared potential outliers (i.e. using a Bonferroni correction 
+with two-sided α = 0.05 for k studies included in the meta-
+analyses). Studies with a Cook’s distance larger than the 
+median plus six times the interquartile range of the Cook’s 
+distances were considered overly influential. If a study was 
+identified as a potential outlier or overly influential, a sensi-
+tivity analysis was performed. A trim-and-fill-contour funnel 
+plot was created to estimate the number of studies that may 
+be missing from the meta-analysis (Fig. S1 in the ESM). We 
+used the rank correlation test [25] and regression test [26] 
+using the standard error of observed outcomes as predictor 
+to check for funnel plot asymmetry.
+ES from studies with more than two intervention or con-
+trol groups were combined according to the Cochrane hand-
+book recommendations [27], except for subgroup analysis 
+when different interventions from individual studies were 
+included in separate subgroups. If there were multiple meas-
+urements for the same outcome, only one measurement was 
+included in the analysis, based on the following hierarchies:
+• Maximal strength: (1) dynamic bilateral leg press, (2) 
+squat, (3) unilateral isometric torque (knee extension), 
+and (4) bilateral dynamic knee extension.
+• Explosive strength: (1) jump height and (2) other meas-
+ures of rapid force production as well as squat jump 
+power and leg press power at 50% of maximal strength.
+• Muscle hypertrophy: (1) whole-muscle cross-sectional 
+area of the quadriceps femoris muscles (i.e. panoramic 
+ultrasound, CT, MRI), (2) muscle thickness of the vastus 
+lateralis, and (3) segmental DXA of the lower extremi-
+ties.
+Thus, each study was included in the final analyses with 
+only one parameter to avoid inflating the weighting of indi-
+vidual studies.
+Because of a lack of systematic reporting, subgroup 
+analyses were only performed for aerobic training type (i.e. 
+cycling vs. running), concurrent training frequency (i.e. 
+low frequency of 4.1 ± 0.3 vs. high frequency of 6.1 ± 1.6 
+weekly sessions, based on 2.0 ± 0.3 vs. 3.1 ± 0.6 weekly 
+sessions in the comparison training group), training status 
+(i.e. untrained vs. active), mean age of the study population 
+(18–40 vs. > 40 years), and training modality (i.e. concur -
+rent training on different days vs. on the same day vs. in the 
+same session). For studies comparing concurrent training in 
+the same session, when a sufficient number of studies were 
+available, training order was also compared (i.e. aerobic 
+before strength exercise vs. strength before aerobic exercise). 
+Studies were divided into subgroups based on the descrip-
+tion in the manuscript. This was particularly true for training 
+status, with studies classified as ‘untrained’ if participants 
+were clearly described as ‘sedentary’, ‘previously untrained’, 
+or ‘inactive’. Conversely, all other studies were classified as 
+‘active’ (i.e. ‘recreationally active’, ‘trained’, ‘well-trained’, 
+etc.). Specific rationale for the exclusion of individual stud-
+ies can be found in Table S2 in the ESM.
+2.5  Assessment of Methodological Quality
+Risk of bias for the included studies was assessed indepen-
+dently by two reviewers using the Physiotherapy Evidence 
+Database (PEDro) scale. The PEDro scale has previously
+
+Compatibility of Concurrent Aerobic and Strength Training
+been assessed as a valid measure of the methodological 
+quality of randomised trials [ 28]. Studies scoring  > 6 were 
+classified as ‘high quality’, studies scoring 4–5 were classi-
+fied as ‘medium quality’, and studies scoring < 4 were clas-
+sified as ‘low quality’. The following sources of bias were 
+considered: selection (sequence generation and allocation 
+concealment), performance (blinding of participants/per -
+sonnel), detection (blinding outcome assessors), attrition 
+(incomplete outcome data), reporting (selective reporting), 
+and other potential biases (e.g. recall bias). The risk-of-bias 
+scores for the included studies are presented in Table S3 
+in the ESM. The mean score for scale criteria 2–11 of the 
+PEDro scale was 4.3/10, i.e., medium quality.
+3  Results
+3.1  Study Characteristics
+The database search identified 15,729 potentially eligible 
+articles. After further screening and eligibility assessment, a 
+total of 43 studies were included in the final analysis (Fig. 1). 
+The characteristics of the studies, participants, and training 
+interventions are summarised in Table S1 in the ESM. The 
+meta-analysis included a total of 1090 participants, of whom 
+590 performed supervised combined aerobic and strength 
+training and 500 performed strength training alone. In the 
+included studies, cycling was the most common type of aero-
+bic training (24 studies), followed by running (16 studies). In 
+addition, the combination of running and cycling [9], rowing 
+[29], and continuous repeated leg extensions [30] were each 
+evaluated by one study.
+3.2  Maximal Strength
+The final analysis included 37 studies [ 9–11, 29–62], with 
+525 participants performing combined aerobic and strength 
+training and 442 participants performing strength training 
+alone. The observed SMD ranged from − 1.37 to 1.99, and 
+the estimated average SMD based on the random-effects 
+model was − 0.06 (95% confidence interval [CI] − 0.20 to 
+0.09; p = 0.446), indicating no interference effect of aerobic 
+training (Fig.  2). The estimated log variability ratio based 
+on the random-effects model was 0.05 (95% CI − 0.05 to 
+0.15; p = 0.311). According to the Q -test, there was no sig-
+nificant heterogeneity in the true outcomes (Q(36) = 32.591, 
+p = 0.632, /uni0302.s1/u1D70F2 = 0.000, I2 = 0.00%). An examination of the 
+studentised residuals showed no evidence of outliers within 
+this model, and none of the studies were overly influential.
+Subgroup analyses showed no statistical differences 
+(p > 0.05) (Figs. S2–S7 in the ESM).
+3.3  Explosive Strength
+The final analyses included 18 studies [11, 31, 34, 38, 39, 
+42, 49, 51–54, 56, 58–60, 62–64], with 270 participants per-
+forming combined aerobic and strength training and 208 per-
+forming strength training alone. The observed SMD ranged 
+from − 1.60 to 0.22, and the estimated mean SMD based 
+on the random-effects model was − 0.28 (95% CI − 0.48 
+to − 0.08; p = 0.007), indicating an interference effect of 
+aerobic training (Fig. 3). The estimated log variability ratio 
+based on the random-effects model was 0.04 (95% CI − 0.09 
+to 0.18; p = 0.533). According to the Q test, there was no sig-
+nificant heterogeneity in the true outcomes (Q(17) = 26.675, 
+p = 0.068, /uni0302.s1/u1D70F2 = 0.068, I2 = 35.81%). The studentised residuals 
+highlighted Mikkola et al. [31] as a potential outlier that may 
+have been overly influential. Sensitivity analyses revealed 
+that excluding this study reduced the amount of observed 
+heterogeneity to I2 = 0.00% (Q(16) = 13.860, p = 0.061, /uni0302.s1/u1D70F2 = 
+0.061).
+Subgroup analyses showed no statistical differences 
+(p > 0.05) (Figs. S8–S11 in the ESM). When studies were 
+grouped by type of aerobic training, the SMD was signifi-
+cantly in favour of strength training for cycling − 0.44 (95% 
+CI − 0.86 to − 0.01; p = 0.043) but not for running (Fig. S8 
+in the ESM). However, after the overly influential study by 
+Mikkola et al. [31] was removed, this effect was no longer 
+observed (SMD − 0.27; 95% CI − 0.58 to 0.04; p  = 0.086). 
+A similar effect was also seen for low concurrent training 
+frequency, with an initial SMD of − 0.45 (95% CI − 0.87 
+to − 0.02; p = 0.039) in favour of the strength training group 
+(Fig. S9 in the ESM). After the study by Mikkola et al. [31] 
+was removed, this reduced to − 0.25 (95% CI − 0.50 to 0.01; 
+p = 0.059). Conversely, when studies were grouped by train-
+ing modality, a significant interference effect was observed 
+for studies that performed concurrent training within the 
+same session (≤ 20 min between aerobic and strength train-
+ing; SMD − 0.31; 95% CI − 0.62 to − 0.01; p = 0.043) but not 
+when concurrent training was separated by at least 3 h (Fig. 
+S11 in the ESM).
+3.4  Muscle Hypertrophy
+The final analyses included 15 studies [10, 11, 33, 45–47, 
+49, 54, 55, 59, 62, 65–68], with 201 participants perform-
+ing combined aerobic and strength training and 188 per -
+forming strength training alone. The observed SMD in 
+each trial ranged from − 0.67 to 0.28, and the estimated 
+mean SMD based on the random-effects model was − 0.01 
+(95% CI − 0.16 to 0.18; p  = 0.919), indicating no interfer -
+ence effect of aerobic training (Fig.  4). The estimated log 
+variability ratio based on the random-effects model was 0.04
+
+M. Schumann et al.
+(95% CI − 0.11 to 0.19; p = 0.567). According to the Q test, 
+there was no significant heterogeneity in the true outcomes 
+(Q(14) = 4.687; p = 0.990, /uni0302.s1/u1D70F2 = 0.000, I2 = 0.00%). An exami-
+nation of the studentised residuals showed no potential out-
+lier within this model. According to the Cook’s distances, 
+no study could be considered overly influential. Subgroup 
+analyses revealed no statistical differences (p  > 0.05) (Figs. 
+S12–S14 in the ESM).
+4  Discussion
+The aim of this study was to provide a systematic and evi-
+dence-based appraisal of whether aerobic training interfered 
+with adaptations to strength training in terms of muscle func-
+tion (maximal and explosive strength) and whole-muscle 
+hypertrophy. In addition, the impact of important mediating 
+covariates such as type of aerobic training, training modal-
+ity, exercise order, concurrent training frequency, age, and 
+training status were assessed. The main finding was that con-
+current aerobic and strength training did not interfere with 
+the development of maximal strength and muscle hypertro-
+phy compared with strength training alone. However, the 
+development of explosive strength was negatively affected 
+by concurrent training. Our subgroup analysis showed that 
+this negative effect was exacerbated when concurrent train-
+ing was performed within the same session, compared with 
+when aerobic and strength training were separated by at least 
+3 h. No significant effects were found for other moderators, 
+such as type of aerobic training (cycling vs. running), fre-
+quency of concurrent training (> 5 vs. < 5 weekly sessions), 
+training status (untrained vs. active), and mean age (<  40 
+vs. > 40 years).
+An important goal of this meta-analysis was to provide 
+evidence that can be translated into optimised and fine-tuned 
+exercise recommendations for fitness and health purposes. 
+Although our results are generally consistent with those 
+reported by Wilson et al. [14] a decade ago, these authors 
+Fig. 2  Forest plot of studies comparing differences in maximal strength. CI confidence interval, RE random effects, SMD standardised mean dif-
+ference
+
+Compatibility of Concurrent Aerobic and Strength Training
+considered anaerobic power measures such as Wingate per-
+formance as indicators of explosive strength. Since we inten-
+tionally included only direct measures of explosive strength 
+(i.e. jump performance, isometric RFD, and dynamic leg 
+press power), our findings reinforce that concurrent aerobic 
+and strength training can compromise strength qualities that 
+require rapid neural activation.
+The mechanism for compromised explosive but not maxi-
+mal strength is interesting and requires further research. Our 
+findings are supported by an early study showing that muscle 
+hypertrophy and maximal strength were unaffected by con-
+current training, whereas RFD was blunted, likely because 
+of interference with rapid voluntary neural activation [10]. 
+More specifically, although the maximal neural activation 
+was not compromised, the increase in the integrated elec-
+tromyographic signal during the first 500 ms was attenuated 
+in the group performing both aerobic and strength training. 
+Since the rate of recruitment and maximal discharge of 
+motor neurons largely determines the maximal RFD [69], it 
+appears that the rate of recruitment and discharge of motor 
+units is particularly sensitive to the interference effect of 
+aerobic training. It could be speculated that residual fatigue 
+induced by aerobic training affects the corticospinal inputs 
+received by the motor neurons before force is generated, 
+which would subsequently compromise rapid force genera-
+tion. The latter could potentially reduce the quality but not 
+the quantity of strength training sessions performed concur-
+rently with aerobic training, thereby potentially reducing the 
+development of explosive strength but not maximal strength 
+or muscle hypertrophy. This, in turn, could have implications 
+for programme design, as it is apparent that concurrently 
+improving both cardiorespiratory fitness and rapid force pro-
+duction through rather generic exercise recommendations 
+presents a physiological challenge.
+Consistent with this, our subgroup analysis indicated that 
+the magnitude of interference in explosive strength devel-
+opment was dependent on the programming of the exer -
+cise sessions, with significant interference observed when 
+aerobic and strength training were performed within the 
+same training session. Previous studies have indicated that 
+Fig. 3  Forest plot of studies comparing differences in explosive strength. CI confidence interval, RE random effects, SMD standardised mean dif-
+ference
+
+M. Schumann et al.
+neuromuscular interference may be more pronounced when 
+strength training is immediately preceded by aerobic train-
+ing in both young [70] and older individuals [71]. However, 
+our pooled analysis did not provide evidence for an order-
+specific effect but rather highlights that combining aerobic 
+and strength training in close proximity attenuates adapta-
+tions in explosive strength regardless of exercise order. Other 
+studies have suggested that, apart from limitations in rapid 
+neural drive [10], adaptations in pennation angle and fascicle 
+length [54] or patella tendon cross-sectional area [72] could 
+be possible mechanistic explanations for these findings.
+The moderators, including frequency of concurrent 
+training, type of training, age, and training status, did 
+not significantly influence adaptations in maximal and 
+explosive strength, nor muscle hypertrophy. Similarly, no 
+significant effects were observed in our analysis of log 
+variability, indicating no within-group differences in vari-
+ability after concurrent training compared with strength 
+training alone. Our results differ from the recently pub-
+lished meta-analysis that focused exclusively on the effect 
+of training status on maximal strength during concurrent 
+training [15]. In this study, the one-repetition maximum 
+for leg press and squat was negatively affected by concur -
+rent training in trained individuals but not in moderately 
+trained or untrained individuals compared with strength 
+training alone. Moreover, their subgroup analysis sug-
+gested that the negative effect observed in trained indi-
+viduals occurred only when aerobic and strength training 
+were performed within the same training session. How -
+ever, given the lack of consistent reporting, we chose not 
+to divide the active participants into moderately or well-
+trained athletes, which may have diluted potential signifi-
+cant effects. Furthermore, albeit the exact calculations of 
+Petré et al. [15] were not published, their analysis appears 
+to differ from our approach. Apart from the smaller num-
+ber of studies included (27 vs. 37 studies), studies consist-
+ing of multiple intervention groups with only one com-
+parator were included multiple times in the same analysis, 
+potentially inflating power [73]. Although the results did 
+not reach statistical significance, our subgroup analysis for 
+Fig. 4  Forest plot of studies comparing differences in muscle hypertrophy. CI confidence interval, CSA  cross-sectional area, DXA  dual energy 
+X-ray absorptiometry, RE random effects, SMD standardised mean difference
+
+Compatibility of Concurrent Aerobic and Strength Training
+training status showed a similar direction for the SMD in 
+trained versus untrained participants as reported by Petré 
+et al. [15].
+In other concurrent training research, numerous stud-
+ies have focused on the possible interference mechanisms 
+related to muscle hypertrophy [74]. The rationale for these 
+studies stems from rodent and cellular models indicating 
+possible inhibition of mechanistic target of rapamycin sig-
+nalling through activation of AMP-activated protein kinase 
+(AMPK) following aerobic exercise [75– 78]. However, 
+subsequent human studies failed to confirm these find-
+ings when examining physiological mechanisms such as 
+metabolic stress and AMPK activation [67, 79] or protein 
+synthesis [80] following concurrent exercise. Based on our 
+systematic review, this is not surprising as none of the 
+identified studies reported a significant interference effect 
+on muscle hypertrophy. Although Wilson et al. [14] con-
+cluded from their subgroup analysis that there was a nega-
+tive relationship between the ES for hypertrophy and both 
+aerobic training frequency and duration, our results do 
+not confirm these observations. There are several possible 
+explanations for this inconsistency, apart from the obvi-
+ous fact that our analysis was conducted almost a decade 
+later and therefore included more studies. First, the inclu-
+sion criteria differed since Wilson et al. [14] included fibre 
+hypertrophy as an outcome parameter and also included 
+studies without a strength training control group. Second, 
+we conducted our analysis based on an inverse variance-
+weighted random-effects model in a pre-test post-test 
+control group design [18], whereas Wilson et al. [14] esti-
+mated the ES of each individual group, resulting in a total 
+of 72 ES for muscle hypertrophy. The reported aerobic 
+training duration and intensity were then correlated with 
+ES, potentially leading to significant positive correlations.
+Although the current meta-analysis provides updated 
+and novel information, some limitations should be acknowl-
+edged. First, it should be noted that the majority of the 
+included studies were only classified as of medium quality 
+(mean PEDro score 4.3 ± 0.9), and seven studies were of low 
+quality. However, it is important to note that it may not be 
+possible to achieve all items related to blinding in exercise 
+trials. In addition, poor reporting quality may have biased the 
+outcome of this ranking. Thus, more importance can possi-
+bly be given to the studentised residuals and the Cook’s dis-
+tance [24]. Furthermore, meta-analyses are generally limited 
+to the information provided within the included individual 
+studies. Even though we contacted authors to request addi-
+tional information, the response rate was low. Therefore, to 
+avoid speculation, we decided to include only clearly defined 
+moderators. For example, aerobic exercise intensity was 
+not included because the included studies did not provide 
+consistent information. However, it is possible that aerobic 
+exercise intensity may impact on the compatibility of aerobic 
+and strength training. A meta-analysis examining the effects 
+of concurrent high-intensity interval training (HIIT) and 
+strength training reported that lower body strength develop-
+ment was compromised by concurrent training compared 
+with strength training alone, even though the authors noted 
+that a possible negative effect on lower body strength may 
+be ameliorated by the inclusion of running-based HIIT and 
+longer intermodal rest periods [81]. This was further sup-
+ported by a recent narrative review reporting that HIIT could 
+minimise the risk of neuromuscular interference and that this 
+effect was even more pronounced when HIIT was replaced 
+with sprint-interval training [82]. However, it should be 
+acknowledged that previous research appears to indicate that 
+the overall health benefits of concurrent training, apart from 
+muscle function and size, appear to be greater than those 
+obtained with isolated training of either aerobic or strength 
+training [83, 84] and that the overall risk of interference 
+effects is rather low. Therefore, most individuals, includ-
+ing recreational athletes, can enjoy complementary benefits 
+from incorporating both aerobic and strength training into 
+their training programme.
+5  Conclusion
+This updated meta-analysis shows that concurrent aerobic 
+and strength training does not interfere with the develop-
+ment of maximal strength and muscle hypertrophy compared 
+with strength training alone. This appears to be independent 
+of the type of aerobic training (cycling vs. running), fre-
+quency of concurrent training (> 5 vs. < 5 weekly sessions), 
+training status (untrained vs. active), and mean age (<  40 
+vs. > 40 years). However, the evidence of reduced develop-
+ment of explosive strength with concurrent training, particu-
+larly when aerobic and strength training are performed in 
+the same session, suggests that practitioners who prioritize 
+explosive strength may benefit from separating aerobic and 
+strength training to achieve optimal adaptations.
+Supplementary Information The online version contains supplemen-
+tary material available at https:// doi. org/ 10. 1007/ s40279- 021- 01587-7.
+Acknowledgements The authors thank Dr. James Steele (Solent Uni-
+versity, UK) for his valuable input concerning the data analysis.
+Declarations 
+Funding Open Access funding enabled and organized by Projekt 
+DEAL. No funding sources were used in the preparation of this article.
+Conflict of interest Moritz Schumann, Joshua F. Feuerbacher, Marvin 
+Sünkeler, Nils Freitag, Bent R. Rønnestad, Kenji Doma and Tommy 
+Lundberg have no conflicts of interest relevant to the content of this 
+review.
+
+M. Schumann et al.
+Availability of data and material Not applicable.
+Code availability The code will be available upon reasonable request.
+Author contribution Design of the study: MS, JFF, MSü, NF, KD, 
+BRR, TL. Literature search: MS, JFF, MSü. Data screening and extrac-
+tion: JFF, MSü. Statistical analyses: MS, JFF, MSü, NF, TL. Manu-
+script preparation and editing: MS, JFF, TL. All authors have read and 
+agreed to the submitted version.
+Ethics approval Not applicable.
+Consent to participate Not applicable.
+Consent for publication Not applicable.
+Open Access This article is licensed under a Creative Commons Attri-
+bution 4.0 International License, which permits use, sharing, adapta-
+tion, distribution and reproduction in any medium or format, as long 
+as you give appropriate credit to the original author(s) and the source, 
+provide a link to the Creative Commons licence, and indicate if changes 
+were made. The images or other third party material in this article are 
+included in the article's Creative Commons licence, unless indicated 
+otherwise in a credit line to the material. If material is not included in 
+the article's Creative Commons licence and your intended use is not 
+permitted by statutory regulation or exceeds the permitted use, you will 
+need to obtain permission directly from the copyright holder. To view a 
+copy of this licence, visit http:// creat iveco mmons. org/ licen ses/ by/4. 0/.
+References
+ 1. Li R, Xia J, Zhang XI, et al. Associations of muscle mass and 
+strength with all-cause mortality among US older adults. Med Sci 
+Sports Exerc. 2018;50(3):458–67.
+ 2. Kodama S, Saito K, Tanaka S, et al. Cardiorespiratory fitness as 
+a quantitative predictor of all-cause mortality and cardiovascu-
+lar events in healthy men and women: a meta-analysis. JAMA. 
+2009;301(19):2024–35.
+ 3. Hawley JA. Adaptations of skeletal muscle to prolonged, 
+intense endurance training. Clin Exp Pharmacol Physiol. 
+2002;29(3):218–22.
+ 4. Tesch PA. Skeletal muscle adaptations consequent to long-term 
+heavy resistance exercise. Med Sci Sports Exerc. 1988;20(5 
+Suppl):S132–4.
+ 5. Daly RM, Dalla Via J, Fyfe JJ, et al. Effects of exercise frequency 
+and training volume on bone changes following a multi-compo-
+nent exercise intervention in middle aged and older men: Second-
+ary analysis of an 18-month randomized controlled trial. Bone. 
+2021;148:115944. https:// doi. org/ 10. 1016/j. bone. 2021. 115944.
+ 6. Severinsen MCK, Pedersen BK. Muscle-organ crosstalk: the 
+emerging roles of myokines. Endocr Rev. 2020;41(4):594–609.
+ 7. Casas-Herrero A, Cadore EL, Zambom-Ferraresi F, et al. Func-
+tional capacity, muscle fat infiltration, power output, and cognitive 
+impairment in institutionalized frail oldest old. Rejuvenation Res. 
+2013;16(5):396–403.
+ 8. Sherrington C, Fairhall NJ, Wallbank GK, et al. Exercise for pre-
+venting falls in older people living in the community. Cochrane 
+Database Syst Rev. 2019;1:CD012424. https:// doi. org/ 10. 1002/ 
+14651 858. CD012 424. pub2.
+ 9. Hickson RC. Interference of strength development by simulta-
+neously training for strength and endurance. Eur J Appl Physiol 
+Occup Physiol. 1980;45(2–3):255–63.
+ 10. Häkkinen K, Alen M, Kraemer WJ, et al. Neuromuscular adapta-
+tions during concurrent strength and endurance training versus 
+strength training. Eur J Appl Physiol. 2003;89(1):42–52. https://  
+doi. org/ 10. 1007/ s00421- 002- 0751-9.
+ 11. McCarthy JP, Agre JC, Graf BK, et al. Compatibility of adaptive 
+responses with combining strength and endurance training. Med 
+Sci Sports Exerc. 1995;27(3):429–36.
+ 12. McCarthy JP, Pozniak MA, Agre JC. Neuromuscular adaptations 
+to concurrent strength and endurance training. Med Sci Sports 
+Exerc. 2002;34(3):511–9.
+ 13. Chtara M, Chaouachi A, Levin GT, et al. Effect of concurrent 
+endurance and circuit resistance training sequence on mus -
+cular strength and power development. J Strength Cond Res. 
+2008;22(4):1037–45.
+ 14. Wilson JM, Marin PJ, Rhea MR, et al. Concurrent training: a 
+meta-analysis examining interference of aerobic and resistance 
+exercises. J Strength Cond Res. 2012;26(8):2293–307.
+ 15. Petré H, Hemmingsson E, Rosdahl H, et al. Development of maxi-
+mal dynamic strength during concurrent resistance and endurance 
+training in untrained, moderately trained, and trained individuals: 
+a systematic review and meta-analysis. Sports Med. 2021. https:// 
+doi. org/ 10. 1007/ s40279- 021- 01426-9.
+ 16. Liberati A, Altman DG, Tetzlaff J, et al. The PRISMA statement 
+for reporting systematic reviews and meta-analyses of studies that 
+evaluate health care interventions: explanation and elaboration. 
+PLoS Med. 2009;6(7): e1000100. https:// doi. org/ 10. 1371/ journ 
+al. pmed. 10001 00.
+ 17. Drevon D, Fursa SR, Malcolm AL. Intercoder reliability and 
+validity of WebPlotDigitizer in extracting graphed data. Behav 
+Modif. 2017;41(2):323–39. https:// doi. org/ 10. 1177/ 01454 45516 
+673998.
+ 18. Viechtbauer W. Conducting meta-analyses in R with the metafor 
+package. J Stat Softw. 2010;36(3):1–48. https:// lirias. kuleu ven. 
+be/ 10596 37? limo=0.
+ 19. Morris SB. Estimating effect sizes from pretest-posttest-control 
+group designs. Organ Res Methods. 2008;11(2):364–86.
+ 20. Becker BJ. Synthesizing standardized mean-change measures. Br 
+J Math Stat Psychol. 1988;41(2):257–78.
+ 21. Viechtbauer W. Bias and efficiency of meta-analytic variance 
+estimators in the random-effects model. J Educ Behav Stat. 
+2005;30(3):261–93.
+ 22. Cochran WG. The combination of estimates from different experi-
+ments. Biometrics. 1954;10(1):101.
+ 23. Higgins JPT, Thompson SG. Quantifying heterogeneity in a meta-
+analysis. Stat Med. 2002;21(11):1539–58.
+ 24. Viechtbauer W, Cheung MW-L. Outlier and influence diagnostics 
+for meta-analysis. Res Synth Methods. 2010;1(2):112–25. https:// 
+doi. org/ 10. 1002/ jrsm. 11.
+ 25. Begg CB, Mazumdar M. Operating characteristics of a rank cor -
+relation test for publication bias. Biometrics. 1994;50(4):1088.
+ 26. Rothstein HR, Sutton AJ, Borenstein M. Publication bias in meta-
+analysis: prevention, assessment and adjustments. Chichester: 
+Wiley; 2005.
+ 27. Higgins JP, Green S. Cochrane handbook for systematic reviews 
+of interventions version 5.1.0.: Cochrane Collab. 2011.
+ 28. Elkins MR, Herbert RD, Moseley AM, et al. Rating the quality 
+of trials in systematic reviews of physical therapy interventions. 
+Cardiopulm Phys Ther J. 2010;21(3):20–6.
+ 29. Gravelle BL, Blessing DL. Physiological adaptation in women 
+concurrently training for strength and endurance. J Strength 
+Cond Res. 2000;14(1):5–13.
+ 30. Jones TW, Howatson G, Russell M, et al. Performance and 
+neuromuscular adaptations following differing ratios of con-
+current strength and endurance training. J Strength Cond Res. 
+2013;27(12):3342–51.
+
+Compatibility of Concurrent Aerobic and Strength Training
+ 31. Mikkola J, Rusko H, Izquierdo M, et  al. Neuromuscular 
+and cardiovascular adaptations during concurrent strength 
+and endurance training in untrained men. Int J Sports Med. 
+2012;33(9):702–10. http:// www. embase. com/ search/ resul ts? 
+subac tion= viewr ecord & from= expor t& id= L3663 68740.
+ 32. Gettman LR, Ward P, Hagan RD. A comparison of combined 
+running and weight training with circuit weight training. Med 
+Sci Sports Exerc. 1982;14(3):229–34.
+ 33. Sale DG, MacDougall JD, Jacobs I, et al. Interaction between 
+concurrent strength and endurance training. J Appl Physiol. 
+1990;68(1):260–70. http:// www. embase. com/ search/ resul ts? 
+subac tion= viewr ecord & from= expor t& id= L2007 5241.
+ 34. Hennessy LC, Watson AWS. The interference effects of training 
+for strength and endurance simultaneously. J Strength Cond Res. 
+1994;8(1):12.
+ 35. Kraemer WJ, Patton JF, Gordon SE, et al. Compatibility of 
+high-intensity strength and endurance training on hormo-
+nal and skeletal muscle adaptations. J Appl Physiol (1985). 
+1995;78(3):976–89. http:// www. embase. com/ search/ resul ts? 
+subac tion= viewr ecord & from= expor t& id= L2509 8185 https://  
+doi. org/ 10. 1152/ jappl. 1995. 78.3. 976.
+ 36. Dolezal BA, Potteiger JA. Concurrent resistance and endurance 
+training influence basal metabolic rate in nondieting individuals. 
+J Appl Physiol (1985). 1998;85(2):695–700.
+ 37. Bell GJ, Syrotuik D, Martin TP, et al. Effect of concurrent 
+strength and endurance training on skeletal muscle properties 
+and hormone concentrations in humans. Eur J Appl Physiol. 
+2000;81(5):418–27.
+ 38. Balabinis CP, Psarakis CH, Moukas M, et al. Early phase 
+changes by concurrent endurance and strength training. J 
+Strength Cond Res. 2003;17(2):393–401.
+ 39. Glowacki SP, Martin SE, Maurer A, et al. Effects of resistance, 
+endurance, and concurrent exercise on training outcomes in 
+men. Med Sci Sports Exerc. 2004;36(12):2119–27.
+ 40. Haykowsky M, McGavock J, Muhll IV, et al. Effect of exercise 
+training on peak aerobic power, left ventricular morphology, 
+and muscle strength in healthy older women. J Gerontol A Biol 
+Sci Med Sci. 2005;60(3):307–11.
+ 41. Cadore EL, Pinto RS, Lhullier FLR, et  al. Physiological 
+effects of concurrent training in elderly men. Int J Sports Med. 
+2010;31(10):689–97.
+ 42. Hendrickson NR, Sharp MA, Alemany JA, et al. Combined 
+resistance and endurance training improves physical capacity 
+and performance on tactical occupational tasks. Eur J Appl 
+Physiol. 2010;109(6):1197–208.
+ 43. Silva RF, Cadore EL, Kothe G, et al. Concurrent training with 
+different aerobic exercises. Int J Sports Med. 2012;33(8):627–
+34. https:// doi. org/ 10. 1055/s- 0031- 12996 98.
+ 44. Libardi CA, de Souza GV, Cavaglieri CR, et al. Effect of resist -
+ance, endurance, and concurrent training on TNF-α, IL-6, and 
+CRP. Med Sci Sports Exerc. 2012;44(1):50–6.
+ 45. Lundberg TR, Fernandez-Gonzalo R, Gustafsson T, et al. Aero-
+bic exercise does not compromise muscle hypertrophy response 
+to short-term resistance training. J Appl Physiol (1985). 
+2013;114(1):81–9.
+ 46. de Souza EO, Tricoli V, Roschel H, et al. Molecular adaptations 
+to concurrent training. Int J Sports Med. 2013;34(3):207–13.
+ 47. Cantrell GS, Schilling BK, Paquette MR, et  al. Maximal 
+strength, power, and aerobic endurance adaptations to concur -
+rent strength and sprint interval training. Eur J Appl Physiol. 
+2014;114(4):763–71.
+ 48. Lundberg TR, Fernandez-Gonzalo R, Norrbom J, et al. Trun-
+cated splice variant PGC-1\alpha4 is not associated with 
+exercise-induced human muscle hypertrophy. Acta Physiol. 
+2014;212(2):142–51.
+ 49. Fyfe JJ, Bartlett JD, Hanson ED, et al. Endurance training 
+intensity does not mediate interference to maximal lower-body 
+strength gain during short-term concurrent training. Front Phys -
+iol. 2016;7:487. https:// doi. org/ 10. 3389/ fphys. 2016. 00487.
+ 50. Kazior Z, Willis SJ, Moberg M, et  al. Endurance exer -
+cise enhances the effect of strength training on muscle fiber 
+size and protein expression of akt and mTOR. PLoS One 
+2016;11(2):e0149082. https:// doi. org/ 10. 1371/ journ al. pone. 
+01490 82.
+ 51. Robineau J, Babault N, Piscione J, et al. Specific training effects 
+of concurrent aerobic and strength exercises depend on recovery 
+duration. J Strength Cond Res. 2016;30(3):672–83.
+ 52. Laird RH, Elmer DJ, Barberio MD, et al. Evaluation of per -
+formance improvements after either resistance training or 
+sprint interval-based concurrent training. J Strength Cond Res. 
+2016;30(11):3057–65.
+ 53. Terzis G, Spengos K, Methenitis S, et al. Early phase inter -
+ference between low-intensity running and power train-
+ing in moderately trained females. Eur J Appl Physiol. 
+2016;116(5):1063–73.
+ 54. Tsitkanou S, Spengos K, Stasinaki A-N, et al. Effects of high-
+intensity interval cycling performed after resistance training 
+on muscle strength and hypertrophy. Scand J Med Sci Sports. 
+2017;27(11):1317–27. https:// doi. org/ 10. 1111/ sms. 12751.
+ 55. Osuka Y, Fujita S, Kitano N, et al. Effects of aerobic and 
+resistance training combined with fortified milk on muscle 
+mass, muscle strength, and physical performance in older 
+adults: a randomized controlled trial. J Nutr Health Aging. 
+2017;21(10):1349–57.
+ 56. Robineau J, Lacome M, Piscione J, et al. Concurrent training in 
+rugby sevens: effects of high-intensity interval exercises. Int J 
+Sports Physiol Perform. 2017;12(3):336–44.
+ 57. Panissa VLG, Fukuda DH, de Oliveira FP, et al. Maximum 
+strength development and volume-load during concurrent high 
+intensity intermittent training plus strength or strength-only train-
+ing. J Sports Sci Med. 2018;17(4):623–32.
+ 58. Spiliopoulou P, Zaras N, Methenitis S, et al. Effect of concurrent 
+power training and high-intensity interval cycling on muscle mor-
+phology and performance. J Strength Cond Res. 2019;35(9):2464–
+71. https:// doi. org/ 10. 1519/ JSC. 00000 00000 003172
+ 59. Lee MJ-C, Ballantyne JK, Chagolla J, et al. Order of same-day 
+concurrent training influences some indices of power develop-
+ment, but not strength, lean mass, or aerobic fitness in healthy, 
+moderately-active men after 9 weeks of training. PLoS One. 
+2020;15(5):e0233134.
+ 60. Karavirta L, Häkkinen A, Sillanpää E, et al. Effects of combined 
+endurance and strength training on muscle strength, power and 
+hypertrophy in 40–67-year-old men. Scand J Med Sci Sports. 
+2011;21(3):402–11.
+ 61. Karavirta L. Cardiorespiratory, neuromuscular and cardiac auto-
+nomic adaptations to combined endurance and strength training in 
+ageing men and women 162 studies in sports, physical education 
+and health. http:// urn. fi/ URN: ISBN: 978- 951- 39- 4216-8
+ 62. Shamim B, Devlin BL, Timmins RG, et al. Adaptations to concur-
+rent training in combination with high protein availability: a com-
+parative trial in healthy, recreationally active men. Sports Med. 
+2018;48(12):2869–83.
+ 63. Jones TW, Howatson G, Russell M, et al. Performance and endo-
+crine responses to differing ratios of concurrent strength and 
+endurance training. J Strength Cond Res. 2016;30(3):693–702.
+ 64. Kraemer WJ, Vescovi JD, Volek JS, et al. Effects of concurrent 
+resistance and aerobic training on load-bearing performance and 
+the Army physical fitness test. Mil Med. 2004;169(12):994–9.
+ 65. Sillanpää E, Häkkinen A, Nyman K, et al. Body composition and 
+fitness during strength and/or endurance training in older men. 
+Med Sci Sports Exerc. 2008;40(5):950–8.
+
+M. Schumann et al.
+ 66. Sillanpää E, Häkkinen A, Laaksonen DE, et al. Serum basal 
+hormone concentrations, nutrition and physical fitness during 
+strength and/or endurance training in 3964-year-old women. Int J 
+Sports Med. 2010;31(2):110–7.
+ 67. Lundberg TR, Fernandez-Gonzalo R, Tesch PA. Exercise-induced 
+AMPK activation does not interfere with muscle hypertrophy in 
+response to resistance training in men. J Appl Physiol (1985). 
+2014;116(6):611–20. https:// doi. org/ 10. 1152/ jappl physi ol. 01082. 
+2013.
+ 68. Timmins RG, Shamim B, Tofari PJ, et al. Differences in lower 
+limb strength and structure after 12 weeks of resistance, endur -
+ance, and concurrent training. Int J Sports Physiol Perform. 
+2020:1–8. https:// www. embase. com/ search/ resul ts? subac tion= 
+viewr ecord & id= L6313 43334 & from= export. https:// doi. org/ 10. 
+1123/ ijspp. 2019- 0788.
+ 69. Del Vecchio A, Negro F, Holobar A, et al. You are as fast as your 
+motor neurons: speed of recruitment and maximal discharge of 
+motor neurons determine the maximal rate of force development 
+in humans. J Physiol. 2019;597(9):2445–56. https://  doi. org/ 10. 
+1113/ JP277 396.
+ 70. Eklund D, Pulverenti T, Bankers S, et al. Neuromuscular adap-
+tations to different modes of combined strength and endurance 
+training. Int J Sports Med. 2015;36(2):120–9. https:// doi. org/ 10. 
+1055/s- 0034- 13858 83.
+ 71. Cadore EL, Izquierdo M, Alberton CL, et al. Strength prior to 
+endurance intra-session exercise sequence optimizes neuromus-
+cular and cardiovascular gains in elderly men. Exp Gerontol. 
+2012;47(2):164–9. https:// doi. org/ 10. 1016/j. exger. 2011. 11. 013.
+ 72. Rønnestad BR, Hansen EA, Raastad T. Strength training affects 
+tendon cross-sectional area and freely chosen cadence differently 
+in noncyclists and well-trained cyclists. J Strength Cond Res. 
+2012;26(1):158–66.
+ 73. Cheung MW-L. A guide to conducting a meta-analysis with non-
+independent effect sizes. Neuropsychol Rev. 2019;29(4):387–96. 
+https:// doi. org/ 10. 1007/ s11065- 019- 09415-6.
+ 74. Fyfe JJ, Bishop DJ, Stepto NK. Interference between concurrent 
+resistance and endurance exercise: molecular bases and the role 
+of individual training variables. Sports Med. 2014;44(6):743–62.
+ 75. Coffey VG, Hawley JA. Concurrent exercise training: do opposites 
+distract? J Physiol. 2017;595(9). https:// pubmed. ncbi. nlm. nih. gov/ 
+27506 998/.
+ 76. Hawley JA. Molecular responses to strength and endurance 
+training: are they incompatible? Appl Physiol Nutr Metab. 
+2009;34(3):355–61.
+ 77. Atherton PJ, Babraj J, Smith K, et al. Selective activation of 
+AMPK-PGC-1alpha or PKB-TSC2-mTOR signaling can explain 
+specific adaptive responses to endurance or resistance training-
+like electrical muscle stimulation. FASEB J. 2005;19(7):786–8. 
+https:// doi. org/ 10. 1096/ fj. 04- 2179fj  e.
+ 78. Thomson DM, Fick CA, Gordon SE. AMPK activation attenuates 
+S6K1, 4E-BP1, and eEF2 signaling responses to high-frequency 
+electrically stimulated skeletal muscle contractions. J Appl Phys-
+iol (1985). 2008;104(3):625–32. https:// doi. org/ 10. 1152/ jappl 
+physi ol. 00915. 2007.
+ 79. Apró W, Moberg M, Hamilton DL, et al. Resistance exercise-
+induced S6K1 kinase activity is not inhibited in human skeletal 
+muscle despite prior activation of AMPK by high-intensity inter-
+val cycling. Am J Physiol Endocrinol Metab. 2015;308(6):E470–
+81. https:// doi. org/ 10. 1152/ ajpen do. 00486. 2014.
+ 80. Carrithers JA, Carroll CC, Coker RH, et al. Concurrent exercise 
+and muscle protein synthesis: implications for exercise counter -
+measures in space. Aviat Space Environ Med. 2007;78(5):457–62.
+ 81. Sabag A, Najafi A, Michael S, et al. The compatibility of concur-
+rent high intensity interval training and resistance training for 
+muscular strength and hypertrophy: a systematic review and meta-
+analysis. J Sports Sci. 2018;36(21):2472–83. https:// doi. org/ 10. 
+1080/ 02640 414. 2018. 14646 36.
+ 82. Vechin FC, Conceição MS, Telles GD, et  al. Interference 
+phenomenon with concurrent strength and high-intensity 
+interval training-based aerobic training: an updated model. 
+Sports Med. 2021;51(4):599–605. https:// doi. org/ 10. 1007/  
+s40279- 020- 01421-6.
+ 83. Schroeder EC, Franke WD, Sharp RL, et al. Comparative effec -
+tiveness of aerobic, resistance, and combined training on cardio-
+vascular disease risk factors: a randomized controlled trial. PLoS 
+One. 2019;14(1):e0210292. https:// doi. org/ 10. 1371/ journ al. pone. 
+02102 92.
+ 84. Timmons JF, Minnock D, Hone M, et al. Comparison of time-
+matched aerobic, resistance, or concurrent exercise training in 
+older adults. Scand J Med Sci Sports. 2018;28(11). https:// pub-
+med. ncbi. nlm. nih. gov/ 29947 107/.
+Authors and Affiliations
+Moritz Schumann1  · Joshua F. Feuerbacher1 · Marvin Sünkeler1 · Nils Freitag1,2 · Bent R. Rønnestad3 · Kenji Doma4 · 
+Tommy R. Lundberg5,6 
+1 Department of Molecular and Cellular Sports Medicine, 
+Institute of Cardiovascular Research and Sports Medicine, 
+German Sport University, Am Sportpark Müngersdorf 6, 
+50933 Cologne, Germany
+2 Olympic Training Centre Berlin, Berlin, Germany
+3 Section for Health and Exercise Physiology, Department 
+of Public Health and Sport Sciences, Inland Norway 
+University of Applied Sciences, Elverum, Norway
+4 Sport and Exercise Science, College of Healthcare Sciences, 
+James Cook University, Townsville, QLD, Australia
+5 Division of Clinical Physiology, Department of Laboratory 
+Medicine, Karolinska Institutet, Stockholm, Sweden
+6 Unit of Clinical Physiology, Karolinska University Hospital, 
+Stockholm, Sweden

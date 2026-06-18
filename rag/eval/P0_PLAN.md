@@ -152,6 +152,63 @@
 
 ---
 
+## 8b. 执行决策记录（2026-06-17）
+
+实际执行时，针对"KB 太小/数据不匹配"做了如下决策并已落地：
+
+- **先扩 KB 再标注**（用户拍板）：在 `data/sources.yaml` 新登记 4 个**纯 CC-BY** 训练编程类源——
+  `rt_hypertrophy_umbrella`（训练量/频率/周期化）、`periodized_rt_minireview`（周期化/渐进超负荷）、
+  `concurrent_training_review`（干扰效应）、`warmup_resistance_training`（热身）。加上原有 3 个待抓源，
+  KB 从 5 篇 → 约 12 篇。
+- **授权红线**：动作技术/姿势类只找到 CC BY-**NC** 源，**不收**；过度训练、引体进阶暂无干净源。
+- **没源的题转 abstention 负样本**（`in_scope:false`），用于"无文档时是否误召回/弃答"评估。
+- **数据集落地**：`golden_dataset.json` 重构为 **12 道 in-scope + 6 道 abstention**，每个 KB 文档（含此前无题的咖啡因 `kb_04`）≥1 题。
+- **qrels 粒度**：document/source 级，`source` = 灌库文件名（与 `kb_service` 的 `metadata["source"]=filename` 对齐，已核实）。
+
+**已交付（确定性、无需外部环境）**：
+- `data/sources.yaml`：+4 CC-BY 源
+- `eval/golden_dataset.json`：in_scope + relevant_sources(grade) + abstention
+- `eval/retrieval_metrics.py`：Recall/Precision/MRR/nDCG/hit_rate/AP/false_retrieval_rate（纯函数）
+- `tests/test_retrieval_metrics.py`：指标单测
+- `eval/eval_retrieval.py`：进程内 / HTTP 两种取数的评估 runner + 报告
+- `eval/README.md`：复现文档
+
+**关键实验发现（2026-06-18，Supabase pgvector 后端）**：
+
+| variant | recall@3 | recall@10 | nDCG@10 | MRR |
+|---|---|---|---|---|
+| bm25 | 0.292 | 0.375 | 0.279 | 0.257 |
+| vector | 1.000 | 1.000 | **0.986** | **1.000** |
+| ensemble (0.5/0.5, 旧默认) | 1.000 | 1.000 | 0.822 | 0.792 |
+
+- query 多为中文、KB 为英文 → **BM25 词法匹配几乎失效**；等权重融合反而把 nDCG@10 从 0.99 拉低到 0.82。
+- 据此把 ensemble 权重做成可配置（`RETRIEVAL_VECTOR_WEIGHT`，默认仍 0.5 不破坏现状），并加 `--sweep` 找最优。
+- Recall 在 9 文档小 KB 下饱和（向量/ensemble 均 1.0）→ 头条指标用 **nDCG@10 / MRR**。
+
+**双语 query 权重扫描（同一 KB，向量权重 vs nDCG@10）**：
+
+| 向量权重 | 中文 query (cross-lingual) | 英文 query (same-language) |
+|---|---|---|
+| 0.0 (纯 BM25) | 0.279 | 0.750 |
+| 0.2 | 0.327 | 0.886 |
+| 0.5 | 0.822 | 0.978 |
+| 0.8 | 0.903 | **0.986** |
+| 1.0 (纯向量) | **0.986** | 0.955 |
+
+结论（按 query 语言分场景）：
+- **跨语言（中文问 / 英文库）→ 纯向量 w=1.0 最优**：BM25 词法跨语言失效。
+- **同语言（英文问 / 英文库）→ 混合 w=0.8 最优**，且 hybrid(0.986) > 纯向量(0.955) > 纯BM25(0.750)：两路互补，融合胜出，正是 hybrid 检索的标准理由。
+- 产品将转全英文 → 采用 **`RETRIEVAL_VECTOR_WEIGHT=0.8`**。
+- 评测集：中文 `golden_dataset.json` / 英文 `golden_dataset_en.json`，runner `--dataset` 切换。
+
+**待在你的 `.venv`（Python 3.11 + Gemini key）跑**：
+1. `python scripts/fetch_sources.py`（抓 4 个新源 + 3 个旧源）
+2. `python scripts/ingest_seed_kb.py --force`（灌库）
+3. `python eval/eval_retrieval.py --tag ensemble`（出基线指标）
+4. （可选）`RERANKER_ENABLED=true python eval/eval_retrieval.py --tag reranker_on`（对照）
+
+---
+
 ## 8. 后续（P1 / P2 预告，非本次范围）
 
 - **P1**：把 `eval_retrieval.py` 接进 GitHub Actions，设阈值做回归门禁。

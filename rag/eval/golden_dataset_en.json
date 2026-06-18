@@ -1,190 +1,190 @@
 [
   {
     "id": "eval_001",
-    "question": "增肌期每天蛋白质摄入应该是多少？",
+    "question": "How much protein should I eat per day to build muscle?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "kb_01_protein_and_exercise.txt", "grade": 3 }
     ],
-    "expected_keywords": ["体重", "克", "每公斤", "1.4", "2.0"],
+    "expected_keywords": ["1.4", "2.0", "g/kg", "body weight", "per day"],
     "topic": "nutrition",
     "difficulty": "easy"
   },
   {
     "id": "eval_002",
-    "question": "每餐摄入多少蛋白质最有利于肌肉合成？应该怎么分配？",
+    "question": "How much protein per meal maximizes muscle protein synthesis, and how should I spread it out?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "kb_01_protein_and_exercise.txt", "grade": 3 }
     ],
-    "expected_keywords": ["0.25", "20", "40", "亮氨酸", "3-4小时", "分配"],
+    "expected_keywords": ["0.25", "20", "40", "leucine", "every 3-4 hours"],
     "topic": "nutrition",
     "difficulty": "medium"
   },
   {
     "id": "eval_003",
-    "question": "肌酸补剂的作用和服用方法是什么？",
+    "question": "What does creatine do and how should I take it?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "kb_02_creatine_supplementation.txt", "grade": 3 }
     ],
-    "expected_keywords": ["ATP", "力量", "冲击期", "维持期", "每天", "克"],
+    "expected_keywords": ["ATP", "strength", "loading", "maintenance", "grams"],
     "topic": "supplement",
     "difficulty": "medium"
   },
   {
     "id": "eval_004",
-    "question": "训练前后应该怎么补充碳水化合物？营养时机重要吗？",
+    "question": "How should I time carbohydrates around training? Does nutrient timing matter?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "kb_03_nutrient_timing.txt", "grade": 3 }
     ],
-    "expected_keywords": ["糖原", "能量", "训练前", "训练后", "碳水"],
+    "expected_keywords": ["glycogen", "energy", "pre-workout", "post-workout", "carbohydrate"],
     "topic": "nutrition",
     "difficulty": "medium"
   },
   {
     "id": "eval_005",
-    "question": "咖啡因对运动表现有什么影响？建议摄入多少？",
+    "question": "How does caffeine affect exercise performance and how much should I take?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "kb_04_caffeine_and_performance.txt", "grade": 3 }
     ],
-    "expected_keywords": ["咖啡因", "mg", "体重", "耐力", "力量", "运动表现"],
+    "expected_keywords": ["caffeine", "mg/kg", "body weight", "endurance", "performance"],
     "topic": "supplement",
     "difficulty": "easy"
   },
   {
     "id": "eval_006",
-    "question": "减脂期间如何避免肌肉流失？",
+    "question": "How do I avoid losing muscle while cutting / in a calorie deficit?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "kb_05_diets_and_body_composition.txt", "grade": 3 },
       { "source": "kb_01_protein_and_exercise.txt", "grade": 2 }
     ],
-    "expected_keywords": ["蛋白质", "热量缺口", "力量训练", "保持", "瘦体重"],
+    "expected_keywords": ["protein", "calorie deficit", "resistance training", "lean mass", "preserve"],
     "topic": "fat_loss",
     "difficulty": "hard"
   },
   {
     "id": "eval_007",
-    "question": "低碳水、生酮等不同饮食法对身体成分的影响有区别吗？",
+    "question": "Do low-carb or ketogenic diets affect body composition differently from other diets?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "kb_05_diets_and_body_composition.txt", "grade": 3 }
     ],
-    "expected_keywords": ["热量平衡", "蛋白质", "饮食法", "依从性", "身体成分"],
+    "expected_keywords": ["calorie balance", "protein", "diet type", "adherence", "body composition"],
     "topic": "nutrition",
     "difficulty": "medium"
   },
   {
     "id": "eval_008",
-    "question": "渐进超负荷和周期化训练是什么意思？",
+    "question": "What are progressive overload and periodization in resistance training?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "auto_periodized_rt_minireview.txt", "grade": 3 },
       { "source": "auto_rt_hypertrophy_umbrella.txt", "grade": 2 }
     ],
-    "expected_keywords": ["重量", "增加", "适应", "线性", "波动", "周期"],
+    "expected_keywords": ["load", "increase", "adaptation", "linear", "undulating", "periodization"],
     "topic": "training_principle",
     "difficulty": "medium"
   },
   {
     "id": "eval_009",
-    "question": "每周每个肌群练多少组（训练量）最利于增肌？",
+    "question": "How many sets per muscle group per week are best for hypertrophy?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "auto_rt_hypertrophy_umbrella.txt", "grade": 3 }
     ],
-    "expected_keywords": ["组数", "每周", "肌群", "训练量", "10"],
+    "expected_keywords": ["sets", "per week", "muscle group", "volume", "10"],
     "topic": "training_volume",
     "difficulty": "medium"
   },
   {
     "id": "eval_010",
-    "question": "每周训练几次比较合适？",
+    "question": "How many times per week should I train?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "auto_rt_hypertrophy_umbrella.txt", "grade": 3 }
     ],
-    "expected_keywords": ["频率", "每周", "肌群", "训练量", "恢复"],
+    "expected_keywords": ["frequency", "per week", "muscle group", "volume", "recovery"],
     "topic": "training_frequency",
     "difficulty": "easy"
   },
   {
     "id": "eval_011",
-    "question": "有氧运动会不会影响力量和增肌效果？",
+    "question": "Does doing cardio interfere with strength and muscle gains?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "auto_concurrent_training_review.txt", "grade": 3 }
     ],
-    "expected_keywords": ["干扰效应", "并行训练", "HIIT", "恢复", "安排"],
+    "expected_keywords": ["interference effect", "concurrent training", "HIIT", "recovery", "scheduling"],
     "topic": "cardio_and_strength",
     "difficulty": "hard"
   },
   {
     "id": "eval_012",
-    "question": "热身运动应该做多久？做哪些内容？",
+    "question": "How long should a warm-up be and what should it include?",
     "in_scope": true,
     "relevant_sources": [
       { "source": "auto_warmup_resistance_training.txt", "grade": 3 }
     ],
-    "expected_keywords": ["动态", "升温", "活动度", "激活", "分钟"],
+    "expected_keywords": ["dynamic", "raise", "mobility", "activation", "minutes"],
     "topic": "warmup",
     "difficulty": "easy"
   },
 
   {
     "id": "eval_101",
-    "question": "深蹲时膝盖应该朝哪个方向？",
+    "question": "Which direction should my knees point during a squat?",
     "in_scope": false,
     "relevant_sources": [],
-    "note": "动作技术/姿势细节，知识库无授权干净的来源；用于评估检索是否正确返回空 / 系统是否弃答。",
+    "note": "Exercise-form detail; no license-clean source in the KB. Abstention negative.",
     "topic": "exercise_form",
     "difficulty": "easy"
   },
   {
     "id": "eval_102",
-    "question": "硬拉和深蹲的主要区别是什么？",
+    "question": "What is the main difference between a deadlift and a squat?",
     "in_scope": false,
     "relevant_sources": [],
-    "note": "动作生物力学对比，知识库未覆盖；abstention 负样本。",
+    "note": "Movement biomechanics comparison; not covered by KB. Abstention negative.",
     "topic": "exercise_comparison",
     "difficulty": "medium"
   },
   {
     "id": "eval_103",
-    "question": "卧推时应该如何正确握杠铃？",
+    "question": "How should I grip the barbell correctly when bench pressing?",
     "in_scope": false,
     "relevant_sources": [],
-    "note": "动作技术细节，知识库未覆盖；abstention 负样本。",
+    "note": "Exercise-form detail; not covered by KB. Abstention negative.",
     "topic": "exercise_form",
     "difficulty": "easy"
   },
   {
     "id": "eval_104",
-    "question": "卧推时膝盖疼痛是什么原因？",
+    "question": "What causes knee pain during the bench press?",
     "in_scope": false,
     "relevant_sources": [],
-    "note": "伤痛/姿势诊断，知识库未覆盖；abstention 负样本。",
+    "note": "Injury/form diagnosis; not covered by KB. Abstention negative.",
     "topic": "injury_prevention",
     "difficulty": "medium"
   },
   {
     "id": "eval_105",
-    "question": "如何判断自己是否过度训练了？",
+    "question": "How can I tell if I am overtraining?",
     "in_scope": false,
     "relevant_sources": [],
-    "note": "过度训练综合征，暂无授权干净的权威来源；abstention 负样本。",
+    "note": "Overtraining syndrome; no license-clean source yet. Abstention negative.",
     "topic": "recovery",
     "difficulty": "medium"
   },
   {
     "id": "eval_106",
-    "question": "引体向上做不了几个怎么办？",
+    "question": "What should I do if I can't do any pull-ups yet?",
     "in_scope": false,
     "relevant_sources": [],
-    "note": "动作进阶方法，知识库未覆盖；abstention 负样本。",
+    "note": "Exercise progression; not covered by KB. Abstention negative.",
     "topic": "exercise_progression",
     "difficulty": "easy"
   }
