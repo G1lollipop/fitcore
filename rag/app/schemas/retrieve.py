@@ -3,6 +3,7 @@ Request / response schemas for /v1/retrieve.
 
 LOCKED CONTRACT — field names and types must match the published frontend.
 """
+
 from typing import Any
 
 from pydantic import BaseModel, Field

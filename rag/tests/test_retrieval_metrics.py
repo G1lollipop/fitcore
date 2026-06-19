@@ -95,7 +95,9 @@ def test_compute_all_keys():
 
 def test_false_retrieval_rate():
     # 阈值 0.8：3 个分数里 2 个 >= 0.8 → 2/3
-    assert rm.false_retrieval_rate([0.9, 0.85, 0.1], threshold=0.8) == pytest_approx(2 / 3)
+    assert rm.false_retrieval_rate([0.9, 0.85, 0.1], threshold=0.8) == pytest_approx(
+        2 / 3
+    )
     # 全 None → -1.0（后端不提供可比分数）
     assert rm.false_retrieval_rate([None, None], threshold=0.8) == -1.0
 

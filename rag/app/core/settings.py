@@ -33,7 +33,9 @@ def _normalize_pasted_secret(s: str) -> str:
     if not s:
         return ""
     t = s.strip().strip("﻿").strip()
-    if (t.startswith('"') and t.endswith('"')) or (t.startswith("'") and t.endswith("'")):
+    if (t.startswith('"') and t.endswith('"')) or (
+        t.startswith("'") and t.endswith("'")
+    ):
         t = t[1:-1].strip()
     return t
 
@@ -102,20 +104,26 @@ class Settings(BaseSettings):
     # ── Vector store backend ──────────────────────────────────────────────
     vector_backend: str = Field(default="chroma", alias="VECTOR_BACKEND")
     supabase_url: str = Field(default="", alias="SUPABASE_URL")
-    supabase_service_role_key: str = Field(default="", alias="SUPABASE_SERVICE_ROLE_KEY")
+    supabase_service_role_key: str = Field(
+        default="", alias="SUPABASE_SERVICE_ROLE_KEY"
+    )
 
     # ── Reranker ─────────────────────────────────────────────────────────
     reranker_enabled: bool = Field(default=True, alias="RERANKER_ENABLED")
     reranker_model_name: str = Field(default="", alias="RERANKER_MODEL_NAME")
     reranker_hf_model: str = Field(default="", alias="RERANKER_HF_MODEL")
     reranker_model_path: str = Field(default="", alias="RERANKER_MODEL_PATH")
-    local_reranker_model_path: str = Field(default="", alias="LOCAL_RERANKER_MODEL_PATH")
+    local_reranker_model_path: str = Field(
+        default="", alias="LOCAL_RERANKER_MODEL_PATH"
+    )
     reranker_model_kwargs_raw: str = Field(default="", alias="RERANKER_MODEL_KWARGS")
 
     # ── HTTP API ─────────────────────────────────────────────────────────
     allowed_origins_raw: str = Field(default="*", alias="ALLOWED_ORIGINS")
     rag_chat_timeout_sec: float = Field(default=118.0, alias="RAG_CHAT_TIMEOUT_SEC")
-    rag_retrieve_timeout_sec: float = Field(default=30.0, alias="RAG_RETRIEVE_TIMEOUT_SEC")
+    rag_retrieve_timeout_sec: float = Field(
+        default=30.0, alias="RAG_RETRIEVE_TIMEOUT_SEC"
+    )
     rag_chat_retries: int = Field(default=3, alias="RAG_CHAT_RETRIES", ge=1)
 
     # ── API auth / rate limiting ──────────────────────────────────────────

@@ -33,6 +33,7 @@ from langchain_core.documents import Document
 
 # ─── Public helper: query normalization ────────────────────────────────────
 
+
 def normalize_query(text: str) -> str:
     """Light normalization for cache keys.
 
@@ -48,6 +49,7 @@ def normalize_query(text: str) -> str:
 
 # ─── Backend Protocol ──────────────────────────────────────────────────────
 
+
 class CacheBackend(Protocol):
     def get_json(self, key: str) -> Optional[Any]: ...
     def set_json(self, key: str, value: Any, ttl_seconds: int) -> None: ...
@@ -56,6 +58,7 @@ class CacheBackend(Protocol):
 
 
 # ─── In-process backend ───────────────────────────────────────────────────
+
 
 class MemoryBackend:
     """Process-local LRU cache with per-key TTL. JSON-only payloads to keep
@@ -95,6 +98,7 @@ class MemoryBackend:
 
 
 # ─── Upstash Redis backend ─────────────────────────────────────────────────
+
 
 class RedisBackend:
     """Upstash Redis backend (REST API, no persistent connection).
@@ -171,6 +175,7 @@ class RedisBackend:
 
 # ─── Backend factory ──────────────────────────────────────────────────────
 
+
 def build_cache_backend() -> CacheBackend:
     """Pick a backend by env (CACHE_BACKEND). Defaults to MemoryBackend.
     Falls back to memory on any Redis init failure — the service must
@@ -198,15 +203,19 @@ def build_cache_backend() -> CacheBackend:
 
 # ─── Document <-> dict adapters (Redis serialization) ─────────────────────
 
+
 def _doc_to_dict(d: Document) -> dict:
     return {"page_content": d.page_content, "metadata": d.metadata}
 
 
 def _dict_to_doc(d: dict) -> Document:
-    return Document(page_content=d.get("page_content", ""), metadata=d.get("metadata") or {})
+    return Document(
+        page_content=d.get("page_content", ""), metadata=d.get("metadata") or {}
+    )
 
 
 # ─── VectorStoreCache (process-local; retrievers can't serialize) ─────────
+
 
 class VectorStoreCache:
     """Caches the constructed (vector + BM25) ensemble retriever. Rebuilds
@@ -288,12 +297,20 @@ class CacheManager:
         self._retrieval_ttl = (
             retrieval_ttl_sec
             if retrieval_ttl_sec is not None
-            else (query_cache_ttl if query_cache_ttl is not None else self._resolve_retrieval_ttl())
+            else (
+                query_cache_ttl
+                if query_cache_ttl is not None
+                else self._resolve_retrieval_ttl()
+            )
         )
         self._embedding_ttl = (
-            embedding_ttl_sec if embedding_ttl_sec is not None else self._resolve_embedding_ttl()
+            embedding_ttl_sec
+            if embedding_ttl_sec is not None
+            else self._resolve_embedding_ttl()
         )
-        self.vector_store_cache = VectorStoreCache(on_hash_change=self._on_corpus_change)
+        self.vector_store_cache = VectorStoreCache(
+            on_hash_change=self._on_corpus_change
+        )
         self._stats = {
             "retrieval_hits": 0,
             "retrieval_misses": 0,
@@ -308,6 +325,7 @@ class CacheManager:
     def _resolve_retrieval_ttl() -> int:
         try:
             from app.core.settings import get_settings
+
             return int(get_settings().cache_retrieval_ttl_sec)
         except Exception:  # noqa: BLE001
             return _FALLBACK_RETRIEVAL_TTL
@@ -316,13 +334,16 @@ class CacheManager:
     def _resolve_embedding_ttl() -> int:
         try:
             from app.core.settings import get_settings
+
             return int(get_settings().cache_embedding_ttl_sec)
         except Exception:  # noqa: BLE001
             return _FALLBACK_EMBEDDING_TTL
 
     # ── Query → Documents cache ───────────────────────────────────────────
 
-    def get_cached_query(self, query: str, k: Optional[int] = None) -> Optional[List[Document]]:
+    def get_cached_query(
+        self, query: str, k: Optional[int] = None
+    ) -> Optional[List[Document]]:
         key = self._retrieval_key(query, k)
         cached = self._backend.get_json(key)
         if cached is None:
@@ -334,7 +355,9 @@ class CacheManager:
             return [_dict_to_doc(d) for d in cached]
         return cached
 
-    def set_cached_query(self, query: str, results: List[Document], k: Optional[int] = None) -> None:
+    def set_cached_query(
+        self, query: str, results: List[Document], k: Optional[int] = None
+    ) -> None:
         key = self._retrieval_key(query, k)
         payload = [_doc_to_dict(d) for d in results]
         self._backend.set_json(key, payload, self._retrieval_ttl)

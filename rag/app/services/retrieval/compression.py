@@ -76,7 +76,9 @@ def build_compression_retriever(
     # 模型时才尝试导入。生产镜像 (requirements-prod.txt) 不安装这些包，所以
     # 这里的 ImportError 是预期的「云端轻量模式」信号，不是错误。
     try:
-        from langchain_classic.retrievers.document_compressors import CrossEncoderReranker
+        from langchain_classic.retrievers.document_compressors import (
+            CrossEncoderReranker,
+        )
         from langchain_community.cross_encoders import HuggingFaceCrossEncoder
     except ImportError as exc:
         print(

@@ -35,6 +35,7 @@ def _get_rag_service() -> RagService:
     # Imported lazily so unit tests can replace main.app.state without
     # triggering RagService construction at import time.
     from app.main import get_rag_service
+
     return get_rag_service()
 
 

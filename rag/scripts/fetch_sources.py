@@ -180,9 +180,13 @@ def fetch_entry(entry: dict) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Fetch KB sources from data/sources.yaml")
+    parser = argparse.ArgumentParser(
+        description="Fetch KB sources from data/sources.yaml"
+    )
     parser.add_argument("--only", help="Fetch a single source id")
-    parser.add_argument("--list", action="store_true", help="List registry entries and exit")
+    parser.add_argument(
+        "--list", action="store_true", help="List registry entries and exit"
+    )
     args = parser.parse_args()
 
     sources = _load_sources()

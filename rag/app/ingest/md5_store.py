@@ -4,6 +4,7 @@ In-memory MD5 dedupe set, persisted to md5.text via append.
 The file format is unchanged (one md5 per line) so any pre-existing md5.text
 keeps working. Lookup is now O(1); save_md5 is idempotent and append-only.
 """
+
 import hashlib
 import os
 import threading

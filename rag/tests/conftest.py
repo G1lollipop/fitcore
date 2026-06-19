@@ -93,6 +93,7 @@ def stub_rag(monkeypatch):
 
     # Reset cached singletons (Settings + service) so test env actually applies.
     from app.core.settings import reset_settings_cache
+
     reset_settings_cache()
 
     stub = StubRagService()

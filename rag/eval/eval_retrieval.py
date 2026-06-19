@@ -51,6 +51,7 @@ RETRIEVE_DEPTH_ENV = "EVAL_RETRIEVE_DEPTH"
 
 # ─── 取数：ranked sources + top1 score ──────────────────────────────────────
 
+
 def _sources_from_docs(docs) -> tuple[list[str], float | None]:
     """从 LangChain Document 列表抽 (ranked_sources, top1_score)。"""
     ranked: list[str] = []
@@ -67,7 +68,9 @@ def _sources_from_docs(docs) -> tuple[list[str], float | None]:
 
 
 def _sources_from_http(chunks: list[dict]) -> tuple[list[str], float | None]:
-    ranked = [c.get("source") or c.get("title") or f"doc{i}" for i, c in enumerate(chunks)]
+    ranked = [
+        c.get("source") or c.get("title") or f"doc{i}" for i, c in enumerate(chunks)
+    ]
     top1 = None
     if chunks:
         s = chunks[0].get("score")
@@ -115,13 +118,17 @@ class ProcessInRetriever:
             return self._vector_sub
         vs = self.rag.vector_service
         if self._is_supabase():
-            from app.services.retrieval.supabase_store import SupabaseSimilarityRetriever  # noqa: WPS433
+            from app.services.retrieval.supabase_store import (
+                SupabaseSimilarityRetriever,
+            )  # noqa: WPS433
 
             self._vector_sub = SupabaseSimilarityRetriever(
                 client=vs.client, embedding=vs.embedding, k=self._depth
             )
         else:
-            self._vector_sub = vs.vector_store.as_retriever(search_kwargs={"k": self._depth})
+            self._vector_sub = vs.vector_store.as_retriever(
+                search_kwargs={"k": self._depth}
+            )
         return self._vector_sub
 
     def _build_variant(self, variant: str):
@@ -192,7 +199,12 @@ class HttpRetriever:
 
         resp = requests.post(
             f"{self.base}/v1/retrieve",
-            json={"query": query, "sessionId": "eval", "userContext": {}, "topK": depth},
+            json={
+                "query": query,
+                "sessionId": "eval",
+                "userContext": {},
+                "topK": depth,
+            },
             timeout=90,
         )
         resp.raise_for_status()
@@ -205,12 +217,19 @@ class HttpRetriever:
         return None
 
     def config_label(self) -> dict:
-        return {"mode": "http", "variant": "ensemble", "endpoint": f"{self.base}/v1/retrieve"}
+        return {
+            "mode": "http",
+            "variant": "ensemble",
+            "endpoint": f"{self.base}/v1/retrieve",
+        }
 
 
 # ─── 主流程 ─────────────────────────────────────────────────────────────────
 
-def _eval_one_variant(retriever, variant, in_scope, abstain, ks, depth, threshold, use_http, verbose):
+
+def _eval_one_variant(
+    retriever, variant, in_scope, abstain, ks, depth, threshold, use_http, verbose
+):
     """对单个检索变体跑全量 query，返回 (summary, per_query, abstention)。"""
     retriever.set_variant(variant)
     per_query: list[dict] = []
@@ -219,15 +238,18 @@ def _eval_one_variant(retriever, variant, in_scope, abstain, ks, depth, threshol
     if verbose:
         header = (
             f"{'ID':<10} {'topic':<20} "
-            + " ".join(f"{'R@'+str(k):>6}" for k in ks)
-            + f" {'nDCG@'+str(ks[-1]):>8} {'MRR':>6}"
+            + " ".join(f"{'R@' + str(k):>6}" for k in ks)
+            + f" {'nDCG@' + str(ks[-1]):>8} {'MRR':>6}"
         )
         print(f"\n--- variant = {variant} ---")
         print(header)
         print("-" * len(header))
 
     for item in in_scope:
-        qrels = {rs["source"]: int(rs.get("grade", 1)) for rs in item.get("relevant_sources", [])}
+        qrels = {
+            rs["source"]: int(rs.get("grade", 1))
+            for rs in item.get("relevant_sources", [])
+        }
         try:
             ranked, _ = retriever.retrieve(item["question"], depth)
         except Exception as exc:  # noqa: BLE001
@@ -239,18 +261,22 @@ def _eval_one_variant(retriever, variant, in_scope, abstain, ks, depth, threshol
         metrics = rm.compute_all(ranked, qrels, ks)
         for key, val in metrics.items():
             agg[key] = agg.get(key, 0.0) + val
-        per_query.append({
-            "id": item["id"],
-            "question": item["question"],
-            "topic": item.get("topic", ""),
-            "relevant_sources": list(qrels.keys()),
-            "retrieved": rm.dedup_keep_order(ranked)[:depth],
-            "metrics": metrics,
-        })
+        per_query.append(
+            {
+                "id": item["id"],
+                "question": item["question"],
+                "topic": item.get("topic", ""),
+                "relevant_sources": list(qrels.keys()),
+                "retrieved": rm.dedup_keep_order(ranked)[:depth],
+                "metrics": metrics,
+            }
+        )
         if verbose:
-            row = f"{item['id']:<10} {item.get('topic',''):<20} "
+            row = f"{item['id']:<10} {item.get('topic', ''):<20} "
             row += " ".join(f"{metrics[f'recall@{k}']:>6.2f}" for k in ks)
-            row += f" {metrics[f'ndcg@{ks[-1]}']:>8.3f} {metrics[f'mrr@{ks[-1]}']:>6.2f}"
+            row += (
+                f" {metrics[f'ndcg@{ks[-1]}']:>8.3f} {metrics[f'mrr@{ks[-1]}']:>6.2f}"
+            )
             print(row)
         if not use_http:
             time.sleep(0.15)
@@ -274,10 +300,20 @@ def _eval_one_variant(retriever, variant, in_scope, abstain, ks, depth, threshol
             detail.append({"id": item["id"], "error": str(exc)})
             continue
         top1s.append(top1)
-        detail.append({"id": item["id"], "top1_source": ranked[0] if ranked else None, "top1_score": top1})
+        detail.append(
+            {
+                "id": item["id"],
+                "top1_source": ranked[0] if ranked else None,
+                "top1_score": top1,
+            }
+        )
     frr = rm.false_retrieval_rate(top1s, threshold)
 
-    return summary, per_query, {"false_retrieval_rate": frr, "threshold": threshold, "detail": detail}
+    return (
+        summary,
+        per_query,
+        {"false_retrieval_rate": frr, "threshold": threshold, "detail": detail},
+    )
 
 
 def _emit_step_summary(lines: list[str]) -> None:
@@ -313,14 +349,22 @@ def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
 
     summary = results[gate_variant]["summary"]
     failures: list[str] = []
-    rows = ["", "## 检索回归门禁 — variant=" + gate_variant, "", "| 指标 | 实测 | 下限 | 状态 |", "|---|---|---|---|"]
+    rows = [
+        "",
+        "## 检索回归门禁 — variant=" + gate_variant,
+        "",
+        "| 指标 | 实测 | 下限 | 状态 |",
+        "|---|---|---|---|",
+    ]
     print(f"\n=== 检索回归门禁（variant={gate_variant}，基线 {baseline_path.name}）===")
     for metric, floor in thresholds.items():
         actual = float(summary.get(metric, 0.0))
         ok = actual + 1e-9 >= float(floor)
         status = "PASS" if ok else "FAIL"
         print(f"  {metric:<12} {actual:>7.3f}  下限 {float(floor):>6.3f}  [{status}]")
-        rows.append(f"| {metric} | {actual:.3f} | ≥ {float(floor)} | {'✅' if ok else '❌'} |")
+        rows.append(
+            f"| {metric} | {actual:.3f} | ≥ {float(floor)} | {'✅' if ok else '❌'} |"
+        )
         if not ok:
             failures.append(f"{metric} {actual:.3f} < {floor}")
 
@@ -332,7 +376,9 @@ def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
             ok = frr <= float(max_frr) + 1e-9
             status = "PASS" if ok else "FAIL"
             print(f"  {'frr':<12} {frr:>7.3f}  上限 {float(max_frr):>6.3f}  [{status}]")
-            rows.append(f"| false_retrieval_rate | {frr:.3f} | ≤ {float(max_frr)} | {'✅' if ok else '❌'} |")
+            rows.append(
+                f"| false_retrieval_rate | {frr:.3f} | ≤ {float(max_frr)} | {'✅' if ok else '❌'} |"
+            )
             if not ok:
                 failures.append(f"false_retrieval_rate {frr:.3f} > {max_frr}")
 
@@ -347,8 +393,17 @@ def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
     return 0
 
 
-def evaluate(ks, use_http, tag, threshold, variant_arg, sweep=None, dataset_path=None,
-             gate=False, baseline_path="retrieval_baseline.json") -> int:
+def evaluate(
+    ks,
+    use_http,
+    tag,
+    threshold,
+    variant_arg,
+    sweep=None,
+    dataset_path=None,
+    gate=False,
+    baseline_path="retrieval_baseline.json",
+) -> int:
     ds_path = Path(dataset_path) if dataset_path else DATASET_PATH
     if not ds_path.is_absolute():
         ds_path = _EVAL_DIR / ds_path
@@ -370,7 +425,9 @@ def evaluate(ks, use_http, tag, threshold, variant_arg, sweep=None, dataset_path
 
     print("=== FitCore 检索评估（离线，document 级 qrels）===")
     print(f"配置     : {json.dumps(retriever.config_label(), ensure_ascii=False)}")
-    print(f"in-scope : {len(in_scope)} 条 | abstention : {len(abstain)} 条 | 候选深度 : {depth}")
+    print(
+        f"in-scope : {len(in_scope)} 条 | abstention : {len(abstain)} 条 | 候选深度 : {depth}"
+    )
     print(f"k 值     : {ks} | 变体 : {variants}")
 
     # 单变体时打印逐题明细；多变体对比时只打印对比表，避免刷屏。
@@ -384,7 +441,12 @@ def evaluate(ks, use_http, tag, threshold, variant_arg, sweep=None, dataset_path
 
     # ── 对比表 ──────────────────────────────────────────────────────────────
     print("\n=== 变体对比（in-scope 平均）===")
-    cmp_cols = [f"recall@{ks[0]}", f"recall@{ks[-1]}", f"ndcg@{ks[-1]}", f"mrr@{ks[-1]}"]
+    cmp_cols = [
+        f"recall@{ks[0]}",
+        f"recall@{ks[-1]}",
+        f"ndcg@{ks[-1]}",
+        f"mrr@{ks[-1]}",
+    ]
     cmp_header = f"{'variant':<12} " + " ".join(f"{c:>12}" for c in cmp_cols)
     print(cmp_header)
     print("-" * len(cmp_header))
@@ -393,7 +455,9 @@ def evaluate(ks, use_http, tag, threshold, variant_arg, sweep=None, dataset_path
         row = f"{v:<12} " + " ".join(f"{s.get(c, 0):>12.3f}" for c in cmp_cols)
         print(row)
 
-    print("\n[abstention] out-of-scope top-1 分数误召回率（越低越好；-1=后端无可比分数）")
+    print(
+        "\n[abstention] out-of-scope top-1 分数误召回率（越低越好；-1=后端无可比分数）"
+    )
     for v in variants:
         frr = results[v]["abstention"]["false_retrieval_rate"]
         print(f"  {v:<12} false_retrieval_rate@{threshold}: {frr:.3f}")
@@ -411,7 +475,9 @@ def evaluate(ks, use_http, tag, threshold, variant_arg, sweep=None, dataset_path
         "results": results,
     }
     out_path = _EVAL_DIR / f"retrieval_report_{tag_part}{ts}.json"
-    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    out_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print(f"\n报告已保存: {out_path}")
 
     if gate:
@@ -422,10 +488,19 @@ def evaluate(ks, use_http, tag, threshold, variant_arg, sweep=None, dataset_path
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="离线检索评估（Recall/MRR/nDCG）")
-    parser.add_argument("--http", action="store_true", help="走 HTTP /v1/retrieve 而非进程内")
-    parser.add_argument("--k", nargs="+", type=int, default=DEFAULT_KS, help="k 值列表，如 --k 3 5 10")
+    parser.add_argument(
+        "--http", action="store_true", help="走 HTTP /v1/retrieve 而非进程内"
+    )
+    parser.add_argument(
+        "--k", nargs="+", type=int, default=DEFAULT_KS, help="k 值列表，如 --k 3 5 10"
+    )
     parser.add_argument("--tag", default="", help="报告标签（标记本次配置）")
-    parser.add_argument("--threshold", type=float, default=0.8, help="abstention false_retrieval 分数阈值")
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.8,
+        help="abstention false_retrieval 分数阈值",
+    )
     parser.add_argument(
         "--variant",
         default="ensemble",
@@ -460,8 +535,15 @@ def main() -> int:
         sweep = args.sweep or [0.0, 0.2, 0.5, 0.8, 1.0]
 
     return evaluate(
-        sorted(set(args.k)), args.http, args.tag, args.threshold,
-        args.variant, sweep, args.dataset, args.gate, args.baseline,
+        sorted(set(args.k)),
+        args.http,
+        args.tag,
+        args.threshold,
+        args.variant,
+        sweep,
+        args.dataset,
+        args.gate,
+        args.baseline,
     )
 
 

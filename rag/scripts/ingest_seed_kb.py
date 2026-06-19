@@ -27,7 +27,9 @@ load_dotenv(RAG_ROOT / ".env")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Ingest data/kb_*.txt + auto_*.txt into vector store")
+    parser = argparse.ArgumentParser(
+        description="Ingest data/kb_*.txt + auto_*.txt into vector store"
+    )
     parser.add_argument(
         "--force",
         action="store_true",
@@ -100,7 +102,9 @@ def main() -> int:
             failed += 1
             print(f"[异常] {path.name}: {exc}")
 
-    print(f"[汇总] success={ok}, skipped={skipped}, failed={failed}, total={len(files)}")
+    print(
+        f"[汇总] success={ok}, skipped={skipped}, failed={failed}, total={len(files)}"
+    )
 
     # Cache invalidation crosses processes only with a shared backend (Redis).
     # With the default in-process memory cache, the running API keeps its own
@@ -109,7 +113,9 @@ def main() -> int:
         from app.core.settings import get_settings  # noqa: WPS433
 
         if get_settings().cache_backend == "redis":
-            print("[缓存] 已失效共享缓存（Redis）；运行中的 API 会在下次查询重建检索器。")
+            print(
+                "[缓存] 已失效共享缓存（Redis）；运行中的 API 会在下次查询重建检索器。"
+            )
         else:
             print(
                 "[缓存] 当前为内存缓存（进程隔离）；如有运行中的 API 服务，请重启以加载新语料。"

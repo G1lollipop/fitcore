@@ -10,7 +10,9 @@ from app.infra.cache import CacheManager
 from app.infra.supabase_client import supabase_configured, vector_backend
 
 
-def resolve_vector_store_service(embedding, cache_manager: Optional[CacheManager] = None):
+def resolve_vector_store_service(
+    embedding, cache_manager: Optional[CacheManager] = None
+):
     """
     Chroma (default) or Supabase pgvector (VECTOR_BACKEND=supabase + secrets set).
     """

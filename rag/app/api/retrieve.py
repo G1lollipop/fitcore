@@ -20,6 +20,7 @@ router = APIRouter()
 
 def _get_rag_service() -> RagService:
     from app.main import get_rag_service
+
     return get_rag_service()
 
 
