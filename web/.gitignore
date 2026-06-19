@@ -69,8 +69,9 @@ docs/
 # Scripts (local development only)
 scripts/
 
-# Supabase (local config only, keep migrations if needed)
-supabase/
+# Supabase CLI local config/migrations only (anchored to web root so it does
+# NOT swallow source dirs like lib/supabase/).
+/supabase/
 
 # CSV files (local data files)
 *.csv
