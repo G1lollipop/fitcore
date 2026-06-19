@@ -81,7 +81,7 @@ flowchart TD
 |---|---|
 | **前端框架** | Next.js 15 · React 19 · TypeScript |
 | **UI / 样式** | Tailwind CSS 4 · Radix UI · shadcn/ui |
-| **认证** | Clerk |
+| **认证** | Supabase Auth（Google OAuth + 邮箱密码） |
 | **后端框架** | FastAPI · Uvicorn (Python) |
 | **RAG 框架** | LangChain 1.2 · LangChain Community |
 | **向量数据库** | Supabase pgvector（生产）· Chroma（本地） |
@@ -178,7 +178,7 @@ Fitcore/
 
 ```bash
 cd fitcore-web
-cp .env.local.example .env.local   # 填写 Clerk / Supabase / Gemini key
+cp .env.local.example .env.local   # 填写 Supabase / Gemini key
 npm install
 npm run dev
 ```
@@ -208,9 +208,8 @@ python eval/evaluate.py
 ### 前端 (`fitcore-web/.env.local`)
 
 ```env
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=   # 公开 key，cookie 会话客户端（登录/注册/Google OAuth）使用
 SUPABASE_SERVICE_ROLE_KEY=   # 服务端专用（server action + middleware），绕过 RLS，禁止暴露到浏览器
 GOOGLE_AI_STUDIO_API_KEY=    # 一个 Gemini key 覆盖对话/解析/视觉全部 AI 功能
 AI_CHAT_MODEL=gemini-2.5-flash

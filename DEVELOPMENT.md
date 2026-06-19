@@ -52,9 +52,10 @@ Fitcore/
 ├── web/                      # 前端：Next.js 16 (App Router)
 │   ├── app/
 │   │   ├── page.tsx          # 主应用（tab 切换 5 个模块）
-│   │   ├── layout.tsx        # 根布局（字体 / 主题 / Clerk / analytics）
+│   │   ├── layout.tsx        # 根布局（字体 / 主题 / analytics）
 │   │   ├── onboarding/       # 首次引导
-│   │   ├── sign-in/ sign-up/ # Clerk 鉴权页
+│   │   ├── sign-in/ sign-up/ # Supabase Auth 鉴权页（Google + 邮箱密码）
+│   │   ├── auth/callback/    # OAuth / 邮箱验证回调（code → session）
 │   │   ├── api/ai/chat/      # SSE 流式 AI 接口
 │   │   └── actions/          # 'use server' 业务动作（dashboard/log/plans/chat...）
 │   ├── components/
@@ -65,7 +66,7 @@ Fitcore/
 │   │   ├── supabaseClient.ts openaiClient.ts database.types.ts
 │   │   └── plans|training|metrics|utils
 │   ├── hooks/                # toast / quick-log / sidebar
-│   ├── proxy.ts              # Clerk 中间件 + onboarding 门禁（Next 16 用 proxy.ts）
+│   ├── proxy.ts              # Supabase 会话刷新 + 路由保护 + onboarding 门禁（Next 16 用 proxy.ts）
 │   └── .env.local.example
 │
 ├── rag/                      # 后端：FastAPI + LangChain RAG 服务
@@ -105,8 +106,7 @@ Fitcore/
 
 外部服务账号（按需）：
 
-- **Clerk**（鉴权）
-- **Supabase**（业务数据库；若后端用 pgvector 也复用）
+- **Supabase**（鉴权 + 业务数据库；若后端用 pgvector 也复用）
 - **Google AI Studio (Gemini)**（对话 + 结构化解析 + 视觉 + `gemini-embedding-001` 向量，一个 key 覆盖全部）
 - **Upstash Redis**（可选，后端检索缓存）
 
@@ -143,7 +143,7 @@ uvicorn backend_api:app --host 0.0.0.0 --port 8000 --reload
 
 ```bash
 cd web
-cp .env.local.example .env.local       # 填 Clerk / Supabase / RAG_SERVICE_URL
+cp .env.local.example .env.local       # 填 Supabase / RAG_SERVICE_URL
 npm install
 npm run dev
 ```
@@ -158,10 +158,9 @@ npm run dev
 
 | 变量 | 必填 | 说明 |
 |------|------|------|
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | ✅ | Clerk 公钥 |
-| `CLERK_SECRET_KEY` | ✅ | Clerk 私钥 |
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase 项目地址 |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase 项目地址（鉴权 + 数据共用） |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key，供 cookie 会话客户端（登录/注册/Google OAuth）使用 |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | service-role key，服务端数据访问（绕过 RLS，勿暴露给浏览器） |
 | `RAG_SERVICE_URL` | ✅ | 后端 RAG 服务地址（本地默认 `http://127.0.0.1:8000`） |
 | `RAG_CLIENT_TIMEOUT_MS` | | RAG 调用超时（默认 120000，冷启动时调大） |
 | `GOOGLE_AI_STUDIO_API_KEY` | ✅ | Gemini key，覆盖对话/解析/视觉全部 AI 功能 |
@@ -288,7 +287,7 @@ python eval/evaluate.py      # 需要服务已在 :8000 运行；LLM-as-Judge �
 
 ### 7.4 鉴权 / 门禁
 
-`proxy.ts`（Next 16 用 `proxy.ts` 取代 `middleware.ts`）：放行 `/sign-in`、`/sign-up`、`/api/*`；已登录但无 `user_settings` 的用户跳 `/onboarding`；已完成引导的用户访问 `/onboarding` 跳回 `/`。
+`proxy.ts`（Next 16 用 `proxy.ts` 取代 `middleware.ts`）：用 `@supabase/ssr` 在每次请求刷新会话 cookie；放行 `/sign-in`、`/sign-up`、`/auth/*`、`/api/*`；其余路由未登录跳 `/sign-in`；已登录但无 `user_settings` 的用户跳 `/onboarding`；已完成引导的用户访问 `/onboarding` 跳回 `/`。鉴权改为 Supabase Auth（Google OAuth + 邮箱密码），登录态由 `lib/supabase/server.ts` / `client.ts` 提供，身份解析仍统一走 `lib/auth/require-user.ts`。
 
 ### 7.5 UI 组件约定
 

@@ -21,7 +21,7 @@ npm run typecheck    # tsc --noEmit（改动 TS 后务必跑一次）
 npm run format       # Prettier
 ```
 
-环境变量见 `web/.env.local.example`（Clerk / Supabase / `RAG_SERVICE_URL` / `GOOGLE_AI_STUDIO_API_KEY`，一个 Gemini key 覆盖全部 AI）。
+环境变量见 `web/.env.local.example`（Supabase / `RAG_SERVICE_URL` / `GOOGLE_AI_STUDIO_API_KEY`，一个 Gemini key 覆盖全部 AI）。鉴权用 Supabase Auth（Google OAuth + 邮箱密码）。
 
 ## 后端 `rag/`
 
@@ -43,7 +43,7 @@ cd rag
 几个容易"反直觉"、第一次读会卡住的点：
 
 - **首页是单路由 + 客户端视图切换**：`web/app/page.tsx` 是 server component（服务端鉴权 + 取 dashboard 数据），交互壳是 `web/components/dashboard/dashboard-client.tsx`。dashboard / nutrition / training / plans / knowledge 五个"页面"是同一路由下用 `activeNav` 状态切换的，**不是** `/nutrition`、`/training` 这样的独立路由——别去找 `app/nutrition/page.tsx`，不存在。
-- **中间件文件叫 `web/proxy.ts`，不是 `middleware.ts`**：Clerk 鉴权 + onboarding 跳转在这里。
+- **中间件文件叫 `web/proxy.ts`，不是 `middleware.ts`**：Supabase 会话刷新 + 路由保护 + onboarding 跳转在这里。身份解析统一走 `lib/auth/require-user.ts`（`requireUserId()` 返回 Supabase user id）；认证用的 cookie 客户端在 `lib/supabase/{server,client}.ts`，与数据访问用的 service-role 客户端 `lib/supabaseClient.ts` 分开。
 - **数据访问全走 server actions**：`web/app/actions/*`。前端组件不直连 Supabase；`web/lib/supabaseClient.ts` 是 `server-only` + service-role，导入到客户端会构建失败。鉴权统一用 `web/lib/auth/require-user.ts` 的 `authedUserId()` / `getUserIdOrNull()`，action 内部取 `userId`，调用方不传。
 - **AI 对话链路**：浏览器 → `web/app/api/ai/chat/route.ts`（SSE）→（个人数据 `lib/ai/user-context.ts` + RAG `lib/ai/rag-client.ts`）→ `rag/` 服务。
 - **"今日训练"唯一逻辑**：`web/lib/plans/today-workout.ts` 纯函数，多处 action 取数后调用它，别再各写一份。
@@ -69,15 +69,15 @@ Secrets 由 Cursor Dashboard 注入进程环境，**不会**自动写入 `.env` 
 ```bash
 cp rag/.env.example rag/.env
 cp web/.env.local.example web/.env.local
-# 将 Dashboard Secrets 写入对应变量（至少 Clerk、Supabase、DASHSCOPE、OPENAI/DashScope key）
+# 将 Dashboard Secrets 写入对应变量（至少 Supabase、DASHSCOPE、OPENAI/DashScope key）
 ```
 
 | 用途 | 文件 | 必填变量 |
 |------|------|----------|
 | RAG 服务 | `rag/.env` | `DASHSCOPE_API_KEY`；云端建议 `RERANKER_ENABLED=false` |
-| Next.js | `web/.env.local` | Clerk 两把 key、Supabase URL + `SUPABASE_SERVICE_ROLE_KEY`、`RAG_SERVICE_URL=http://127.0.0.1:8000`、`OPENAI_API_KEY` |
+| Next.js | `web/.env.local` | Supabase URL + `NEXT_PUBLIC_SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY`、`RAG_SERVICE_URL=http://127.0.0.1:8000`、`OPENAI_API_KEY` |
 
-无有效 Clerk key 时 `npm run dev` 能启动但页面会 500（`Publishable key not valid`）。
+无有效 Supabase key 时 `npm run dev` 能启动，但访问受保护页面会因无法建立会话而被重定向到 `/sign-in`。Google 登录需在 Supabase Dashboard 配置 Provider 及回调 URL（含 `<域名>/auth/callback`）。
 
 ### 启动顺序
 
@@ -96,8 +96,8 @@ cp web/.env.local.example web/.env.local
 | 后端测试 | `cd rag && ./.venv/bin/python -m pytest` |
 | 后端 lint | `cd rag && ./.venv/bin/ruff check .`（有若干既有 style 告警，非阻塞） |
 | 前端 lint / 类型 | `cd web && npm run lint && npm run typecheck` |
-| 前端构建 | `cd web && npm run build`（不依赖 Clerk 运行时，可离线验证编译） |
+| 前端构建 | `cd web && npm run build`（不依赖鉴权运行时，可离线验证编译） |
 
 ### 外部 SaaS（本地不启动）
 
-Clerk、Supabase、DashScope 为托管服务；完整 E2E（登录、dashboard、AI 对话）必须配置上述 Secrets。
+Supabase、DashScope 为托管服务；完整 E2E（登录、dashboard、AI 对话）必须配置上述 Secrets。

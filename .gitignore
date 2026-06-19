@@ -22,6 +22,12 @@ Thumbs.db
 !.env.example
 !.env.local.example
 
+# OAuth / 服务账号密钥文件（Google 下载的 client_secret 等，切勿提交）
+client_secret*.json
+**/client_secret*.json
+*-service-account*.json
+gha-creds-*.json
+
 # ---- Node / 前端 ----
 **/node_modules/
 **/.next/

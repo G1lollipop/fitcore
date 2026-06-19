@@ -4,7 +4,7 @@ AI 驱动的健身教练应用。前后端合并为一个 monorepo 管理：
 
 ```
 Fitcore/
-├── web/   # 前端：Next.js 16 (App Router) + React 19 + Clerk + Supabase
+├── web/   # 前端：Next.js 16 (App Router) + React 19 + Supabase（Auth + 数据）
 └── rag/   # 后端：FastAPI + LangChain RAG 检索服务（Google Gemini）
 ```
 
@@ -13,15 +13,15 @@ Fitcore/
 ```mermaid
 flowchart TD
     Browser["浏览器 (React 19 客户端组件)"]
-    Clerk["Clerk 鉴权<br/>(proxy.ts 中间件)"]
+    Auth["Supabase Auth 鉴权<br/>(proxy.ts 中间件 · Google + 邮箱密码)"]
     Actions["Server Actions<br/>(web/app/actions/*)"]
     ChatAPI["/api/ai/chat (SSE)<br/>route.ts"]
-    Supabase[("Supabase<br/>日志/计划/统计/聊天")]
+    Supabase[("Supabase<br/>Auth + 日志/计划/统计/聊天")]
     LLM["Google Gemini<br/>(对话 / 解析 / 视觉 / embedding)"]
     RAG["RAG 服务 FastAPI (rag/)<br/>/v1/retrieve · /v1/chat"]
 
-    Browser -->|"受保护路由"| Clerk
-    Browser -->|"业务读写<br/>(userId 由服务端 auth() 注入)"| Actions
+    Browser -->|"受保护路由"| Auth
+    Browser -->|"业务读写<br/>(userId 由服务端 requireUserId() 注入)"| Actions
     Browser -->|"对话"| ChatAPI
     Actions --> Supabase
     ChatAPI -->|"个人上下文 user-context.ts"| Supabase
@@ -60,7 +60,7 @@ uvicorn backend_api:app --host 0.0.0.0 --port 8000
 
 ```bash
 cd web
-cp .env.local.example .env.local   # 配置 Clerk / Supabase / RAG_SERVICE_URL 等
+cp .env.local.example .env.local   # 配置 Supabase / RAG_SERVICE_URL 等
 npm install
 npm run dev
 ```
@@ -86,5 +86,5 @@ monorepo 下前后端分别部署，互不干扰：
 
 ## 技术栈
 
-- **前端**：Next.js 16、React 19、TypeScript、Tailwind CSS 4、shadcn/ui、Clerk、Supabase
+- **前端**：Next.js 16、React 19、TypeScript、Tailwind CSS 4、shadcn/ui、Supabase（Auth + 数据）
 - **后端**：Python 3.11、FastAPI、LangChain 1.x、Google Gemini（gemini-2.5-flash + gemini-embedding-001）、Chroma / Supabase pgvector
