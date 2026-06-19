@@ -1,7 +1,8 @@
 {
   "$schema": "https://cursor.com/schemas/environment.json",
   "build": {
-    "dockerfile": ".cursor/Dockerfile"
+    "dockerfile": "Dockerfile",
+    "context": ".."
   },
   "install": "cd web && npm install && cd ../rag && (test -x .venv/bin/python || python3 -m venv .venv) && ./.venv/bin/pip install --upgrade pip && ./.venv/bin/pip install -r requirements-dev.txt"
 }
