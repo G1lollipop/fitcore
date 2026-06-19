@@ -87,9 +87,6 @@ logs/
 Thumbs.db
 .DS_Store
 
-# clerk configuration (can include secrets)
-/.clerk/
-
 # Claude Code local config & memory (per-developer, not shared)
 .claude/
 

@@ -24,7 +24,7 @@
 ### P0-1 服务端鉴权：消除越权（IDOR）
 - **问题**：全部 ~30 个 action 从客户端参数接收 `userId`，无 `auth()` 校验。
 - **改法**：
-  1. 新建 `web/lib/auth/require-user.ts`，导出 `requireUserId()`（内部 `auth()`，无 user 抛 `UNAUTHORIZED`）。
+  1. 新建 `web/lib/auth/require-user.ts`，导出 `requireUserId()`（内部 Supabase `auth.getUser()` 从会话 cookie 解析身份，无 user 抛 `UNAUTHORIZED`）。
   2. 改造所有「按用户」的 action：删除 `userId` 形参，函数体内 `const userId = await requireUserId()`。
   3. 改所有调用点（客户端组件）去掉传 `userId` 实参。
   4. 统一返回：未登录 `{ success: false, error: 'UNAUTHORIZED' }`（getter 返回 `null`）。
@@ -36,7 +36,7 @@
 
 ### P0-3 Supabase 访问改为带身份
 - **问题**：全局 anon 客户端，服务端无用户 JWT，安全全靠 RLS（仓库无 RLS 定义）。
-- **改法**：服务端用 service-role 客户端 + 已验证 `userId` 应用层过滤（或接 `@supabase/ssr` + Clerk JWT）；补 RLS migration；客户端直查（`nutrition-center.tsx`、`training-history.tsx`）改走 server action。
+- **改法**：服务端用 service-role 客户端 + 已验证 `userId`（Supabase Auth 会话）应用层过滤；补 RLS migration；客户端直查（`nutrition-center.tsx`、`training-history.tsx`）改走 server action。
 
 ### P0-4 后端 sessionId 路径穿越
 - **问题**：`history_store.py` 用 `session_id` 直接拼文件名。
@@ -93,10 +93,10 @@
 
 ## 执行进度
 
-- [x] P0-1 服务端鉴权 requireUserId（所有 action 移除客户端 userId 形参，改 `auth()`；调用点全部修正；typecheck + lint 0 error）
+- [x] P0-1 服务端鉴权 requireUserId（所有 action 移除客户端 userId 形参，改 Supabase `auth.getUser()`；调用点全部修正；typecheck + lint 0 error）
 - [x] P0-2 资源归属校验（plan: updatePlan/deletePlan/setCurrentPlan/getPlanById；exercise: update/delete 校验 created_by + is_system）
 - [x] P0-3（方案 A）服务端化 Supabase 访问：`supabaseClient.ts` 改 `import 'server-only'` + service-role key（anon key 不再进浏览器）；新增 `app/actions/history.ts`（`getNutritionByDate` / `getWorkoutHistory`，按 `getUserIdOrNull` 限定本人 + 日期正则校验），`nutrition-center.tsx` / `training-history.tsx` 的客户端直查全部改走 action；middleware `proxy.ts` 改用 service-role key；env 示例/README 同步（移除前端 anon key）；typecheck + lint 0 error
-  - [ ] P0-3（方案 B，待你连库）叠加纵深防御：在 Supabase 配 Clerk 原生第三方集成 + 全表 RLS（`auth.jwt()->>'sub' = user_id`）。方案 A 已堵住公开 anon key 的全表泄露，B 作为数据库层兜底，建议有测试环境后再加。
+  - [ ] P0-3（方案 B，待你连库）叠加纵深防御：业务表全表开 RLS，策略用 Supabase Auth 身份（`auth.uid() = user_id`，user_id 列为 Supabase user uuid）。方案 A 已堵住公开 anon key 的全表泄露，B 作为数据库层兜底，建议有测试环境后再加。
 - [x] P0-4 sessionId 路径穿越（正则白名单 + resolve 越界检查；新增 tests/test_history_store.py）
 - [x] P0-5 RAG 接口鉴权 / 限流 / 错误处理（X-API-Key 依赖 + 滑窗限流 + 422/500 错误映射 + CORS 凭证修正；前端 rag-client 带 header）
 - [x] P1-1 灌库缓存失效（ingest 脚本共享 CacheManager；按 backend 提示是否需重启 API）
@@ -120,5 +120,4 @@
   - [ ] P4-4（待办）`confirm()` → Radix `AlertDialog`（涉及 UI 组件，留待后续）
   - [ ] P4-3（待办）其余 catch 块 `console.error` 统一走 `lib/logger.ts`（低价值、改动面大，暂留）
 
-> 说明：本环境只有 Python 3.14 且未装后端依赖（项目要求 3.11），无法本地跑 `pytest`。
-> 后端改动已通过 `py_compile` 语法校验，且改动文件 `ruff check` 无新增告警；建议在 3.11 环境或 CI 跑一遍 `pytest`。
+> 说明：后端验收门已可本地跑——`rag/.venv`（Python 3.11）下 `ruff check .` 干净、`pytest` 全绿（52 passed），CI（`rag-ci.yml`）每 PR 也会跑。

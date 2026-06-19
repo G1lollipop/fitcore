@@ -3,4 +3,3 @@ node_modules
 public
 next-env.d.ts
 lib/database.types.ts
-.clerk
