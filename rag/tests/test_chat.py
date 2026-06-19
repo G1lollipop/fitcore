@@ -41,10 +41,11 @@ def test_v1_chat_session_id_defaults_to_anonymous(client, stub_rag):
     assert stub_rag.chat_calls[-1]["session_id"] == "anonymous"
 
 
-def test_v1_chat_empty_query_returns_500(client):
-    """Locked legacy behavior: missing/empty query → 500 with detail message."""
+def test_v1_chat_empty_query_returns_422(client):
+    """Empty/whitespace query is a client error → 422 (validated up-front,
+    not retried as a 500). See chat.py:_resolve_query."""
     r = client.post("/v1/chat", json={"query": "  ", "sessionId": "s1"})
-    assert r.status_code == 500
+    assert r.status_code == 422
     assert "query is required" in r.text
 
 

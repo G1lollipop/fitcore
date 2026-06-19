@@ -1,26 +1,30 @@
-name: CI
+# Per-PR backend gate: ruff lint/format + pytest. Cheap (no external APIs), so
+# it runs on every PR/push that touches rag/.
+#
+# Lives at the REPO ROOT because GitHub Actions only runs workflows from
+# .github/workflows/ at the root (not from subdirectories like rag/.github/).
+# All steps run inside rag/ via defaults.run.working-directory.
+name: RAG CI
 
 on:
   pull_request:
     branches: [main]
+    paths: ['rag/**', '.github/workflows/rag-ci.yml']
   push:
     branches: [main]
+    paths: ['rag/**', '.github/workflows/rag-ci.yml']
 
-# Cancel superseded runs on the same branch/PR.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: rag-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # Backend: FastAPI / Python 3.11
-  #
-  # Frontend CI lives in the fitcore-web repo (separate git repo). When that's
-  # set up, mirror this layout there with `npm ci && lint && typecheck && build`.
-  # ---------------------------------------------------------------------------
   backend:
     name: Backend (ruff · pytest)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rag
 
     steps:
       - uses: actions/checkout@v4
@@ -31,8 +35,8 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: |
-            requirements-prod.txt
-            requirements-dev.txt
+            rag/requirements-prod.txt
+            rag/requirements-dev.txt
 
       - name: Install dependencies
         run: |
@@ -48,12 +52,12 @@ jobs:
 
       - name: Pytest
         env:
-          # Tests should not hit external APIs. If any test reaches for these
-          # vars, set them as repo secrets and reference them here.
+          # Unit tests must not hit external APIs; these are dummy values so
+          # settings/imports resolve without real secrets.
           GOOGLE_AI_STUDIO_API_KEY: ci-dummy
           SUPABASE_URL: https://ci-dummy.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ci-dummy
           VECTOR_BACKEND: chroma
           RERANKER_ENABLED: 'false'
           CACHE_BACKEND: memory
-        run: pytest
+        run: pytest -q

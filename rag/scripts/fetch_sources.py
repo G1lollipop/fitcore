@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import argparse
 import io
-import sys
+import re
 from pathlib import Path
 
 RAG_ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +30,13 @@ DATA_DIR = RAG_ROOT / "data"
 SOURCES_FILE = DATA_DIR / "sources.yaml"
 
 MIN_BODY_CHARS = 500  # guard against extraction returning a near-empty page
+
+# Some open-access hosts (Springer/BMC/PMC) return an empty body to
+# trafilatura's default crawler UA. A normal browser UA gets the full HTML.
+_BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+)
 
 
 def _load_sources() -> list[dict]:
@@ -41,6 +48,51 @@ def _load_sources() -> list[dict]:
     with open(SOURCES_FILE, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     return data.get("sources", []) or []
+
+
+# A reference list (often 100+ entries) is pure citation noise for retrieval and
+# massively inflates the chunk/embedding count. Detect the bibliography in the
+# back half of the document by citation-line density and drop it.
+# Bibliography lines carry dense citation signals (DOIs, "Journal. 2021;..",
+# PubMed links). Body prose almost never does. Detect by signal, not by line
+# shape, so it works for both HTML (one ref/line) and PDF (refs wrap lines).
+_CITE_SIGNAL_RE = re.compile(
+    r"\bdoi\b|10\.\d{4,}/|(19|20)\d{2}\s*[;:]|pubmed", re.IGNORECASE
+)
+
+
+def _looks_like_citation(line: str) -> bool:
+    return bool(_CITE_SIGNAL_RE.search(line))
+
+
+def _trim_reference_tail(text: str | None) -> str | None:
+    """Cut the trailing bibliography (often 100+ entries → huge chunk noise).
+
+    The reference list is a long, dense run of citation lines at the document
+    tail. We find the earliest citation-start (in the back ~70%) from which the
+    rest of the document is citation-dense, and cut there. PDF references wrap
+    across lines, so we use density rather than a fixed window. Body lists in
+    the front are never scanned, so numbered recommendations stay intact.
+    """
+    if not text:
+        return text
+    lines = text.splitlines()
+    n = len(lines)
+    if n < 60:
+        return text
+    starts = [i for i, ln in enumerate(lines) if _looks_like_citation(ln)]
+    if len(starts) < 15:
+        return text
+    for s in starts:
+        if s < n * 0.3:
+            continue
+        tail = [x for x in starts if x >= s]
+        if len(tail) >= 15 and len(tail) >= 0.2 * (n - s):
+            trimmed = "\n".join(lines[:s]).rstrip()
+            if len(trimmed) >= MIN_BODY_CHARS:
+                return trimmed + "\n"
+            break
+    return text
 
 
 def _header(entry: dict) -> str:
@@ -57,27 +109,41 @@ def _header(entry: dict) -> str:
 def _extract_html(url: str) -> str | None:
     import trafilatura
 
-    downloaded = trafilatura.fetch_url(url)
-    if not downloaded:
-        return None
-    text = trafilatura.extract(
-        downloaded,
-        include_comments=False,
-        include_tables=True,
-        favor_recall=True,
-    )
-    return text
+    def _extract(html: str | None) -> str | None:
+        if not html:
+            return None
+        return trafilatura.extract(
+            html,
+            include_comments=False,
+            include_tables=True,
+            favor_recall=True,
+        )
+
+    # 1) trafilatura 自带下载器（对多数站点足够）。
+    text = _extract(trafilatura.fetch_url(url))
+    if text and len(text) >= MIN_BODY_CHARS:
+        return _trim_reference_tail(text)
+
+    # 2) 回退：浏览器 UA 的 requests —— 绕过 Springer/BMC/PMC 对默认爬虫 UA 的拦截。
+    import requests
+
+    try:
+        resp = requests.get(url, timeout=60, headers={"User-Agent": _BROWSER_UA})
+        resp.raise_for_status()
+    except Exception:  # noqa: BLE001 (CLI 工具：失败则退回 trafilatura 结果)
+        return _trim_reference_tail(text)
+    return _trim_reference_tail(_extract(resp.text) or text)
 
 
 def _extract_pdf(url: str) -> str | None:
     import requests
     from pypdf import PdfReader
 
-    resp = requests.get(url, timeout=60, headers={"User-Agent": "FitCore-KB-Fetcher/1.0"})
+    resp = requests.get(url, timeout=60, headers={"User-Agent": _BROWSER_UA})
     resp.raise_for_status()
     reader = PdfReader(io.BytesIO(resp.content))
     parts = [page.extract_text() or "" for page in reader.pages]
-    return "\n\n".join(p.strip() for p in parts if p.strip())
+    return _trim_reference_tail("\n\n".join(p.strip() for p in parts if p.strip()))
 
 
 def fetch_entry(entry: dict) -> str:

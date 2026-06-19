@@ -133,6 +133,39 @@
     "topic": "warmup",
     "difficulty": "easy"
   },
+  {
+    "id": "eval_013",
+    "question": "β-丙氨酸有什么作用？该怎么补充、补多少？",
+    "in_scope": true,
+    "relevant_sources": [
+      { "source": "auto_issn_beta_alanine.txt", "grade": 3 }
+    ],
+    "expected_keywords": ["肌肽", "缓冲", "4-6 克", "刺痛", "高强度"],
+    "topic": "supplement",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_014",
+    "question": "碳酸氢钠（小苏打）能提升运动表现吗？该用多大剂量？",
+    "in_scope": true,
+    "relevant_sources": [
+      { "source": "auto_issn_sodium_bicarbonate.txt", "grade": 3 }
+    ],
+    "expected_keywords": ["0.2", "0.3 克/公斤", "血液 pH", "高强度", "缓冲"],
+    "topic": "supplement",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_015",
+    "question": "HMB 是什么？对增肌或保肌有帮助吗？",
+    "in_scope": true,
+    "relevant_sources": [
+      { "source": "auto_issn_hmb.txt", "grade": 3 }
+    ],
+    "expected_keywords": ["亮氨酸", "肌蛋白", "分解", "HMB-FA", "恢复"],
+    "topic": "supplement",
+    "difficulty": "medium"
+  },
 
   {
     "id": "eval_101",

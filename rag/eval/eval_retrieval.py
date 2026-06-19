@@ -42,7 +42,8 @@ for _p in (str(_ROOT), str(_EVAL_DIR)):
 
 import retrieval_metrics as rm  # noqa: E402  (eval/ 同目录模块)
 
-DATASET_PATH = _EVAL_DIR / "golden_dataset.json"  # noqa: E305
+# 英文集为主集（KB 全为英文文献，产品也走全英文）；与 CI 门禁保持一致。
+DATASET_PATH = _EVAL_DIR / "golden_dataset_en.json"  # noqa: E305
 DEFAULT_KS = [3, 5, 10]
 # 检索候选深度：取够 max(k) 条用于算 @k 指标。
 RETRIEVE_DEPTH_ENV = "EVAL_RETRIEVE_DEPTH"
@@ -279,7 +280,75 @@ def _eval_one_variant(retriever, variant, in_scope, abstain, ks, depth, threshol
     return summary, per_query, {"false_retrieval_rate": frr, "threshold": threshold, "detail": detail}
 
 
-def evaluate(ks, use_http, tag, threshold, variant_arg, sweep=None, dataset_path=None) -> None:
+def _emit_step_summary(lines: list[str]) -> None:
+    """CI 友好：若在 GitHub Actions 里，把门禁结果写进 job summary。"""
+    path = os.getenv("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write("\n".join(lines) + "\n")
+    except OSError:
+        pass
+
+
+def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
+    """对照 baseline 阈值检查 gate_variant 的指标，回归则返回非 0。
+
+    baseline JSON 结构（见 eval/retrieval_baseline.json）：
+      { "variant": "ensemble",
+        "thresholds": { "recall@10": 0.95, "ndcg@10": 0.90, ... },
+        "abstention": { "max_false_retrieval_rate": 0.34 } }  # 可选
+    """
+    if not baseline_path.is_absolute():
+        baseline_path = _EVAL_DIR / baseline_path
+    if not baseline_path.exists():
+        print(f"\n[gate] 基线文件不存在: {baseline_path}（跳过门禁）")
+        return 0
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    thresholds: dict[str, float] = baseline.get("thresholds", {})
+    if gate_variant not in results:
+        print(f"\n[gate] 变体 {gate_variant} 无结果，无法门禁")
+        return 1
+
+    summary = results[gate_variant]["summary"]
+    failures: list[str] = []
+    rows = ["", "## 检索回归门禁 — variant=" + gate_variant, "", "| 指标 | 实测 | 下限 | 状态 |", "|---|---|---|---|"]
+    print(f"\n=== 检索回归门禁（variant={gate_variant}，基线 {baseline_path.name}）===")
+    for metric, floor in thresholds.items():
+        actual = float(summary.get(metric, 0.0))
+        ok = actual + 1e-9 >= float(floor)
+        status = "PASS" if ok else "FAIL"
+        print(f"  {metric:<12} {actual:>7.3f}  下限 {float(floor):>6.3f}  [{status}]")
+        rows.append(f"| {metric} | {actual:.3f} | ≥ {float(floor)} | {'✅' if ok else '❌'} |")
+        if not ok:
+            failures.append(f"{metric} {actual:.3f} < {floor}")
+
+    abst_rule = baseline.get("abstention", {})
+    max_frr = abst_rule.get("max_false_retrieval_rate")
+    if max_frr is not None:
+        frr = results[gate_variant]["abstention"]["false_retrieval_rate"]
+        if frr is not None and frr >= 0:  # -1 = 后端无可比分数，跳过
+            ok = frr <= float(max_frr) + 1e-9
+            status = "PASS" if ok else "FAIL"
+            print(f"  {'frr':<12} {frr:>7.3f}  上限 {float(max_frr):>6.3f}  [{status}]")
+            rows.append(f"| false_retrieval_rate | {frr:.3f} | ≤ {float(max_frr)} | {'✅' if ok else '❌'} |")
+            if not ok:
+                failures.append(f"false_retrieval_rate {frr:.3f} > {max_frr}")
+
+    _emit_step_summary(rows)
+    if failures:
+        msg = "检索指标回归: " + "; ".join(failures)
+        print(f"\n[gate] FAIL — {msg}")
+        if os.getenv("GITHUB_ACTIONS"):
+            print(f"::error::{msg}")
+        return 1
+    print("\n[gate] PASS — 所有检索指标达标")
+    return 0
+
+
+def evaluate(ks, use_http, tag, threshold, variant_arg, sweep=None, dataset_path=None,
+             gate=False, baseline_path="retrieval_baseline.json") -> int:
     ds_path = Path(dataset_path) if dataset_path else DATASET_PATH
     if not ds_path.is_absolute():
         ds_path = _EVAL_DIR / ds_path
@@ -345,6 +414,11 @@ def evaluate(ks, use_http, tag, threshold, variant_arg, sweep=None, dataset_path
     out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n报告已保存: {out_path}")
 
+    if gate:
+        # 门禁只对单一生产变体生效（默认 ensemble）；sweep / all 取第一项。
+        return _run_gate(results, variants[0], Path(baseline_path))
+    return 0
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="离线检索评估（Recall/MRR/nDCG）")
@@ -367,7 +441,17 @@ def main() -> int:
     parser.add_argument(
         "--dataset",
         default=None,
-        help="评测集文件名（默认 golden_dataset.json；英文用 golden_dataset_en.json）",
+        help="评测集文件名（默认 golden_dataset_en.json 主集；跨语种难例用 golden_dataset.json）",
+    )
+    parser.add_argument(
+        "--gate",
+        action="store_true",
+        help="回归门禁：评测后对照 --baseline 阈值，指标回归则退出码非 0（供 CI 用）",
+    )
+    parser.add_argument(
+        "--baseline",
+        default="retrieval_baseline.json",
+        help="门禁基线阈值文件（默认 eval/retrieval_baseline.json）",
     )
     args = parser.parse_args()
 
@@ -375,11 +459,10 @@ def main() -> int:
     if args.sweep is not None:
         sweep = args.sweep or [0.0, 0.2, 0.5, 0.8, 1.0]
 
-    evaluate(
+    return evaluate(
         sorted(set(args.k)), args.http, args.tag, args.threshold,
-        args.variant, sweep, args.dataset,
+        args.variant, sweep, args.dataset, args.gate, args.baseline,
     )
-    return 0
 
 
 if __name__ == "__main__":

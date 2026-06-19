@@ -3,6 +3,7 @@ Knowledge-base ingestion service: text/file → chunks → vector store.
 """
 
 import os
+import time
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -14,6 +15,65 @@ from app.core import constants as config
 from app.core.settings import get_settings
 from app.infra.cache import CacheManager
 from app.infra.embeddings import get_embedding
+
+# The Gemini free tier caps embedding at 100 requests/min. Embedding a long
+# doc's chunks back-to-back blows that instantly, so ingest in sub-batches with
+# a pause + 429 backoff. Lets large CC-BY papers ingest without manual retries.
+# Sub-batch kept modest (vs the per-minute cap) so each HTTP request payload is
+# small enough that the upstream TLS connection doesn't get dropped mid-request.
+_EMBED_SUB_BATCH = 50
+_EMBED_PAUSE_SEC = 61
+_EMBED_MAX_RETRIES = 6
+# Transient network/TLS hiccups (Gemini occasionally drops the connection on
+# larger batches). Retry these too — with a short backoff, not the 61s quota
+# pause — so one flaky request doesn't fail the whole document.
+_EMBED_NET_BACKOFF_SEC = 5
+_EMBED_TRANSIENT_SIGNALS = (
+    "SSL",
+    "UNEXPECTED_EOF",
+    "EOF occurred",
+    "Connection",
+    "ConnectionError",
+    "RemoteDisconnected",
+    "timed out",
+    "timeout",
+    "ServiceUnavailable",
+    "503",
+    "Max retries",
+)
+
+
+def _embed_documents_throttled(embedding: Embeddings, chunks: list[str]) -> list[list[float]]:
+    vectors: list[list[float]] = []
+    total = len(chunks)
+    for start in range(0, total, _EMBED_SUB_BATCH):
+        batch = chunks[start : start + _EMBED_SUB_BATCH]
+        for attempt in range(_EMBED_MAX_RETRIES):
+            try:
+                vectors.extend(embedding.embed_documents(batch))
+                break
+            except Exception as exc:  # noqa: BLE001 (retry on rate-limit / transient net)
+                msg = str(exc)
+                is_quota = "RESOURCE_EXHAUSTED" in msg or "429" in msg
+                is_transient = any(sig in msg for sig in _EMBED_TRANSIENT_SIGNALS)
+                if (is_quota or is_transient) and attempt < _EMBED_MAX_RETRIES - 1:
+                    if is_quota:
+                        wait = _EMBED_PAUSE_SEC
+                        reason = "quota hit"
+                    else:
+                        wait = _EMBED_NET_BACKOFF_SEC * (attempt + 1)
+                        reason = "transient network error"
+                    print(
+                        f"[kb] embedding {reason} on chunks {start}-{start + len(batch)}; "
+                        f"waiting {wait}s then retrying ({attempt + 1})..."
+                    )
+                    time.sleep(wait)
+                    continue
+                raise
+        # Stay under the per-minute cap before the next sub-batch.
+        if start + _EMBED_SUB_BATCH < total:
+            time.sleep(_EMBED_PAUSE_SEC)
+    return vectors
 
 
 def _build_text_splitter(embedding: Embeddings):
@@ -127,7 +187,7 @@ class KnowledgeBaseService(object):
         if self._use_supabase:
             client = get_supabase_client()
             delete_chunks_for_source(client, filename)
-            vectors = self._embedding.embed_documents(list(knowledge_chunks))
+            vectors = _embed_documents_throttled(self._embedding, list(knowledge_chunks))
             insert_chunks(
                 client,
                 source=filename,

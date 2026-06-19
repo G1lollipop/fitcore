@@ -1,0 +1,13 @@
+# Lint config for the FastAPI RAG backend.
+# CI runs `ruff check .` (lint only); formatting is not enforced via ruff —
+# the codebase predates ruff-format and uses its own style.
+
+target-version = "py311"
+
+[lint.per-file-ignores]
+# E402: imports deliberately placed after runtime setup (sys.path tweaks,
+# load_dotenv, or a module-level helper defined before the import block).
+"app/main.py" = ["E402"]
+"app/services/kb_service.py" = ["E402"]
+"scripts/print_embedding_dim.py" = ["E402"]
+"tests/conftest.py" = ["E402"]

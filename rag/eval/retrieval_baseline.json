@@ -1,0 +1,15 @@
+{
+  "_comment": "检索回归门禁基线。eval_retrieval.py --gate 读取这里的阈值，低于下限即判回归（CI fail）。阈值是保守地板（明显低于当前观测值），用于抓真实回归而非噪声波动。产品转全英文，门禁以 golden_dataset_en.json 为准。观测（2026-06，扩库后 18 in-scope，新增 probiotics/meal_frequency/rest_interval，ensemble@0.8/supabase）：recall@3=1.0 recall@10=1.0 ndcg@10=0.922 mrr@10=0.907 frr=0.0。",
+  "dataset": "golden_dataset_en.json",
+  "variant": "ensemble",
+  "vector_weight": 0.8,
+  "thresholds": {
+    "recall@3": 0.90,
+    "recall@10": 0.95,
+    "ndcg@10": 0.88,
+    "mrr@10": 0.86
+  },
+  "abstention": {
+    "max_false_retrieval_rate": 0.34
+  }
+}

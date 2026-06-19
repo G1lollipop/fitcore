@@ -162,7 +162,7 @@ def evaluate():
     dataset: list[dict] = json.loads(DATASET_PATH.read_text(encoding="utf-8"))
     results: list[dict] = []
 
-    print(f"=== FitCore RAG 评估 Pipeline ===")
+    print("=== FitCore RAG 评估 Pipeline ===")
     print(f"服务地址 : {RAG_SERVICE_URL}")
     print(f"评判模型 : {JUDGE_MODEL}")
     print(f"测试用例 : {len(dataset)} 条\n")

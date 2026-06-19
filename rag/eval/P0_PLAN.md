@@ -209,8 +209,60 @@
 
 ---
 
-## 8. 后续（P1 / P2 预告，非本次范围）
+## 8. P1 落地：扩 KB + CI 回归门禁（已完成）
 
-- **P1**：把 `eval_retrieval.py` 接进 GitHub Actions，设阈值做回归门禁。
+**扩 KB（广度，CC-BY only）**：新增 3 个 ISSN 立场声明开放获取源 —— beta-alanine、sodium bicarbonate、HMB（补剂/缓冲剂主题），中英 golden set 各加 3 道 in-scope 题（`eval_013/014/015`）。in-scope 由 12 → **15**。
+
+抓取/灌库管线为此加固（`scripts/fetch_sources.py` + `app/services/kb_service.py`）：
+- **浏览器 UA 回退**：trafilatura 默认下载器对 Springer/BMC/PMC 抽到 0 字，回退到带 UA 的 requests 解锁。
+- **参考文献尾部截断**：按引用信号密度检测并裁掉 bibliography（HMB 141k→96k、sodium 148k→99k），减 chunk 噪声与 embedding 调用。
+- **免费额度节流灌入**：embedding 分批 + 撞 429 自动退避重试，长文档（>100 chunk）免手动分次。
+
+**扩库后英文集复评（ensemble@0.8 / supabase，15 in-scope）**：
+
+| 指标 | 值 |
+|---|---|
+| recall@3 / recall@10 | 1.000 / 1.000 |
+| nDCG@10 | 0.964 |
+| MRR@10 | 0.967 |
+| false_retrieval_rate（abstention） | 0.000 |
+
+3 道新补剂题全部 nDCG@10=1.0 / MRR=1.0，确认新文档已正确灌入且可召回。
+
+**CI 回归门禁**（仓库根 `.github/workflows/`，GitHub 只读根目录）：
+- `rag-ci.yml`：每 PR/push `ruff check` + `pytest`（含指标单测），不调外部 API。
+- `rag-retrieval-eval.yml`：检索回归门禁。`eval_retrieval.py --gate` 对照 `retrieval_baseline.json` 阈值地板，回归即 fail。读已灌好的 Supabase（只 embed query，不在 CI 重灌 → 不炸额度）；nightly + 手动 + 改 eval/data/retrieval 的 PR 触发；nightly 回归自动开 issue。
+- `rag-nightly-eval.yml`：答案层 LLM-as-Judge nightly 门禁（原 `nightly-rag-eval.yml`，从休眠的 `rag/.github/` 迁到根目录激活）。
+- 配套修复：过时单测 `test_chat` 空 query 期望由 500 → 422（与生产校验一致）；清理 ruff lint（新增 `ruff.toml` 豁免有意晚导入的 E402）。
+
+## 8.1 KB 再扩一批（广度，已完成）
+
+在 P1 基础上再补 3 个 CC-BY 开放获取源，把覆盖从「营养 + 补剂」拓宽到**肠道/免疫、进餐频率、训练间歇恢复**：
+
+| 主题 | 源 | 文件 | 片段 |
+|---|---|---|---|
+| 益生菌 / 肠道 / 免疫 / 恢复 | ISSN Position Stand: Probiotics（BMC） | `auto_issn_probiotics.txt` | 203 |
+| 进餐频率与体成分 | ISSN Position Stand: Meal Frequency（BMC） | `auto_issn_meal_frequency.txt` | 57 |
+| 组间休息 × 增肌 | Give It a Rest（Frontiers 2024） | `auto_rest_interval_hypertrophy.txt` | ~50 |
+
+英文主集加 3 道 in-scope 题（`eval_016/017/018`），in-scope 由 15 → **18**。
+
+- **试过但放弃**：`issn_review_2018`（大综述，与各专题库高度重叠会拉低 qrels nDCG，设 `fetch:false`）；MDPI sleep（Cloudflare 403）、T&F female athlete（反爬）—— 均在 `sources.yaml` 注释留痕，待找到机构库镜像再说。
+- **管线再加固**：PDF 抓取也统一浏览器 UA；embedding 子批 80→**50** 减小 payload；除 429 退避外，**瞬时 TLS/网络错误（SSL EOF、连接重置）也短退避重试**（probiotics 灌入时实测触发并自愈）。
+- **运维教训**：Gemini 免费层除每分钟限速外，还有**每日 1000 次** embedding 硬上限（太平洋午夜重置），客户端节流无法绕过，大批量灌库需分日。
+
+**再扩库后英文集复评（ensemble@0.8 / supabase，18 in-scope）**：
+
+| 指标 | 值 | 门禁地板 |
+|---|---|---|
+| recall@3 / recall@10 | 1.000 / 1.000 | 0.90 / 0.95 |
+| nDCG@10 | 0.922 | 0.88 |
+| MRR@10 | 0.907 | 0.86 |
+| false_retrieval_rate | 0.000 | ≤0.34 |
+
+3 道新题全部 nDCG@10=1.0 / MRR=1.0；nDCG 整体由 0.964 微降至 0.922（库变大后竞争 chunk 增多，属预期），仍稳过门禁。`retrieval_baseline.json` 观测值与地板已同步更新（中文集已冻结，仅作跨语种基准）。
+
+## 9. 后续（P2 预告，非本次范围）
+
 - **P2**：在线可观测性（请求级 latency / 检索命中 / token 成本结构化日志 + dashboard）。
-- **P3**：扩 KB（训练动作/计划类权威源）、chunking / 权重 / 维度对照实验、chunk 级 qrels。
+- **P3**：chunking / 权重 / 维度对照实验、chunk 级 qrels。

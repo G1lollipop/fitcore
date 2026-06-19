@@ -3,7 +3,6 @@
 """
 from abc import ABC, abstractmethod
 from typing import Dict, Optional, Any
-import io
 
 
 class BaseFileParser(ABC):
@@ -56,7 +55,6 @@ class BaseFileParser(ABC):
         Returns:
             基础元数据字典
         """
-        import os
         from pathlib import Path
         
         path = Path(filename)

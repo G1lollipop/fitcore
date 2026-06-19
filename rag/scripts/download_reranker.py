@@ -12,7 +12,6 @@ Or skip the local download and pull from HuggingFace hub at runtime:
   RERANKER_MODEL_NAME=BAAI/bge-reranker-base
 """
 
-import os
 from pathlib import Path
 
 from modelscope.hub.snapshot_download import snapshot_download

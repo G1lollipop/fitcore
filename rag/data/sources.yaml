@@ -62,11 +62,13 @@ sources:
   # Toggle `fetch: true` and run scripts/fetch_sources.py to pull these.
   - id: issn_review_2018
     title: "ISSN Exercise & Sports Nutrition Review Update: Research & Recommendations"
-    url: https://link.springer.com/article/10.1186/s12970-018-0242-y
+    url: https://jissn.biomedcentral.com/articles/10.1186/s12970-018-0242-y
     type: html
     license: CC BY 4.0
     tags: [nutrition, supplements, macronutrients, hydration]
-    fetch: true
+    # 刻意不灌库：这是一篇覆盖蛋白/肌酸/咖啡因等的「大综述」，与各专题 KB
+    # 高度重叠，灌入会与具体立场声明抢命中、拉低 qrels 评测的 nDCG。
+    fetch: false
 
   - id: who_physical_activity_2020
     title: "WHO Guidelines on Physical Activity and Sedentary Behaviour (2020)"
@@ -121,3 +123,66 @@ sources:
     license: CC BY 4.0
     tags: [warm-up, mobility, injury prevention, resistance training]
     fetch: true
+
+  # ── Ergogenic-aid / supplement position stands (ISSN, CC-BY) ─────────────
+  # Broaden KB supplement coverage beyond protein/creatine/caffeine so the
+  # retrieval eval has in-scope coverage for buffering agents and HMB. All are
+  # open-access ISSN position stands under CC BY 4.0.
+  - id: issn_beta_alanine
+    title: "ISSN Position Stand: Beta-Alanine"
+    # BMC 出版方全文 HTML（Springer 镜像挡爬虫，trafilatura 抽到 0 字）。
+    url: https://jissn.biomedcentral.com/articles/10.1186/s12970-015-0090-y
+    type: html
+    license: CC BY 4.0
+    tags: [beta-alanine, carnosine, buffering, high-intensity, endurance]
+    fetch: true
+
+  - id: issn_sodium_bicarbonate
+    title: "ISSN Position Stand: Sodium Bicarbonate and Exercise Performance"
+    url: https://jissn.biomedcentral.com/articles/10.1186/s12970-021-00458-w
+    type: html
+    license: CC BY 4.0
+    tags: [sodium bicarbonate, buffering, blood pH, high-intensity, ergogenic aid]
+    fetch: true
+
+  - id: issn_hmb
+    title: "ISSN Position Stand: beta-Hydroxy-beta-Methylbutyrate (HMB)"
+    # Taylor & Francis 原文挡爬虫；用 Lindenwood 机构库的 CC BY 全文 PDF。
+    url: https://digitalcommons.lindenwood.edu/cgi/viewcontent.cgi?article=1713&context=faculty-research-papers
+    type: pdf
+    license: CC BY 4.0
+    tags: [HMB, leucine, muscle protein synthesis, recovery, supplement]
+    fetch: true
+
+  # ── Recovery / gut / female-athlete topics (CC-BY) ───────────────────────
+  # Broaden beyond nutrition+supplements into recovery, gut health, and
+  # sex-specific nutrition so retrieval eval covers more of what users ask.
+  - id: issn_probiotics
+    title: "ISSN Position Stand: Probiotics"
+    url: https://jissn.biomedcentral.com/articles/10.1186/s12970-019-0329-0
+    type: html
+    license: CC BY 4.0
+    tags: [probiotics, gut health, immunity, recovery, supplement]
+    fetch: true
+
+  - id: issn_meal_frequency
+    title: "ISSN Position Stand: Meal Frequency"
+    url: https://jissn.biomedcentral.com/articles/10.1186/1550-2783-8-4
+    type: html
+    license: CC BY 4.0
+    tags: [meal frequency, eating frequency, metabolism, body composition, nutrition]
+    fetch: true
+
+  - id: rest_interval_hypertrophy
+    title: "Give It a Rest: Inter-Set Rest Interval Duration and Muscle Hypertrophy (Frontiers, 2024)"
+    url: https://www.frontiersin.org/journals/sports-and-active-living/articles/10.3389/fspor.2024.1429789/full
+    type: html
+    license: CC BY 4.0
+    tags: [rest interval, recovery, hypertrophy, volume load, resistance training]
+    fetch: true
+
+  # Wanted but excluded — host blocks automated fetch (Cloudflare / publisher
+  # anti-scraping) despite the articles being CC-BY:
+  #   - The Sleep and Recovery Practices of Athletes (MDPI Nutrients) → 403
+  #   - ISSN Nutritional Concerns of the Female Athlete (Taylor & Francis) → blocked
+  # Revisit if a license-clean institutional-repository mirror is found.

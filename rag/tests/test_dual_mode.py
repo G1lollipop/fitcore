@@ -20,7 +20,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.core.settings import reset_settings_cache
-from app.services.retrieval import compression as compression_mod
 from app.services.retrieval.compression import build_compression_retriever
 
 

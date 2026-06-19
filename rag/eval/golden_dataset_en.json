@@ -133,6 +133,72 @@
     "topic": "warmup",
     "difficulty": "easy"
   },
+  {
+    "id": "eval_013",
+    "question": "What does beta-alanine do and how much should I take?",
+    "in_scope": true,
+    "relevant_sources": [
+      { "source": "auto_issn_beta_alanine.txt", "grade": 3 }
+    ],
+    "expected_keywords": ["carnosine", "buffer", "4-6 g", "paraesthesia", "high-intensity"],
+    "topic": "supplement",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_014",
+    "question": "Does sodium bicarbonate improve exercise performance, and what dose should I use?",
+    "in_scope": true,
+    "relevant_sources": [
+      { "source": "auto_issn_sodium_bicarbonate.txt", "grade": 3 }
+    ],
+    "expected_keywords": ["0.2", "0.3 g/kg", "blood pH", "high-intensity", "buffering"],
+    "topic": "supplement",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_015",
+    "question": "What is HMB and does it help build or preserve muscle?",
+    "in_scope": true,
+    "relevant_sources": [
+      { "source": "auto_issn_hmb.txt", "grade": 3 }
+    ],
+    "expected_keywords": ["leucine", "muscle protein", "breakdown", "HMB-FA", "recovery"],
+    "topic": "supplement",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_016",
+    "question": "Can taking probiotics help an athlete's immunity, gut health, or recovery?",
+    "in_scope": true,
+    "relevant_sources": [
+      { "source": "auto_issn_probiotics.txt", "grade": 3 }
+    ],
+    "expected_keywords": ["gut", "immune", "upper respiratory", "CFU", "recovery"],
+    "topic": "supplement",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_017",
+    "question": "Does eating more frequent smaller meals boost metabolism or improve body composition?",
+    "in_scope": true,
+    "relevant_sources": [
+      { "source": "auto_issn_meal_frequency.txt", "grade": 3 }
+    ],
+    "expected_keywords": ["meal frequency", "metabolism", "body composition", "sedentary", "protein"],
+    "topic": "nutrition",
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_018",
+    "question": "How long should I rest between sets to maximize muscle growth?",
+    "in_scope": true,
+    "relevant_sources": [
+      { "source": "auto_rest_interval_hypertrophy.txt", "grade": 3 }
+    ],
+    "expected_keywords": ["rest interval", "60 s", "90 s", "volume load", "hypertrophy"],
+    "topic": "training_principle",
+    "difficulty": "medium"
+  },
 
   {
     "id": "eval_101",
