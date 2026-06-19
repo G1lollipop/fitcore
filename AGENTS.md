@@ -74,15 +74,15 @@ cp web/.env.local.example web/.env.local
 
 | 用途 | 文件 | 必填变量 |
 |------|------|----------|
-| RAG 服务 | `rag/.env` | `DASHSCOPE_API_KEY`；云端建议 `RERANKER_ENABLED=false` |
-| Next.js | `web/.env.local` | Supabase URL + `NEXT_PUBLIC_SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY`、`RAG_SERVICE_URL=http://127.0.0.1:8000`、`OPENAI_API_KEY` |
+| RAG 服务 | `rag/.env` | `GOOGLE_AI_STUDIO_API_KEY`（也接受 `GEMINI_API_KEY` / 旧 `DASHSCOPE_API_KEY`）；云端建议 `RERANKER_ENABLED=false` |
+| Next.js | `web/.env.local` | Supabase URL + `NEXT_PUBLIC_SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY`、`RAG_SERVICE_URL=http://127.0.0.1:8000`、`GOOGLE_AI_STUDIO_API_KEY`（`OPENAI_API_KEY` 仅在指向其他兼容供应商时可选） |
 
 无有效 Supabase key 时 `npm run dev` 能启动，但访问受保护页面会因无法建立会话而被重定向到 `/sign-in`。Google 登录需在 Supabase Dashboard 配置 Provider 及回调 URL（含 `<域名>/auth/callback`）。
 
 ### 启动顺序
 
 1. **RAG**（`:8000`）：`cd rag && ./.venv/bin/uvicorn backend_api:app --host 0.0.0.0 --port 8000`
-2. **（首次）灌库**：`./.venv/bin/python scripts/ingest_seed_kb.py`（需有效 `DASHSCOPE_API_KEY`）
+2. **（首次）灌库**：`./.venv/bin/python scripts/ingest_seed_kb.py`（需有效 `GOOGLE_AI_STUDIO_API_KEY`，用于 Gemini embeddings）
 3. **前端**（`:3000`）：`cd web && npm run dev`
 
 健康检查：`curl http://127.0.0.1:8000/v1/health` → `{"status":"healthy"}`
