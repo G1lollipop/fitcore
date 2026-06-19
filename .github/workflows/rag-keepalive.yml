@@ -1,0 +1,53 @@
+# Keep the Render free-tier RAG backend warm.
+#
+# Render free instances spin down after ~15 min of inactivity, so the next
+# request pays a cold-start penalty (container boot + model/index load). This
+# workflow pings the lightweight /v1/health endpoint on a schedule to keep the
+# instance awake during the day.
+#
+# Lives at the REPO ROOT because GitHub Actions only runs workflows from
+# .github/workflows/ at the root (not subdirectories like rag/.github/).
+#
+# Notes:
+#   - Cron is set to every 10 min. GitHub's scheduled triggers are best-effort
+#     and can be delayed under load, so the effective interval is sometimes a bit
+#     longer. If you still observe cold starts, drop the cron to '*/5 * * * *'
+#     (cheap: each run is a single ~20s ping) or use an external uptime pinger
+#     (e.g. cron-job.org / UptimeRobot) which fires more reliably.
+#   - The target URL is read from the RAG_HEALTH_URL repo variable
+#     (Settings -> Secrets and variables -> Actions -> Variables). It falls back
+#     to the default Render hostname if the variable is unset.
+name: RAG Keep-Alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: rag-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Ping /v1/health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping health endpoint
+        env:
+          HEALTH_URL: ${{ vars.RAG_HEALTH_URL || 'https://fitcore-rag.onrender.com/v1/health' }}
+        run: |
+          set -u
+          # A cold instance can take 30-60s to boot, so retry a few times before
+          # giving up. Each attempt allows up to 60s for the response.
+          for attempt in $(seq 1 6); do
+            code=$(curl -fsS -m 60 -o /dev/null -w '%{http_code}' "$HEALTH_URL" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "OK ($code) at $(date -u +%H:%M:%SZ) -> $HEALTH_URL"
+              exit 0
+            fi
+            echo "attempt $attempt failed (http=$code), retrying in 10s..."
+            sleep 10
+          done
+          echo "::warning::Health endpoint did not return 200 after retries: $HEALTH_URL"
