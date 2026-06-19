@@ -34,7 +34,9 @@ def _reset_settings():
 def test_returns_none_when_disabled(monkeypatch):
     monkeypatch.setenv("RERANKER_ENABLED", "false")
     monkeypatch.setenv("RERANKER_MODEL_NAME", "BAAI/bge-reranker-base")
-    result = build_compression_retriever(base_retriever=MagicMock(), cache_manager=MagicMock())
+    result = build_compression_retriever(
+        base_retriever=MagicMock(), cache_manager=MagicMock()
+    )
     assert result is None
 
 
@@ -44,7 +46,9 @@ def test_returns_none_when_no_model_ref(monkeypatch):
     monkeypatch.delenv("RERANKER_HF_MODEL", raising=False)
     monkeypatch.delenv("RERANKER_MODEL_PATH", raising=False)
     monkeypatch.delenv("LOCAL_RERANKER_MODEL_PATH", raising=False)
-    result = build_compression_retriever(base_retriever=MagicMock(), cache_manager=MagicMock())
+    result = build_compression_retriever(
+        base_retriever=MagicMock(), cache_manager=MagicMock()
+    )
     assert result is None
 
 
@@ -52,7 +56,9 @@ def test_returns_none_when_local_path_missing(monkeypatch, tmp_path):
     """A path-shaped ref that doesn't exist must degrade, not raise."""
     monkeypatch.setenv("RERANKER_ENABLED", "true")
     monkeypatch.setenv("RERANKER_MODEL_PATH", str(tmp_path / "does_not_exist"))
-    result = build_compression_retriever(base_retriever=MagicMock(), cache_manager=MagicMock())
+    result = build_compression_retriever(
+        base_retriever=MagicMock(), cache_manager=MagicMock()
+    )
     assert result is None
 
 
@@ -61,7 +67,11 @@ def test_returns_none_on_import_error(monkeypatch):
     monkeypatch.setenv("RERANKER_ENABLED", "true")
     monkeypatch.setenv("RERANKER_MODEL_NAME", "BAAI/bge-reranker-base")
 
-    real_import = __builtins__["__import__"] if isinstance(__builtins__, dict) else __builtins__.__import__
+    real_import = (
+        __builtins__["__import__"]
+        if isinstance(__builtins__, dict)
+        else __builtins__.__import__
+    )
 
     def fake_import(name, *args, **kwargs):
         if "cross_encoder" in name or "sentence_transformers" in name:
@@ -69,7 +79,9 @@ def test_returns_none_on_import_error(monkeypatch):
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr("builtins.__import__", fake_import)
-    result = build_compression_retriever(base_retriever=MagicMock(), cache_manager=MagicMock())
+    result = build_compression_retriever(
+        base_retriever=MagicMock(), cache_manager=MagicMock()
+    )
     assert result is None
 
 
@@ -80,7 +92,9 @@ def test_returns_none_on_init_failure(monkeypatch):
 
     fake_module = MagicMock()
     fake_module.HuggingFaceCrossEncoder.side_effect = RuntimeError("simulated OOM")
-    monkeypatch.setitem(__import__("sys").modules, "langchain_community.cross_encoders", fake_module)
+    monkeypatch.setitem(
+        __import__("sys").modules, "langchain_community.cross_encoders", fake_module
+    )
 
     fake_classic = MagicMock()
     monkeypatch.setitem(
@@ -89,11 +103,14 @@ def test_returns_none_on_init_failure(monkeypatch):
         fake_classic,
     )
 
-    result = build_compression_retriever(base_retriever=MagicMock(), cache_manager=MagicMock())
+    result = build_compression_retriever(
+        base_retriever=MagicMock(), cache_manager=MagicMock()
+    )
     assert result is None
 
 
 # ── RagService sticky-no-retry behavior ─────────────────────────────────────
+
 
 def _make_bare_rag_service():
     """Construct just enough of RagService to exercise _get_compression_retriever
@@ -125,7 +142,9 @@ def test_compression_lookup_is_sticky_when_none(monkeypatch):
     assert svc._get_compression_retriever() is None
     assert svc._get_compression_retriever() is None
     assert svc._get_compression_retriever() is None
-    assert call_count["n"] == 1, "build_compression_retriever should be called exactly once"
+    assert call_count["n"] == 1, (
+        "build_compression_retriever should be called exactly once"
+    )
 
 
 def test_compression_lookup_caches_when_present(monkeypatch):

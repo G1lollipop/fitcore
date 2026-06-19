@@ -32,7 +32,9 @@ def insert_chunks(
     if len(chunks) != len(embeddings):
         raise ValueError("chunks and embeddings length mismatch")
 
-    title = (base_metadata.get("title") or base_metadata.get("file_name") or source) or source
+    title = (
+        base_metadata.get("title") or base_metadata.get("file_name") or source
+    ) or source
     rows: list[dict[str, Any]] = []
     for i, (text, emb) in enumerate(zip(chunks, embeddings)):
         meta = {**base_metadata, "chunk_index": i}

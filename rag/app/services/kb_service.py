@@ -43,7 +43,9 @@ _EMBED_TRANSIENT_SIGNALS = (
 )
 
 
-def _embed_documents_throttled(embedding: Embeddings, chunks: list[str]) -> list[list[float]]:
+def _embed_documents_throttled(
+    embedding: Embeddings, chunks: list[str]
+) -> list[list[float]]:
     vectors: list[list[float]] = []
     total = len(chunks)
     for start in range(0, total, _EMBED_SUB_BATCH):
@@ -110,6 +112,8 @@ def _build_text_splitter(embedding: Embeddings):
         separators=config.separators,
         length_function=len,
     )
+
+
 from app.infra.supabase_client import (
     get_supabase_client,
     supabase_configured,
@@ -187,7 +191,9 @@ class KnowledgeBaseService(object):
         if self._use_supabase:
             client = get_supabase_client()
             delete_chunks_for_source(client, filename)
-            vectors = _embed_documents_throttled(self._embedding, list(knowledge_chunks))
+            vectors = _embed_documents_throttled(
+                self._embedding, list(knowledge_chunks)
+            )
             insert_chunks(
                 client,
                 source=filename,
@@ -233,23 +239,23 @@ class KnowledgeBaseService(object):
         """
         parse_result = FileParserFactory.parse_file(file_content, filename, mime_type)
 
-        if not parse_result['success']:
+        if not parse_result["success"]:
             return {
-                'success': False,
-                'message': f"[失败]文件解析失败: {parse_result.get('error', '未知错误')}",
-                'parsed_metadata': parse_result.get('metadata', {}),
+                "success": False,
+                "message": f"[失败]文件解析失败: {parse_result.get('error', '未知错误')}",
+                "parsed_metadata": parse_result.get("metadata", {}),
             }
 
-        parsed_metadata = parse_result.get('metadata', {})
+        parsed_metadata = parse_result.get("metadata", {})
         if extra_metadata:
             parsed_metadata.update(extra_metadata)
 
-        text = parse_result['text']
+        text = parse_result["text"]
         if not text or not text.strip():
             return {
-                'success': False,
-                'message': "[失败]文件内容为空",
-                'parsed_metadata': parsed_metadata,
+                "success": False,
+                "message": "[失败]文件内容为空",
+                "parsed_metadata": parsed_metadata,
             }
 
         result_message = self.upload_by_str(
@@ -257,7 +263,7 @@ class KnowledgeBaseService(object):
         )
 
         return {
-            'success': True,
-            'message': result_message,
-            'parsed_metadata': parsed_metadata,
+            "success": True,
+            "message": result_message,
+            "parsed_metadata": parsed_metadata,
         }

@@ -4,6 +4,7 @@ ChatPromptTemplate used by RagService.
 Kept in its own module so prompt edits don't touch service code, and so the
 template can be reused by future LLM endpoints without re-instantiating it.
 """
+
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 

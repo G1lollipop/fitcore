@@ -43,6 +43,7 @@ def get_rag_service():
     with _rag_service_lock:
         if _rag_service is None:
             from app.services.rag_service import RagService
+
             _rag_service = RagService()
     return _rag_service
 

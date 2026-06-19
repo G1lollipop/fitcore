@@ -13,7 +13,11 @@ from langchain_classic.retrievers import ContextualCompressionRetriever
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough, RunnableWithMessageHistory
+from langchain_core.runnables import (
+    RunnableLambda,
+    RunnablePassthrough,
+    RunnableWithMessageHistory,
+)
 
 from app.core.settings import get_settings
 from app.infra.cache import CacheManager
@@ -73,9 +77,13 @@ class RagService(object):
         """
         retriever = self._get_compression_retriever()
         if retriever is not None:
-            print("[RagService] 检索模式: Reranker (Vector + BM25 + CrossEncoder rerank)")
+            print(
+                "[RagService] 检索模式: Reranker (Vector + BM25 + CrossEncoder rerank)"
+            )
         else:
-            print("[RagService] 检索模式: Base retrieval (Vector + BM25 ensemble; reranker 未启用)")
+            print(
+                "[RagService] 检索模式: Base retrieval (Vector + BM25 ensemble; reranker 未启用)"
+            )
 
     def _get_compression_retriever(self) -> ContextualCompressionRetriever | None:
         """Returns the compression retriever, or None if reranker is disabled /
@@ -154,7 +162,9 @@ class RagService(object):
                 "input": original_input["input"],
                 "context": value["context"],
                 "history": original_input.get("history", []),
-                "user_context": self._format_user_context(original_input.get("user_context")),
+                "user_context": self._format_user_context(
+                    original_input.get("user_context")
+                ),
             }
 
         chain = (
@@ -185,10 +195,20 @@ class RagService(object):
         docs = retriever.invoke(query)
         return docs[:k]
 
-    def chat(self, query: str, session_id: str, user_context: dict[str, Any] | None = None, top_k: int | None = None) -> dict[str, Any]:
+    def chat(
+        self,
+        query: str,
+        session_id: str,
+        user_context: dict[str, Any] | None = None,
+        top_k: int | None = None,
+    ) -> dict[str, Any]:
         # 动态确定最终使用的文档数。
         # top_k 为 None 时自动根据查询复杂度计算，也支持调用方显式指定。
-        k = top_k if (top_k is not None and 1 <= top_k <= 20) else compute_retrieval_k(query)
+        k = (
+            top_k
+            if (top_k is not None and 1 <= top_k <= 20)
+            else compute_retrieval_k(query)
+        )
 
         session_config = {"configurable": {"session_id": session_id}}
         docs = self.retrieve(query, k)

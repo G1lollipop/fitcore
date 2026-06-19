@@ -58,7 +58,9 @@ DATASET_PATH = Path(__file__).parent / "golden_dataset.json"
 def _build_judge_llm() -> ChatOpenAI:
     """与 RagService 一致：走 Gemini 的 OpenAI 兼容端点。"""
     if not _settings.llm_api_key:
-        raise RuntimeError("LLM API key 未配置 (GOOGLE_AI_STUDIO_API_KEY)；评判器无法调用 LLM")
+        raise RuntimeError(
+            "LLM API key 未配置 (GOOGLE_AI_STUDIO_API_KEY)；评判器无法调用 LLM"
+        )
     return ChatOpenAI(
         model=JUDGE_MODEL,
         api_key=_settings.llm_api_key,
@@ -79,6 +81,7 @@ def _get_judge_llm() -> ChatOpenAI:
 
 # ─── 调用 RAG 服务 ──────────────────────────────────────────────────────────
 
+
 def call_rag(question: str, session_id: str) -> dict:
     """调用 /v1/chat，返回回答、引用和延迟。"""
     start = time.time()
@@ -91,7 +94,13 @@ def call_rag(question: str, session_id: str) -> dict:
         resp.raise_for_status()
         data = resp.json()
     except Exception as exc:
-        return {"answer": "", "citations": [], "retrieved_count": 0, "latency_ms": -1, "error": str(exc)}
+        return {
+            "answer": "",
+            "citations": [],
+            "retrieved_count": 0,
+            "latency_ms": -1,
+            "error": str(exc),
+        }
 
     elapsed_ms = int((time.time() - start) * 1000)
     return {
@@ -105,13 +114,19 @@ def call_rag(question: str, session_id: str) -> dict:
 
 # ─── LLM 评判 ──────────────────────────────────────────────────────────────
 
+
 def judge_answer(question: str, answer: str, expected_keywords: list[str]) -> dict:
     """
     用 Gemini 作为评判 LLM，对回答质量打分。
     每项满分 5 分，最终归一化到 [0, 1]。
     """
     if not answer.strip():
-        return {"relevance": 0.0, "completeness": 0.0, "accuracy": 0.0, "comment": "回答为空"}
+        return {
+            "relevance": 0.0,
+            "completeness": 0.0,
+            "accuracy": 0.0,
+            "comment": "回答为空",
+        }
 
     kw_list = "、".join(expected_keywords) if expected_keywords else "（无）"
 
@@ -153,10 +168,16 @@ def judge_answer(question: str, answer: str, expected_keywords: list[str]) -> di
         }
     except Exception as exc:
         print(f"  [判断器错误] {exc}")
-        return {"relevance": 0.0, "completeness": 0.0, "accuracy": 0.0, "comment": f"评估失败: {exc}"}
+        return {
+            "relevance": 0.0,
+            "completeness": 0.0,
+            "accuracy": 0.0,
+            "comment": f"评估失败: {exc}",
+        }
 
 
 # ─── 主评估流程 ─────────────────────────────────────────────────────────────
+
 
 def evaluate():
     dataset: list[dict] = json.loads(DATASET_PATH.read_text(encoding="utf-8"))
@@ -166,7 +187,9 @@ def evaluate():
     print(f"服务地址 : {RAG_SERVICE_URL}")
     print(f"评判模型 : {JUDGE_MODEL}")
     print(f"测试用例 : {len(dataset)} 条\n")
-    print(f"{'ID':<12} {'问题':<22} {'相关性':>6} {'完整性':>6} {'准确性':>6} {'引用':>4} {'延迟(ms)':>9}")
+    print(
+        f"{'ID':<12} {'问题':<22} {'相关性':>6} {'完整性':>6} {'准确性':>6} {'引用':>4} {'延迟(ms)':>9}"
+    )
     print("-" * 75)
 
     for item in dataset:
@@ -178,11 +201,15 @@ def evaluate():
 
         if rag_result["error"]:
             print(f"{item['id']:<12} {q[:20]:<22} {'ERROR':>6} - {rag_result['error']}")
-            results.append({"id": item["id"], "question": q, "error": rag_result["error"]})
+            results.append(
+                {"id": item["id"], "question": q, "error": rag_result["error"]}
+            )
             continue
 
         # LLM 评判
-        scores = judge_answer(q, rag_result["answer"], item.get("expected_keywords", []))
+        scores = judge_answer(
+            q, rag_result["answer"], item.get("expected_keywords", [])
+        )
 
         result = {
             "id": item["id"],
@@ -241,10 +268,14 @@ def evaluate():
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     report_path = Path(__file__).parent / f"eval_report_{ts}.json"
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     print(f"\n报告已保存至: {report_path}")
-    print(f"\n【汇总】相关性 {avg_rel:.3f} | 完整性 {avg_com:.3f} | 准确性 {avg_acc:.3f} | 平均延迟 {avg_lat:.0f}ms")
+    print(
+        f"\n【汇总】相关性 {avg_rel:.3f} | 完整性 {avg_com:.3f} | 准确性 {avg_acc:.3f} | 平均延迟 {avg_lat:.0f}ms"
+    )
 
 
 if __name__ == "__main__":
