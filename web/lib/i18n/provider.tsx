@@ -12,6 +12,7 @@ import {
   DEFAULT_LANGUAGE,
   HTML_LANG,
   LANGUAGE_STORAGE_KEY,
+  detectBrowserLanguage,
   getDictionary,
   isLanguage,
   type Dictionary,
@@ -34,23 +35,32 @@ const LanguageContext = createContext<LanguageContextValue | null>(null)
  *
  * Preference is persisted to `localStorage` (the user's choice — no backend).
  * Because localStorage is client-only, the server renders with
- * `DEFAULT_LANGUAGE`; on mount we read the stored value and, if different,
- * re-render once. The `<html lang>` attribute and `document.title` are synced
- * client-side whenever the language changes.
+ * `DEFAULT_LANGUAGE`; on mount we resolve the real language and, if different,
+ * re-render once. Resolution order: stored preference → browser language
+ * (`navigator.language`) → `DEFAULT_LANGUAGE`. The `<html lang>` attribute and
+ * `document.title` are synced client-side whenever the language changes.
  */
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(DEFAULT_LANGUAGE)
   const [mounted, setMounted] = useState(false)
 
-  // Read the persisted preference once, after hydration.
+  // Resolve the active language once, after hydration. An explicit stored
+  // choice always wins; first-time visitors fall back to their browser locale.
   useEffect(() => {
+    let resolved: Language | null = null
     try {
       const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
       if (isLanguage(stored)) {
-        setLanguageState(stored)
+        resolved = stored
       }
     } catch {
       // localStorage may be unavailable (private mode etc.) — ignore.
+    }
+    if (!resolved) {
+      resolved = detectBrowserLanguage()
+    }
+    if (resolved !== DEFAULT_LANGUAGE) {
+      setLanguageState(resolved)
     }
     setMounted(true)
   }, [])

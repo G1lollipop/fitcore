@@ -10,6 +10,7 @@ export {
   LANGUAGE_STORAGE_KEY,
   HTML_LANG,
   isLanguage,
+  detectBrowserLanguage,
 } from './config'
 
 const DICTIONARIES: Record<Language, Dictionary> = { zh, en }

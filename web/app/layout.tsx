@@ -30,8 +30,8 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'FitCore — 智能健身助手',
-  description: '追踪饮食、训练，获取专属健身建议',
+  title: 'FitCore — Smart Fitness Assistant',
+  description: 'Track your nutrition and training, and get personalized fitness advice',
 }
 
 export default function RootLayout({
@@ -43,7 +43,7 @@ export default function RootLayout({
     // suppressHydrationWarning is required because next-themes injects the
     // `class="dark"` attribute via inline script before React hydrates,
     // which would otherwise mismatch the server-rendered `<html>`.
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} font-sans antialiased bg-background text-foreground`}
       >
