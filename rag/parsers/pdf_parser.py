@@ -11,11 +11,11 @@ class PdfParser(BaseFileParser):
     def parse(self, file_content: bytes, filename: str, **kwargs) -> Dict[str, Any]:
         """解析 PDF 文件"""
         try:
-            import PyPDF2
+            from pypdf import PdfReader
             from io import BytesIO
             
             pdf_file = BytesIO(file_content)
-            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            pdf_reader = PdfReader(pdf_file)
             
             # 提取所有页面的文本
             text_parts = []
@@ -57,7 +57,7 @@ class PdfParser(BaseFileParser):
                 'text': '',
                 'metadata': self._extract_basic_metadata(filename),
                 'success': False,
-                'error': 'PyPDF2 未安装，请运行: pip install PyPDF2',
+                'error': 'pypdf 未安装，请运行: pip install pypdf',
             }
         except Exception as e:
             return {

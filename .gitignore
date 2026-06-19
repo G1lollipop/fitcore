@@ -52,6 +52,7 @@ gha-creds-*.json
 **/chat_history/
 **/md5.text
 **/eval/eval_report_*.json
+**/eval/retrieval_report_*.json
 
 # ---- 日志 / 杂项本地文件 ----
 *.local

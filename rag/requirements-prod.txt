@@ -32,9 +32,10 @@ supabase
 # BM25 检索
 rank-bm25
 
-# 文件解析
+# 文件解析（KB 上传 / 灌库支持 txt·md·pdf·docx·html）
 pypdf
 python-docx
+beautifulsoup4
 requests
 httpx
 
