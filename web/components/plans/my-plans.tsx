@@ -3,7 +3,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dumbbell, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState, useTransition } from 'react'
-import { useAuth } from '@clerk/nextjs'
 import {
   getUserPlansLight,
   getCurrentPlanLight,
@@ -14,6 +13,8 @@ import {
 import { batchLogWorkouts } from '@/app/actions/logWorkout'
 import { useToast } from '@/hooks/use-toast'
 import { calculateTodayWorkout, type TodayWorkoutResult } from '@/lib/plans/today-workout'
+import { useT } from '@/lib/i18n/provider'
+import { tError, localizedName } from '@/lib/i18n'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Database } from '@/lib/database.types'
@@ -34,9 +35,9 @@ interface PlanWithDays extends WorkoutPlan {
   })[]
 }
 
-export function MyPlans() {
-  const { userId } = useAuth()
+export function MyPlans({ userId }: { userId?: string }) {
   const { toast } = useToast()
+  const t = useT()
 
   const [userPlans, setUserPlans] = useState<PlanWithDays[]>([])
   const [currentPlan, setCurrentPlanData] = useState<PlanWithDays | null>(null)
@@ -113,7 +114,7 @@ export function MyPlans() {
         setTemplates(templatesRes.data as unknown as WorkoutPlan[])
       }
     } catch (error) {
-      console.error('加载计划失败:', error)
+      console.error('Failed to load plans:', error)
     } finally {
       setLoading(false)
     }
@@ -134,27 +135,27 @@ export function MyPlans() {
           setCurrentPlanData(newCurrent)
           refreshTodayWorkout(newCurrent)
           toast({
-            title: '设置成功',
-            description: '已切换为当前计划',
+            title: t.plans.list.setSuccess,
+            description: t.plans.list.setSuccessDesc,
           })
         } else {
           toast({
             variant: 'destructive',
-            title: '设置失败',
-            description: typeof result.error === 'string' ? result.error : '请稍后再试',
+            title: t.plans.list.setFailed,
+            description: typeof result.error === 'string' ? tError(t, result.error) : t.plans.list.tryLater,
           })
         }
       } finally {
         setPendingPlanId(null)
       }
     },
-    [userId, userPlans, refreshTodayWorkout, toast]
+    [userId, userPlans, refreshTodayWorkout, toast, t]
   )
 
   const handleDelete = useCallback(
     async (planId: string) => {
       if (!userId) return
-      if (!confirm('确定要删除这个计划吗？')) return
+      if (!confirm(t.plans.list.confirmDelete)) return
       setPendingPlanId(planId)
       try {
         const result = await deletePlan(planId)
@@ -164,26 +165,28 @@ export function MyPlans() {
             setCurrentPlanData(null)
             setTodayResult(null)
           }
-          toast({ title: '删除成功', description: '计划已删除' })
+          toast({ title: t.plans.list.deleteSuccess, description: t.plans.list.deleteSuccessDesc })
         } else {
           toast({
             variant: 'destructive',
-            title: '删除失败',
-            description: typeof result.error === 'string' ? result.error : '请稍后再试',
+            title: t.plans.list.deleteFailed,
+            description: typeof result.error === 'string' ? tError(t, result.error) : t.plans.list.tryLater,
           })
         }
       } finally {
         setPendingPlanId(null)
       }
     },
-    [userId, currentPlan, toast]
+    [userId, currentPlan, toast, t]
   )
 
   const handleStartWorkout = useCallback(() => {
     if (!userId || !todayResult || todayResult.exercises.length === 0) return
     startLogging(async () => {
       const workouts = todayResult.exercises.map((e) => ({
-        name: e.exerciseName ?? '训练',
+        name: e.exerciseName
+          ? localizedName(t, e.exerciseName, e.exerciseNameEn)
+          : t.plans.list.workoutDefaultName,
         sets: e.sets ?? undefined,
         duration_minutes: 15,
         calories_burned: Math.round((e.sets ?? 3) * 8),
@@ -191,18 +194,18 @@ export function MyPlans() {
       const result = await batchLogWorkouts(workouts)
       if (result.success) {
         toast({
-          title: '训练开始',
-          description: `已记录 ${workouts.length} 个动作`,
+          title: t.plans.list.workoutStarted,
+          description: t.plans.list.workoutStartedDesc(workouts.length),
         })
       } else {
         toast({
           variant: 'destructive',
-          title: '记录失败',
-          description: typeof result.error === 'string' ? result.error : '请稍后再试',
+          title: t.plans.list.logFailed,
+          description: typeof result.error === 'string' ? tError(t, result.error) : t.plans.list.tryLater,
         })
       }
     })
-  }, [userId, todayResult, toast])
+  }, [userId, todayResult, toast, t])
 
   const handleWizardCreated = useCallback(() => {
     loadData()
@@ -226,9 +229,9 @@ export function MyPlans() {
       <section className="space-y-4">
         <header className="flex items-center justify-between">
           <div>
-            <h3 className="font-display text-base font-semibold text-foreground">我的计划</h3>
+            <h3 className="font-display text-base font-semibold text-foreground">{t.plans.list.title}</h3>
             <p className="text-[11px] text-muted-foreground">
-              {userPlans.length > 0 ? `共 ${userPlans.length} 个计划` : '还没有创建训练计划'}
+              {userPlans.length > 0 ? t.plans.list.countPlans(userPlans.length) : t.plans.list.noPlansYet}
             </p>
           </div>
           <button
@@ -237,15 +240,15 @@ export function MyPlans() {
             className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md"
           >
             <Plus size={12} />
-            创建计划
+            {t.plans.list.create}
           </button>
         </header>
 
         {userPlans.length === 0 ? (
           <EmptyState
             icon={Dumbbell}
-            title="还没有训练计划"
-            description="从下方系统模板复制一个，或点击「创建计划」用向导新建"
+            title={t.plans.list.emptyTitle}
+            description={t.plans.list.emptyDesc}
           >
             <button
               type="button"
@@ -253,7 +256,7 @@ export function MyPlans() {
               className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md"
             >
               <Plus size={12} />
-              用向导创建
+              {t.plans.list.createWithWizard}
             </button>
           </EmptyState>
         ) : (
@@ -284,8 +287,8 @@ export function MyPlans() {
 
       <section className="space-y-3">
         <header>
-          <h3 className="font-display text-base font-semibold text-foreground">系统模板</h3>
-          <p className="text-[11px] text-muted-foreground">一键复制为我的计划，可以再继续编辑</p>
+          <h3 className="font-display text-base font-semibold text-foreground">{t.plans.list.templatesTitle}</h3>
+          <p className="text-[11px] text-muted-foreground">{t.plans.list.templatesHint}</p>
         </header>
         <TemplateGrid
           templates={templates.slice(0, 6)}

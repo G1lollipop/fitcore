@@ -77,7 +77,7 @@ export function useExercises({ enabled, filters }: UseExercisesArgs): UseExercis
           setPagination(result.data.pagination)
         }
       } catch (err) {
-        console.error('加载动作数据失败:', err)
+        console.error('Failed to load exercises:', err)
       } finally {
         if (!cancelled) setLoading(false)
       }

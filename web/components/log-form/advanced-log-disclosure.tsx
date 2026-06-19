@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { useT } from '@/lib/i18n/provider'
 import { cn } from '@/lib/utils'
 
 interface AdvancedLogDisclosureProps {
@@ -19,6 +20,7 @@ interface AdvancedLogDisclosureProps {
  */
 export function AdvancedLogDisclosure({ children, defaultOpen = false }: AdvancedLogDisclosureProps) {
   const [open, setOpen] = useState(defaultOpen)
+  const t = useT()
 
   return (
     <section className="rounded-2xl border border-border bg-card/60 shadow-sm">
@@ -33,9 +35,9 @@ export function AdvancedLogDisclosure({ children, defaultOpen = false }: Advance
             <SlidersHorizontal size={13} />
           </span>
           <span>
-            <span className="block text-sm font-medium text-foreground">高级模式</span>
+            <span className="block text-sm font-medium text-foreground">{t.logForm.advanced.title}</span>
             <span className="block text-[11px] text-muted-foreground">
-              逐项填写、复制昨日、导入今日计划
+              {t.logForm.advanced.desc}
             </span>
           </span>
         </span>

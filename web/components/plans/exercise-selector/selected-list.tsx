@@ -15,6 +15,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
+import { useT } from '@/lib/i18n/provider'
 import { SortableItem } from './sortable-item'
 import type { SelectedExercise, SortableField } from './types'
 
@@ -32,6 +33,7 @@ interface SelectedListProps {
  * handler; renders the empty state inline when nothing is selected.
  */
 export function SelectedList({ exercises, onReorder, onRemove, onUpdate }: SelectedListProps) {
+  const t = useT()
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -49,13 +51,13 @@ export function SelectedList({ exercises, onReorder, onRemove, onUpdate }: Selec
   return (
     <div className="w-80 flex flex-col border-l border-border bg-secondary/30">
       <div className="p-4 border-b border-border shrink-0">
-        <h4 className="font-medium text-foreground">已选动作</h4>
-        <p className="text-xs text-muted-foreground mt-0.5">拖拽调整顺序 · 点击移除</p>
+        <h4 className="font-medium text-foreground">{t.plans.selectedList.title}</h4>
+        <p className="text-xs text-muted-foreground mt-0.5">{t.plans.selectedList.hint}</p>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
         {exercises.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-sm text-muted-foreground">还未选择动作</p>
+            <p className="text-sm text-muted-foreground">{t.plans.selectedList.empty}</p>
           </div>
         ) : (
           <DndContext

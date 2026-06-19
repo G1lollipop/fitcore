@@ -1,7 +1,8 @@
 'use client'
 
 import { Check, ChevronLeft, ChevronRight, SearchX } from 'lucide-react'
-import { categoryLabels, difficultyLabels } from '@/lib/labels'
+import { useT } from '@/lib/i18n/provider'
+import { tLabel, localizedName, equipmentLabel, type Dictionary } from '@/lib/i18n'
 import type { Database } from '@/lib/database.types'
 import type { PaginatedExercises } from '@/app/actions/exercises'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -36,6 +37,7 @@ export function ExerciseList({
   onClearFilters,
   hasActiveFilters,
 }: ExerciseListProps) {
+  const t = useT()
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -48,8 +50,8 @@ export function ExerciseList({
     return (
       <EmptyState
         icon={SearchX}
-        title="没有找到匹配的动作"
-        description={hasActiveFilters ? '试着放宽筛选条件，或清空后重新搜索' : '换个关键词再试试'}
+        title={t.plans.exerciseList.emptyTitle}
+        description={hasActiveFilters ? t.plans.exerciseList.emptyDescFiltered : t.plans.exerciseList.emptyDesc}
         size="inset"
       >
         {hasActiveFilters && onClearFilters && (
@@ -58,7 +60,7 @@ export function ExerciseList({
             onClick={onClearFilters}
             className="inline-flex items-center gap-1 rounded-xl border border-border bg-secondary/60 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
           >
-            清除筛选条件
+            {t.plans.exerciseList.clearFilters}
           </button>
         )}
       </EmptyState>
@@ -81,6 +83,7 @@ export function ExerciseList({
             exercise={exercise}
             selected={isSelected(exercise.id)}
             onToggle={() => onToggle(exercise)}
+            t={t}
           />
         ))}
       </div>
@@ -91,6 +94,7 @@ export function ExerciseList({
           totalPages={pagination.totalPages}
           hasMore={pagination.hasMore}
           onPageChange={handlePageChange}
+          t={t}
         />
       )}
     </>
@@ -105,9 +109,13 @@ interface ExerciseCardProps {
   exercise: Exercise
   selected: boolean
   onToggle: () => void
+  t: Dictionary
 }
 
-function ExerciseCard({ exercise, selected, onToggle }: ExerciseCardProps) {
+function ExerciseCard({ exercise, selected, onToggle, t }: ExerciseCardProps) {
+  const primaryName = localizedName(t, exercise.name, exercise.name_en)
+  const secondaryName =
+    primaryName === exercise.name ? exercise.name_en : exercise.name
   return (
     <button
       type="button"
@@ -122,24 +130,24 @@ function ExerciseCard({ exercise, selected, onToggle }: ExerciseCardProps) {
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h4 className="font-medium text-foreground text-sm truncate">{exercise.name}</h4>
+            <h4 className="font-medium text-foreground text-sm truncate">{primaryName}</h4>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground shrink-0">
-              {categoryLabels[exercise.category] || exercise.category}
+              {tLabel(t.labels.categories, exercise.category)}
             </span>
           </div>
-          {exercise.name_en && (
-            <p className="text-xs text-muted-foreground mt-0.5">{exercise.name_en}</p>
+          {secondaryName && secondaryName !== primaryName && (
+            <p className="text-xs text-muted-foreground mt-0.5">{secondaryName}</p>
           )}
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span className="text-[10px] px-2 py-0.5 rounded-lg bg-primary/10 text-primary">
-              {difficultyLabels[exercise.difficulty] || exercise.difficulty}
+              {tLabel(t.labels.levels, exercise.difficulty)}
             </span>
             <span className="text-[10px] px-2 py-0.5 rounded-lg bg-secondary text-muted-foreground">
-              {exercise.equipment}
+              {equipmentLabel(t, exercise.equipment)}
             </span>
             {exercise.default_sets && (
               <span className="text-[10px] px-2 py-0.5 rounded-lg bg-secondary text-muted-foreground">
-                {exercise.default_sets}组
+                {t.plans.exerciseList.setsShort(exercise.default_sets)}
               </span>
             )}
           </div>
@@ -162,9 +170,10 @@ interface PaginationProps {
   totalPages: number
   hasMore: boolean
   onPageChange: (page: number) => void
+  t: Dictionary
 }
 
-function Pagination({ currentPage, totalPages, hasMore, onPageChange }: PaginationProps) {
+function Pagination({ currentPage, totalPages, hasMore, onPageChange, t }: PaginationProps) {
   // Up to 5 visible page numbers, centered on the current page when possible.
   const visiblePages: number[] = (() => {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -182,7 +191,7 @@ function Pagination({ currentPage, totalPages, hasMore, onPageChange }: Paginati
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         className="p-2 rounded-lg border border-border hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label="上一页"
+        aria-label={t.plans.exerciseList.prevPage}
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -205,7 +214,7 @@ function Pagination({ currentPage, totalPages, hasMore, onPageChange }: Paginati
         onClick={() => onPageChange(currentPage + 1)}
         disabled={!hasMore}
         className="p-2 rounded-lg border border-border hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label="下一页"
+        aria-label={t.plans.exerciseList.nextPage}
       >
         <ChevronRight className="w-4 h-4" />
       </button>

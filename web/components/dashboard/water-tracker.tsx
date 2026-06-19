@@ -6,6 +6,8 @@ import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import { logWater } from '@/app/actions/dashboard'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
+import { tError } from '@/lib/i18n'
 
 interface WaterTrackerProps {
   userId?: string
@@ -33,6 +35,7 @@ export function WaterTracker({
   className,
 }: WaterTrackerProps) {
   const { toast } = useToast()
+  const t = useT()
   const [ml, setMl] = useState(initialMl)
   const [isPending, startTransition] = useTransition()
   // Track the last `initialMl` we synced from. When the parent refetches
@@ -78,8 +81,8 @@ export function WaterTracker({
         setMl(previous)
         toast({
           variant: 'destructive',
-          title: '记录失败',
-          description: result.error ?? '请稍后再试',
+          title: t.dashboard.water.logFailed,
+          description: result.error ? tError(t, result.error) : t.dashboard.water.tryLater,
         })
         return
       }
@@ -109,7 +112,7 @@ export function WaterTracker({
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Droplets size={14} />
           </span>
-          <span className="text-sm font-medium text-foreground">饮水追踪</span>
+          <span className="text-sm font-medium text-foreground">{t.dashboard.water.title}</span>
         </div>
       </header>
 
@@ -118,14 +121,14 @@ export function WaterTracker({
 
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            今日饮水
+            {t.dashboard.water.todayWater}
           </span>
           <p className="font-display mt-0.5 text-3xl font-semibold tabular-nums leading-none text-foreground">
             {liters}
             <span className="ml-1 text-sm font-normal text-muted-foreground">L</span>
           </p>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            目标 {goalLiters} L · {pct}%
+            {t.dashboard.water.goalLine(goalLiters, pct)}
           </p>
           <AnimatePresence>
             {reachedGoal && (
@@ -136,7 +139,7 @@ export function WaterTracker({
                 exit={{ opacity: 0 }}
                 className="mt-1 rounded-full bg-accent/30 px-2 py-0.5 text-[10px] font-medium text-accent-foreground"
               >
-                目标达成 ✦
+                {t.dashboard.water.reached}
               </motion.p>
             )}
           </AnimatePresence>
@@ -153,7 +156,7 @@ export function WaterTracker({
         className="relative z-10 mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Plus size={14} className={cn(isPending && 'animate-pulse')} />
-        {isPending ? '记录中…' : `添加 ${incrementMl} ml`}
+        {isPending ? t.dashboard.water.logging : t.dashboard.water.add(incrementMl)}
       </motion.button>
     </motion.section>
   )

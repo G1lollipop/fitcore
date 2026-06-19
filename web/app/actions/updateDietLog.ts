@@ -6,6 +6,7 @@ import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId } from '@/lib/auth/require-user';
 import { dietLogInputSchema, firstZodError } from '@/lib/validation/schemas';
+import { ActionError } from '@/lib/errors';
 import type { DietLogItem } from './types';
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -26,7 +27,7 @@ export async function updateDietLog(
   const a = await authedUserId();
   if (!a.ok) return a.result;
   const userId = a.userId;
-  if (!originalId) return { success: false, error: '缺少原记录 ID' };
+  if (!originalId) return { success: false, error: ActionError.MISSING_ORIGINAL_ID };
 
   const parsed = dietLogInputSchema.safeParse(next);
   if (!parsed.success) {
@@ -43,16 +44,16 @@ export async function updateDietLog(
     .single();
 
   if (queryError) {
-    return { success: false, error: `查询失败: ${queryError.message}` };
+    return { success: false, error: ActionError.DB_QUERY_FAILED };
   }
 
   const row = data as DailyStatsRow | null;
-  if (!row) return { success: false, error: '今日记录不存在' };
+  if (!row) return { success: false, error: ActionError.TODAY_RECORD_NOT_FOUND };
 
   const logs = (row.diet_logs as DietLogItem[]) || [];
   const prev = logs.find((l) => l.id === originalId);
   if (!prev) {
-    return { success: false, error: '原记录已不存在，请重新记录' };
+    return { success: false, error: ActionError.ORIGINAL_RECORD_GONE };
   }
 
   const updatedLogs = logs.map((l) =>
@@ -73,7 +74,7 @@ export async function updateDietLog(
     .eq('id', row.id);
 
   if (updateError) {
-    return { success: false, error: `更新失败: ${updateError.message}` };
+    return { success: false, error: ActionError.DB_UPDATE_FAILED };
   }
 
   revalidatePath('/');

@@ -14,7 +14,7 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
  * no longer shipped to the client at all.
  *
  * Consequently, ALL access control is the caller's responsibility: every query
- * must run inside a server action that scopes rows by the Clerk-authenticated
+ * must run inside a server action that scopes rows by the Supabase-authenticated
  * `userId` (see `lib/auth/require-user.ts`). Never interpolate untrusted input
  * into PostgREST filters.
  */

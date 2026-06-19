@@ -6,26 +6,33 @@ import {
   UtensilsCrossed,
   type LucideIcon,
 } from 'lucide-react'
+import type { Dictionary } from '@/lib/i18n'
+
+type NavKey = keyof Dictionary['nav']
 
 export interface NavItem {
   id: string
-  label: string
-  /** Compact label used in the mobile floating tab bar. */
-  shortLabel: string
+  /** Dictionary key (under `nav`) for the full label. */
+  labelKey: NavKey
+  /** Dictionary key (under `nav`) for the compact mobile-tab label. */
+  shortLabelKey: NavKey
   icon: LucideIcon
 }
 
 /**
  * Single source of truth for the dashboard's primary navigation.
  * Used by `<SidebarNav>` (desktop), `<MobileTabBar>` (mobile), and the
- * page-title resolution in `app/page.tsx`.
+ * page-title resolution in `dashboard-client`.
+ *
+ * Labels are resolved through the active dictionary at render time
+ * (`t.nav[item.labelKey]`), so they follow the selected language.
  */
 export const NAV_ITEMS: readonly NavItem[] = [
-  { id: 'dashboard', label: '今日概览', shortLabel: '概览', icon: LayoutDashboard },
-  { id: 'nutrition', label: '饮食中心', shortLabel: '饮食', icon: UtensilsCrossed },
-  { id: 'training', label: '训练历史', shortLabel: '训练', icon: Dumbbell },
-  { id: 'plans', label: '我的计划', shortLabel: '计划', icon: Calendar },
-  { id: 'knowledge', label: '知识库', shortLabel: '知识', icon: BookOpen },
+  { id: 'dashboard', labelKey: 'dashboard', shortLabelKey: 'shortDashboard', icon: LayoutDashboard },
+  { id: 'nutrition', labelKey: 'nutrition', shortLabelKey: 'shortNutrition', icon: UtensilsCrossed },
+  { id: 'training', labelKey: 'training', shortLabelKey: 'shortTraining', icon: Dumbbell },
+  { id: 'plans', labelKey: 'plans', shortLabelKey: 'shortPlans', icon: Calendar },
+  { id: 'knowledge', labelKey: 'knowledge', shortLabelKey: 'shortKnowledge', icon: BookOpen },
 ] as const
 
 /** Lookup helper. Returns `undefined` for unknown ids. */

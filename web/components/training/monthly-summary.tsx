@@ -5,6 +5,7 @@ import { Clock, Flame, Calendar as CalendarIcon, Activity } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { type MuscleGroupStat, type MuscleGroup } from '@/lib/training/calendar'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
 import { EmptyState } from '@/components/ui/empty-state'
 
 interface MonthlySummaryProps {
@@ -27,15 +28,9 @@ const MUSCLE_COLOR: Record<MuscleGroup, string> = {
   other: 'var(--color-muted-foreground)',
 }
 
-const MONTH_NAMES = [
-  '一月', '二月', '三月', '四月', '五月', '六月',
-  '七月', '八月', '九月', '十月', '十一月', '十二月',
-] as const
-
 /**
  * Editorial header card for the training history page. Headline reads as
- * a sentence ("本月共训练 X 小时, 燃烧 Y kcal"), with a per-muscle stacked
- * bar underneath showing the top groups.
+ * a sentence, with a per-muscle stacked bar underneath showing the top groups.
  */
 export function MonthlySummary({
   month,
@@ -45,12 +40,16 @@ export function MonthlySummary({
   topGroups,
   className,
 }: MonthlySummaryProps) {
+  const t = useT()
   const totalHoursLabel = useMemo(() => {
     const hours = totalMinutes / 60
     return hours >= 10 ? hours.toFixed(0) : hours.toFixed(1)
   }, [totalMinutes])
 
-  const monthLabel = `${month.getFullYear()} ${MONTH_NAMES[month.getMonth()]}`
+  const monthLabel = month.toLocaleDateString(t.common.locale, {
+    year: 'numeric',
+    month: 'long',
+  })
 
   return (
     <motion.section
@@ -68,18 +67,18 @@ export function MonthlySummary({
             Monthly Summary
           </p>
           <h2 className="font-display mt-1 text-xl font-semibold text-foreground sm:text-2xl">
-            {monthLabel} 训练总览
+            {t.training.summary.overview(monthLabel)}
           </h2>
         </div>
         <span className="hidden text-[11px] text-muted-foreground sm:inline">
-          数据按本地时区聚合
+          {t.training.summary.localTz}
         </span>
       </header>
 
       <div className="mt-5 grid grid-cols-3 gap-3">
         <Stat
           icon={<Clock size={14} />}
-          label="累计时长"
+          label={t.training.summary.totalDuration}
           value={totalHoursLabel}
           unit="h"
           accent="var(--color-primary)"
@@ -87,7 +86,7 @@ export function MonthlySummary({
         />
         <Stat
           icon={<Flame size={14} />}
-          label="消耗热量"
+          label={t.training.summary.totalCalories}
           value={totalCalories.toLocaleString()}
           unit="kcal"
           accent="var(--color-chart-5)"
@@ -95,9 +94,9 @@ export function MonthlySummary({
         />
         <Stat
           icon={<CalendarIcon size={14} />}
-          label="训练日数"
+          label={t.training.summary.trainingDays}
           value={`${trainingDays}`}
-          unit="天"
+          unit={t.training.summary.daysUnit}
           accent="var(--color-accent)"
           numeric={trainingDays}
         />
@@ -106,11 +105,14 @@ export function MonthlySummary({
       <div className="mt-6">
         <div className="mb-2 flex items-baseline justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            重点肌群
+            {t.training.summary.focusMuscles}
           </h3>
           {topGroups.length > 0 && (
             <span className="text-[11px] text-muted-foreground tabular-nums">
-              {topGroups.reduce((s, g) => s + g.minutes, 0)} 分钟 / {topGroups.length} 个部位
+              {t.training.summary.focusMeta(
+                topGroups.reduce((s, g) => s + g.minutes, 0),
+                topGroups.length
+              )}
             </span>
           )}
         </div>
@@ -118,8 +120,8 @@ export function MonthlySummary({
         {topGroups.length === 0 ? (
           <EmptyState
             icon={Activity}
-            title="本月还没有训练记录"
-            description="点击日历某一天，或用 ⌘K 快速记录今天的训练"
+            title={t.training.summary.emptyTitle}
+            description={t.training.summary.emptyDesc}
             size="inset"
           />
         ) : (
@@ -157,10 +159,10 @@ export function MonthlySummary({
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground">
-                      {g.label}
+                      {t.training.muscles[g.group]}
                     </p>
                     <p className="text-[11px] text-muted-foreground tabular-nums">
-                      {g.minutes} 分 · {g.sessions} 次 · {Math.round(g.share * 100)}%
+                      {t.training.summary.muscleMeta(g.minutes, g.sessions, Math.round(g.share * 100))}
                     </p>
                   </div>
                 </motion.li>

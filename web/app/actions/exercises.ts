@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { logger, createModuleLogger } from '@/lib/logger';
 import { authedUserId } from '@/lib/auth/require-user';
+import { ActionError } from '@/lib/errors';
 
 type ExerciseRow = Database['public']['Tables']['exercises']['Row'];
 type ExerciseInsert = Database['public']['Tables']['exercises']['Insert'];
@@ -26,10 +27,10 @@ async function assertExerciseOwner(
     .single();
 
   if (error || !data) {
-    return { success: false, error: '动作不存在' };
+    return { success: false, error: ActionError.EXERCISE_NOT_FOUND };
   }
   if (data.is_system || data.created_by !== userId) {
-    return { success: false, error: 'FORBIDDEN' };
+    return { success: false, error: ActionError.FORBIDDEN };
   }
   return null;
 }

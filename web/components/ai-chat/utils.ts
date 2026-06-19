@@ -1,4 +1,5 @@
 import type { ChatConversationSummary } from '@/app/actions/chat'
+import type { Dictionary } from '@/lib/i18n'
 
 /** Current wall-clock as HH:MM (24h, zero-padded). */
 export function nowHHMM(): string {
@@ -16,8 +17,8 @@ export function isHttpUrl(s: string): boolean {
  * Format: "<short> MM/DD · <preview>" — where <short> is "当前" for the
  * active conversation or "…<lastSix>" for siblings.
  */
-export function sessionSelectLabel(c: ChatConversationSummary, activeId: string): string {
-  const short = c.conversationId === activeId ? '当前' : `…${c.conversationId.slice(-6)}`
+export function sessionSelectLabel(c: ChatConversationSummary, activeId: string, t: Dictionary): string {
+  const short = c.conversationId === activeId ? t.aiChat.current : `…${c.conversationId.slice(-6)}`
   const d = c.lastAt ? new Date(c.lastAt) : new Date()
   const md = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`
   const pv = (c.preview || '').replace(/\s+/g, ' ').slice(0, 20)

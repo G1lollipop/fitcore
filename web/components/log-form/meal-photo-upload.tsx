@@ -15,6 +15,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
+import { useT } from '@/lib/i18n/provider';
+import { tError } from '@/lib/i18n';
+import type { Dictionary } from '@/lib/i18n';
 import { parseFoodFromPhoto, type ParsedMealPhoto } from '@/app/actions/parseFoodFromPhoto';
 import { saveDietLog } from '@/app/actions/saveDietLog';
 import { updateDietLog } from '@/app/actions/updateDietLog';
@@ -77,14 +80,14 @@ async function compressImage(
   ctx.drawImage(bitmap, 0, 0, w, h);
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error('图片压缩失败'))),
+      (b) => (b ? resolve(b) : reject(new Error('Image compression failed'))),
       'image/jpeg',
       quality
     );
   });
 }
 
-function ConfidenceBadge({ value }: { value: number }) {
+function ConfidenceBadge({ value, t }: { value: number; t: Dictionary }) {
   const pct = Math.round(value * 100);
   const tone =
     value >= 0.75
@@ -94,7 +97,7 @@ function ConfidenceBadge({ value }: { value: number }) {
         : 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300';
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>
-      AI 置信度 {pct}%
+      {t.logForm.photo.aiConfidence(pct)}
     </span>
   );
 }
@@ -113,6 +116,7 @@ function ConfidenceBadge({ value }: { value: number }) {
  * "调整"), so the happy path is fully background and zero-wait.
  */
 export function MealPhotoUpload({ userId, onSuccess }: Props) {
+  const t = useT();
   const [editing, setEditing] = useState<EditState | null>(null);
   const [edited, setEdited] = useState<
     Pick<ParsedMealPhoto, 'food_name' | 'calories' | 'protein' | 'carbs' | 'fat'> | null
@@ -151,8 +155,8 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
     async (file: File) => {
       let objectUrl: string | null = null;
       const loading = toast({
-        title: '正在识别',
-        description: 'AI 正在分析照片…',
+        title: t.logForm.photo.recognizing,
+        description: t.logForm.photo.recognizingDesc,
       });
       try {
         const compressed = await compressImage(file);
@@ -166,8 +170,8 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
           loading.dismiss();
           if (objectUrl) URL.revokeObjectURL(objectUrl);
           toast({
-            title: '识别失败',
-            description: parseResult.error,
+            title: t.logForm.photo.recognizeFailed,
+            description: tError(t, parseResult.error),
             variant: 'destructive',
           });
           return;
@@ -181,14 +185,14 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
           const previewUrl = objectUrl;
           objectUrl = null; // hand ownership to the dialog (revoked on close)
           toast({
-            title: '请确认识别结果',
-            description: `${parsed.food_name} · 置信度 ${Math.round(parsed.confidence * 100)}%`,
+            title: t.logForm.photo.confirmTitle,
+            description: t.logForm.photo.confirmDesc(parsed.food_name, Math.round(parsed.confidence * 100)),
             action: (
               <ToastAction
-                altText="审核并保存"
+                altText={t.logForm.photo.reviewAlt}
                 onClick={() => openReview(parsed, previewUrl)}
               >
-                审核
+                {t.logForm.photo.review}
               </ToastAction>
             ),
           });
@@ -204,8 +208,8 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
         if (!saveResult.success || !saveResult.data) {
           if (objectUrl) URL.revokeObjectURL(objectUrl);
           toast({
-            title: '保存失败',
-            description: saveResult.error,
+            title: t.logForm.photo.saveFailed,
+            description: tError(t, saveResult.error),
             variant: 'destructive',
           });
           return;
@@ -216,11 +220,11 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
         objectUrl = null;
         onSuccess?.();
         toast({
-          title: '已记录',
-          description: `${savedItem.food_name} · ${savedItem.calories} kcal`,
+          title: t.logForm.photo.logged,
+          description: t.logForm.photo.loggedDesc(savedItem.food_name, savedItem.calories),
           action: (
             <ToastAction
-              altText="调整识别结果"
+              altText={t.logForm.photo.adjustAlt}
               onClick={() =>
                 openReview(
                   { ...parsed, ...savedItem, confidence: parsed.confidence, notes: parsed.notes },
@@ -229,7 +233,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
                 )
               }
             >
-              调整
+              {t.logForm.photo.adjust}
             </ToastAction>
           ),
         });
@@ -238,13 +242,13 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
         loading.dismiss();
         if (objectUrl) URL.revokeObjectURL(objectUrl);
         toast({
-          title: '处理失败',
+          title: t.logForm.photo.processFailed,
           description: err instanceof Error ? err.message : undefined,
           variant: 'destructive',
         });
       }
     },
-    [toast, userId, onSuccess, openReview]
+    [toast, userId, onSuccess, openReview, t]
   );
 
   const onFileSelected = useCallback(
@@ -280,8 +284,8 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
     if (!result.success) {
       setSaving(false);
       toast({
-        title: isUpdate ? '更新失败' : '保存失败',
-        description: result.error,
+        title: isUpdate ? t.logForm.photo.updateFailed : t.logForm.photo.saveFailed,
+        description: tError(t, result.error),
         variant: 'destructive',
       });
       return;
@@ -289,11 +293,11 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
 
     onSuccess?.();
     toast({
-      title: isUpdate ? '已更新' : '已记录',
+      title: isUpdate ? t.logForm.photo.updated : t.logForm.photo.logged,
       description: `${next.food_name} · ${next.calories} kcal`,
     });
     closeReview();
-  }, [editing, edited, userId, onSuccess, toast, closeReview]);
+  }, [editing, edited, userId, onSuccess, toast, closeReview, t]);
 
   const setField = <K extends keyof NonNullable<typeof edited>>(
     key: K,
@@ -308,7 +312,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        aria-label="拍照记录食物"
+        aria-label={t.logForm.photo.captureAria}
         className="fixed bottom-24 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-2 ring-background transition-transform hover:scale-105 active:scale-95"
       >
         <Camera className="h-6 w-6" />
@@ -332,12 +336,12 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editing?.savedLogId ? '调整识别结果' : '请确认识别结果'}
+              {editing?.savedLogId ? t.logForm.photo.adjustTitle : t.logForm.photo.confirmReviewTitle}
             </DialogTitle>
             <DialogDescription>
               {editing?.savedLogId
-                ? '已自动保存，修改后将替换原记录。'
-                : 'AI 置信度较低，请检查并调整后再保存。'}
+                ? t.logForm.photo.adjustedDesc
+                : t.logForm.photo.lowConfDesc}
             </DialogDescription>
           </DialogHeader>
 
@@ -353,7 +357,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
               )}
 
               <div className="flex items-center justify-between gap-2">
-                <ConfidenceBadge value={editing.parsed.confidence} />
+                <ConfidenceBadge value={editing.parsed.confidence} t={t} />
                 {editing.parsed.notes && (
                   <span className="text-xs italic text-muted-foreground">
                     {editing.parsed.notes}
@@ -363,7 +367,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
 
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label htmlFor="food_name">食物名称</Label>
+                  <Label htmlFor="food_name">{t.logForm.photo.foodName}</Label>
                   <Input
                     id="food_name"
                     value={edited.food_name}
@@ -374,7 +378,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="calories">热量 (kcal)</Label>
+                    <Label htmlFor="calories">{t.logForm.photo.calories}</Label>
                     <Input
                       id="calories"
                       type="number"
@@ -387,7 +391,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="protein">蛋白质 (g)</Label>
+                    <Label htmlFor="protein">{t.logForm.photo.protein}</Label>
                     <Input
                       id="protein"
                       type="number"
@@ -400,7 +404,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="carbs">碳水 (g)</Label>
+                    <Label htmlFor="carbs">{t.logForm.photo.carbs}</Label>
                     <Input
                       id="carbs"
                       type="number"
@@ -413,7 +417,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="fat">脂肪 (g)</Label>
+                    <Label htmlFor="fat">{t.logForm.photo.fat}</Label>
                     <Input
                       id="fat"
                       type="number"
@@ -432,7 +436,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={closeReview} disabled={saving}>
-              取消
+              {t.logForm.photo.cancel}
             </Button>
             <Button onClick={onSave} disabled={saving} className="gap-2">
               {saving ? (
@@ -440,7 +444,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              {editing?.savedLogId ? '更新记录' : '保存到今日记录'}
+              {editing?.savedLogId ? t.logForm.photo.updateRecord : t.logForm.photo.saveToToday}
             </Button>
           </DialogFooter>
         </DialogContent>

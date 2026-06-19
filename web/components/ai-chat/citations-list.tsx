@@ -1,14 +1,16 @@
 'use client'
 
 import type { Citation } from '@/lib/ai/types'
+import { useT } from '@/lib/i18n/provider'
 import { isHttpUrl } from './utils'
 
 /** Renders the small "引用" card under an assistant message. Returns null when empty. */
 export function CitationsList({ citations }: { citations: Citation[] }) {
+  const t = useT()
   if (citations.length === 0) return null
   return (
     <div className="mt-1 w-full max-w-[320px] rounded-lg border border-border/70 bg-muted/25 px-2 py-1.5 space-y-1.5">
-      <p className="text-[10px] font-medium text-muted-foreground tracking-wide">引用</p>
+      <p className="text-[10px] font-medium text-muted-foreground tracking-wide">{t.aiChat.citations}</p>
       <ul className="space-y-1.5">
         {citations.map((c, i) => (
           <li

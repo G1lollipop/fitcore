@@ -31,7 +31,7 @@ export function useFilterOptions(enabled: boolean): UseFilterOptionsResult {
         if (mgRes.success && mgRes.data) setMuscleGroups(mgRes.data as string[])
         if (eqRes.success && eqRes.data) setEquipmentList(eqRes.data as string[])
       } catch (err) {
-        console.error('加载筛选选项失败:', err)
+        console.error('Failed to load filter options:', err)
       }
     })()
 

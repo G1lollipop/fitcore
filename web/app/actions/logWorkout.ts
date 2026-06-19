@@ -8,6 +8,7 @@ import { AI_FAST_MODEL } from '@/lib/ai/model';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
+import { ActionError } from '@/lib/errors';
 import type { WorkoutLogItem, DailyWorkoutStatsData } from './types';
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -79,12 +80,12 @@ export async function logWorkout(
   if (!a.ok) return a.result;
   const userId = a.userId;
   if (!userInput) {
-    return { success: false, error: '缺少必要参数' };
+    return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
   const workoutData = await parseWorkoutWithAI(userInput);
   if (!workoutData) {
-    return { success: false, error: 'AI 解析失败，请检查 GOOGLE_AI_STUDIO_API_KEY 配置' };
+    return { success: false, error: ActionError.AI_PARSE_FAILED };
   }
 
   if (planContext?.planId) {
@@ -108,7 +109,7 @@ export async function logWorkout(
 
   if (queryError && queryError.code !== 'PGRST116') {
     console.error('[logWorkout] Query error:', queryError.message);
-    return { success: false, error: `查询数据库失败: ${queryError.message}` };
+    return { success: false, error: ActionError.DB_QUERY_FAILED };
   }
 
   if (existingRecord) {
@@ -132,8 +133,8 @@ export async function logWorkout(
     const updateError = updateResult.error;
 
     if (updateError) {
-      console.error('[logWorkout] Update error:', updateError.message);
-      return { success: false, error: `更新记录失败: ${updateError.message}` };
+    console.error('[logWorkout] Update error:', updateError.message);
+    return { success: false, error: ActionError.DB_UPDATE_FAILED };
     }
 
     revalidatePath('/');
@@ -160,8 +161,8 @@ export async function logWorkout(
     const insertError = insertResult.error;
 
     if (insertError) {
-      console.error('[logWorkout] Insert error:', insertError.message);
-      return { success: false, error: `创建记录失败: ${insertError.message}` };
+    console.error('[logWorkout] Insert error:', insertError.message);
+    return { success: false, error: ActionError.DB_INSERT_FAILED };
     }
 
     revalidatePath('/');
@@ -207,7 +208,7 @@ export async function deleteWorkoutLog(
   if (!a.ok) return a.result;
   const userId = a.userId;
   if (!logId) {
-    return { success: false, error: '缺少必要参数' };
+    return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
   const today = getTodayDate();
@@ -223,14 +224,14 @@ export async function deleteWorkoutLog(
   const queryError = queryResult.error;
 
   if (queryError || !existingRecord) {
-    return { success: false, error: '未找到今日记录' };
+    return { success: false, error: ActionError.TODAY_RECORD_NOT_FOUND };
   }
 
   const currentWorkoutLogs = (existingRecord.workout_logs as WorkoutLogItem[]) || [];
   const targetLog = currentWorkoutLogs.find((log) => log.id === logId);
 
   if (!targetLog) {
-    return { success: false, error: '未找到该记录' };
+    return { success: false, error: ActionError.RECORD_NOT_FOUND };
   }
 
   const updatedWorkoutLogs = currentWorkoutLogs.filter((log) => log.id !== logId);
@@ -251,7 +252,7 @@ export async function deleteWorkoutLog(
 
   if (updateResult.error) {
     console.error('[deleteWorkoutLog] Update error:', updateResult.error);
-    return { success: false, error: `删除记录失败: ${updateResult.error.message}` };
+    return { success: false, error: ActionError.DB_DELETE_FAILED };
   }
 
   revalidatePath('/');
@@ -265,7 +266,7 @@ export async function batchLogWorkouts(
   if (!a.ok) return a.result;
   const userId = a.userId;
   if (!workouts || workouts.length === 0) {
-    return { success: false, error: '缺少必要参数' };
+    return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
   const today = getTodayDate();
@@ -282,7 +283,7 @@ export async function batchLogWorkouts(
 
   if (queryError && queryError.code !== 'PGRST116') {
     console.error('[batchLogWorkouts] Query error:', JSON.stringify(queryError, null, 2));
-    return { success: false, error: `查询数据库失败: ${queryError.message}` };
+    return { success: false, error: ActionError.DB_QUERY_FAILED };
   }
 
   const now = new Date().toISOString();
@@ -321,8 +322,8 @@ export async function batchLogWorkouts(
       .eq('id', existingRecord.id);
 
     if (updateResult.error) {
-      console.error('[batchLogWorkouts] Update error:', JSON.stringify(updateResult.error, null, 2));
-      return { success: false, error: `更新记录失败: ${updateResult.error.message}` };
+    console.error('[batchLogWorkouts] Update error:', JSON.stringify(updateResult.error, null, 2));
+    return { success: false, error: ActionError.DB_UPDATE_FAILED };
     }
 
     revalidatePath('/');
@@ -347,8 +348,8 @@ export async function batchLogWorkouts(
       .select();
 
     if (insertResult.error) {
-      console.error('[batchLogWorkouts] Insert error:', JSON.stringify(insertResult.error, null, 2));
-      return { success: false, error: `创建记录失败: ${insertResult.error.message}` };
+    console.error('[batchLogWorkouts] Insert error:', JSON.stringify(insertResult.error, null, 2));
+    return { success: false, error: ActionError.DB_INSERT_FAILED };
     }
 
     revalidatePath('/');

@@ -7,6 +7,8 @@ import { logFood, deleteDietLog } from "@/app/actions/logFood"
 import { logWorkout, deleteWorkoutLog, batchLogWorkouts } from "@/app/actions/logWorkout"
 import type { DietLogItem, WorkoutLogItem, YesterdayWorkoutLog } from "@/app/actions/types"
 import { useToast } from "@/hooks/use-toast"
+import { useT } from "@/lib/i18n/provider"
+import { tError, type Dictionary } from "@/lib/i18n"
 
 interface LogEntry {
   id: string
@@ -14,14 +16,14 @@ interface LogEntry {
   time: string
 }
 
-function TagBadge({ label, onRemove }: { label: string; onRemove: () => void }) {
+function TagBadge({ label, onRemove, t }: { label: string; onRemove: () => void; t: Dictionary }) {
   return (
     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary text-xs text-foreground border border-border">
       {label}
       <button
         onClick={onRemove}
         className="text-muted-foreground hover:text-destructive transition-colors"
-        aria-label={`删除 ${label}`}
+        aria-label={t.logForm.daily.deleteTag(label)}
       >
         <X size={10} />
       </button>
@@ -48,6 +50,7 @@ interface LogSectionProps {
   } | null
   loadingWorkout?: boolean
   hasYesterdayWorkout?: boolean
+  t: Dictionary
 }
 
 function LogSection({
@@ -64,6 +67,7 @@ function LogSection({
   todayWorkoutInfo,
   loadingWorkout = false,
   hasYesterdayWorkout = false,
+  t,
 }: LogSectionProps) {
   const [input, setInput] = useState("")
   const [added, setAdded] = useState(false)
@@ -113,7 +117,7 @@ function LogSection({
               ? "bg-primary/20 text-primary scale-95"
               : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
           )}
-          aria-label="添加记录"
+          aria-label={t.logForm.daily.addAria}
         >
           {isSubmitting ? <Loader2 size={15} className="animate-spin" /> : added ? <Check size={15} /> : <Plus size={15} />}
         </button>
@@ -129,9 +133,9 @@ function LogSection({
                   {todayWorkoutInfo.planName} — {todayWorkoutInfo.dayName}
                 </p>
                 {todayWorkoutInfo.isRestDay ? (
-                  <p className="text-[10px] text-muted-foreground">今天是休息日</p>
+                  <p className="text-[10px] text-muted-foreground">{t.logForm.daily.todayRestDay}</p>
                 ) : (
-                  <p className="text-[10px] text-muted-foreground">{todayWorkoutInfo.exerciseCount} 个动作待完成</p>
+                  <p className="text-[10px] text-muted-foreground">{t.logForm.daily.exercisesToComplete(todayWorkoutInfo.exerciseCount ?? 0)}</p>
                 )}
               </div>
             </div>
@@ -139,7 +143,7 @@ function LogSection({
           {loadingWorkout && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary">
               <Loader2 size={13} className="text-muted-foreground animate-spin" />
-              <p className="text-xs text-muted-foreground">加载今日计划…</p>
+              <p className="text-xs text-muted-foreground">{t.logForm.daily.loadingTodayPlan}</p>
             </div>
           )}
           <div className="flex items-center gap-2">
@@ -155,7 +159,7 @@ function LogSection({
               )}
             >
               <RotateCcw size={11} className="shrink-0" />
-              复制昨日
+              {t.logForm.daily.copyYesterday}
             </button>
             <button
               type="button"
@@ -169,7 +173,7 @@ function LogSection({
               )}
             >
               <ClipboardList size={11} className="shrink-0" />
-              {importing ? "导入中…" : "导入计划"}
+              {importing ? t.logForm.daily.importing : t.logForm.daily.importPlan}
             </button>
           </div>
         </div>
@@ -179,13 +183,13 @@ function LogSection({
         <div className="flex flex-wrap gap-1.5">
           {entries.map((e) => (
             <div key={e.id} className="flex items-center gap-1">
-              <TagBadge label={e.text} onRemove={() => onRemove(e.id)} />
+              <TagBadge label={e.text} onRemove={() => onRemove(e.id)} t={t} />
               <span className="text-[10px] text-muted-foreground">{e.time}</span>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">暂无记录</p>
+        <p className="text-xs text-muted-foreground">{t.logForm.daily.noEntries}</p>
       )}
     </div>
   )
@@ -215,6 +219,7 @@ export function DailyLogForm({
   compact = false
 }: DailyLogFormProps) {
   const { toast } = useToast()
+  const t = useT()
   const [isDietPending, startDietTransition] = useTransition()
   const [isWorkoutPending, startWorkoutTransition] = useTransition()
 
@@ -230,17 +235,17 @@ export function DailyLogForm({
     setDietEntries(initialDietLogs.map((log) => ({
       id: log.id || `legacy-diet-${log.logged_at}`,
       text: log.food_name,
-      time: new Date(log.logged_at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
+      time: new Date(log.logged_at).toLocaleTimeString(t.common.locale, { hour: "2-digit", minute: "2-digit" }),
     })))
-  }, [initialDietLogs])
+  }, [initialDietLogs, t])
 
   useEffect(() => {
     setWorkoutEntries(initialWorkoutLogs.map((log) => ({
       id: log.id || `legacy-workout-${log.logged_at}`,
       text: log.workout_name,
-      time: new Date(log.logged_at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
+      time: new Date(log.logged_at).toLocaleTimeString(t.common.locale, { hour: "2-digit", minute: "2-digit" }),
     })))
-  }, [initialWorkoutLogs])
+  }, [initialWorkoutLogs, t])
 
   const addDiet = (text: string) => {
     if (!userId) return
@@ -249,9 +254,9 @@ export function DailyLogForm({
       if (result.success && result.data) {
         setDietEntries((prev) => [...prev, { id: Date.now().toString(), text: result.data!.food_name, time: now() }])
         onLogSuccess?.()
-        toast({ title: "已记录", description: `${result.data.food_name} (${result.data.calories} kcal)` })
+        toast({ title: t.logForm.daily.logged, description: `${result.data.food_name} (${result.data.calories} kcal)` })
       } else {
-        toast({ variant: "destructive", title: "记录失败", description: result.error || "请稍后重试" })
+        toast({ variant: "destructive", title: t.logForm.daily.logFailed, description: result.error ? tError(t, result.error) : t.logForm.daily.retry })
       }
     })
   }
@@ -263,9 +268,9 @@ export function DailyLogForm({
       if (result.success && result.data) {
         setWorkoutEntries((prev) => [...prev, { id: Date.now().toString(), text: result.data!.workout_name, time: now() }])
         onLogSuccess?.()
-        toast({ title: "已记录", description: `${result.data.workout_name} (${result.data.calories_burned} kcal)` })
+        toast({ title: t.logForm.daily.logged, description: `${result.data.workout_name} (${result.data.calories_burned} kcal)` })
       } else {
-        toast({ variant: "destructive", title: "记录失败", description: result.error || "请稍后重试" })
+        toast({ variant: "destructive", title: t.logForm.daily.logFailed, description: result.error ? tError(t, result.error) : t.logForm.daily.retry })
       }
     })
   }
@@ -277,9 +282,9 @@ export function DailyLogForm({
       if (result.success) {
         setDietEntries((prev) => prev.filter((e) => e.id !== id))
         onLogSuccess?.()
-        toast({ title: "已删除" })
+        toast({ title: t.logForm.daily.deleted })
       } else {
-        toast({ variant: "destructive", title: "删除失败", description: result.error })
+        toast({ variant: "destructive", title: t.logForm.daily.deleteFailed, description: tError(t, result.error) })
       }
     })
   }
@@ -291,33 +296,33 @@ export function DailyLogForm({
       if (result.success) {
         setWorkoutEntries((prev) => prev.filter((e) => e.id !== id))
         onLogSuccess?.()
-        toast({ title: "已删除" })
+        toast({ title: t.logForm.daily.deleted })
       } else {
-        toast({ variant: "destructive", title: "删除失败", description: result.error })
+        toast({ variant: "destructive", title: t.logForm.daily.deleteFailed, description: tError(t, result.error) })
       }
     })
   }
 
   const handleCopyYesterday = () => {
     if (!userId || !yesterdayWorkout || yesterdayWorkout.length === 0) {
-      toast({ title: "无昨日记录" })
+      toast({ title: t.logForm.daily.noYesterday })
       return
     }
     const newEntries = yesterdayWorkout.filter((p) => !workoutEntries.some((e) => e.text === p.text))
     if (newEntries.length === 0) {
-      toast({ title: "昨日记录已全部存在" })
+      toast({ title: t.logForm.daily.yesterdayAllExist })
       return
     }
     startWorkoutTransition(async () => {
       const workouts = newEntries.map((e) => ({ name: e.text, duration_minutes: 15, calories_burned: 50 }))
       const result = await batchLogWorkouts(workouts)
       if (result.success) {
-        const t = now()
-        setWorkoutEntries((prev) => [...prev, ...newEntries.map((p) => ({ id: `y-${Date.now()}-${p.text}`, text: p.text, time: t }))])
+        const time = now()
+        setWorkoutEntries((prev) => [...prev, ...newEntries.map((p) => ({ id: `y-${Date.now()}-${p.text}`, text: p.text, time }))])
         onLogSuccess?.()
-        toast({ title: "已复制", description: `复制了 ${newEntries.length} 条记录` })
+        toast({ title: t.logForm.daily.copied, description: t.logForm.daily.copiedDesc(newEntries.length) })
       } else {
-        toast({ variant: "destructive", title: "复制失败", description: result.error })
+        toast({ variant: "destructive", title: t.logForm.daily.copyFailed, description: tError(t, result.error) })
       }
     })
   }
@@ -325,28 +330,28 @@ export function DailyLogForm({
   const handleImportPlan = () => {
     if (!userId) return
     if (!todayWorkout || !todayWorkout.exercises.length) {
-      toast({ title: "无可用计划", description: "请先在训练计划中选择一个计划" })
+      toast({ title: t.logForm.daily.noPlan, description: t.logForm.daily.noPlanDesc })
       return
     }
     if (todayWorkout.todayDay?.isRestDay) {
-      toast({ title: "今天是休息日", description: `${todayWorkout.todayDay.name}` })
+      toast({ title: t.logForm.daily.restDayTitle, description: `${todayWorkout.todayDay.name}` })
       return
     }
     const newExercises = todayWorkout.exercises.filter((e) => !workoutEntries.some((entry) => entry.text === e.text))
     if (newExercises.length === 0) {
-      toast({ title: "今日计划已全部存在" })
+      toast({ title: t.logForm.daily.todayPlanAllExist })
       return
     }
     startWorkoutTransition(async () => {
       const workouts = newExercises.map((e) => ({ name: e.text, sets: e.sets, duration_minutes: 15, calories_burned: 50 }))
       const result = await batchLogWorkouts(workouts)
       if (result.success) {
-        const t = now()
-        setWorkoutEntries((prev) => [...prev, ...newExercises.map((e) => ({ id: `pl-${Date.now()}-${e.id}`, text: e.text, time: t }))])
+        const time = now()
+        setWorkoutEntries((prev) => [...prev, ...newExercises.map((e) => ({ id: `pl-${Date.now()}-${e.id}`, text: e.text, time }))])
         onLogSuccess?.()
-        toast({ title: "已导入今日计划", description: `${todayWorkout.plan?.name} — ${todayWorkout.todayDay?.name}` })
+        toast({ title: t.logForm.daily.planImported, description: `${todayWorkout.plan?.name} — ${todayWorkout.todayDay?.name}` })
       } else {
-        toast({ variant: "destructive", title: "导入失败", description: result.error })
+        toast({ variant: "destructive", title: t.logForm.daily.importFailed, description: tError(t, result.error) })
       }
     })
   }
@@ -355,17 +360,18 @@ export function DailyLogForm({
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <LogSection
         icon={<UtensilsCrossed size={14} className="text-primary" />}
-        title="今天吃了什么"
-        placeholder="如：鸡胸肉200g、糙米饭…"
+        title={t.logForm.daily.dietTitle}
+        placeholder={t.logForm.daily.dietPlaceholder}
         entries={dietEntries}
         onAdd={addDiet}
         onRemove={removeDiet}
         isSubmitting={isDietPending}
+        t={t}
       />
       <LogSection
         icon={<Dumbbell size={14} className="text-primary" />}
-        title="练了什么"
-        placeholder="如：深蹲4x10、跑步30分钟…"
+        title={t.logForm.daily.workoutTitle}
+        placeholder={t.logForm.daily.workoutPlaceholder}
         entries={workoutEntries}
         onAdd={addWorkout}
         onRemove={removeWorkout}
@@ -380,6 +386,7 @@ export function DailyLogForm({
           exerciseCount: todayWorkout.exercises.length,
         } : null}
         hasYesterdayWorkout={yesterdayWorkout && yesterdayWorkout.length > 0}
+        t={t}
       />
     </div>
   )

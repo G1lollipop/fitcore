@@ -1,8 +1,19 @@
 import { Suspense } from "react"
-import OnboardingForm from "./onboarding-form"
+import { redirect } from "next/navigation"
 import { Loader2 } from "lucide-react"
+import OnboardingForm from "./onboarding-form"
+import { createAuthServerClient } from "@/lib/supabase/server"
+import { resolveDisplayName } from "@/lib/auth/display-name"
 
-export default function OnboardingPage() {
+export default async function OnboardingPage() {
+  const supabase = await createAuthServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    redirect("/sign-in")
+  }
+
   return (
     <Suspense
       fallback={
@@ -11,7 +22,7 @@ export default function OnboardingPage() {
         </div>
       }
     >
-      <OnboardingForm />
+      <OnboardingForm userName={resolveDisplayName(user)} />
     </Suspense>
   )
 }

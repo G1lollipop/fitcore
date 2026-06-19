@@ -3,6 +3,8 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Coffee, Flame, Play, Target } from 'lucide-react'
 import type { TodayWorkoutResult } from '@/lib/plans/today-workout'
+import { useT } from '@/lib/i18n/provider'
+import { localizedName } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 interface TodayBannerProps {
@@ -28,8 +30,11 @@ export function TodayBanner({
   onStart,
   className,
 }: TodayBannerProps) {
+  const t = useT()
   const isRest = result.isRestDay
-  const dayName = result.todayDay?.name ?? '今日训练'
+  const dayName = isRest
+    ? t.plans.banner.restDayName
+    : result.todayDay?.name ?? t.plans.banner.todayDefault
   const exercises = result.exercises
   const showCount = Math.min(PREVIEW_LIMIT, exercises.length)
   const overflow = Math.max(0, exercises.length - showCount)
@@ -63,7 +68,7 @@ export function TodayBanner({
             )}
           >
             {isRest ? <Coffee size={10} /> : <Flame size={10} />}
-            {isRest ? '今日休息' : '今日训练'}
+            {isRest ? t.plans.banner.restToday : t.plans.banner.trainToday}
           </span>
           <h2 className="font-display mt-2 text-xl font-semibold text-foreground sm:text-2xl">
             {dayName}
@@ -71,7 +76,7 @@ export function TodayBanner({
           <p className="text-xs text-muted-foreground">
             {planName}
             {result.todayDay?.day_order
-              ? ` · 第 ${result.todayDay.day_order} 天`
+              ? t.plans.banner.dayN(result.todayDay.day_order)
               : ''}
           </p>
         </div>
@@ -87,7 +92,7 @@ export function TodayBanner({
             className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Play size={14} className={cn(isLogging && 'animate-pulse')} />
-            {isLogging ? '记录中…' : '开始训练'}
+            {isLogging ? t.plans.banner.logging : t.plans.banner.start}
           </motion.button>
         )}
       </header>
@@ -102,7 +107,7 @@ export function TodayBanner({
               exit={{ opacity: 0 }}
               className="rounded-xl border border-dashed border-border bg-secondary/30 px-4 py-5 text-sm text-muted-foreground"
             >
-              今天是计划中的休息日 — 拉伸、补水、好好睡一觉。
+              {t.plans.banner.restCopy}
             </motion.p>
           ) : exercises.length === 0 ? (
             <motion.p
@@ -112,7 +117,7 @@ export function TodayBanner({
               exit={{ opacity: 0 }}
               className="rounded-xl border border-dashed border-border bg-secondary/30 px-4 py-5 text-sm text-muted-foreground"
             >
-              这一天还没有添加动作，去计划详情里补几个吧。
+              {t.plans.banner.emptyCopy}
             </motion.p>
           ) : (
             <motion.ul
@@ -131,11 +136,13 @@ export function TodayBanner({
                     {idx + 1}
                   </span>
                   <span className="flex-1 truncate text-sm text-foreground">
-                    {ex.exerciseName ?? ex.text}
+                    {ex.exerciseName
+                      ? localizedName(t, ex.exerciseName, ex.exerciseNameEn)
+                      : ex.text}
                   </span>
                   <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
                     <Target size={10} />
-                    {ex.sets ?? 0} 组
+                    {t.plans.banner.sets(ex.sets ?? 0)}
                     {ex.repsMin && ex.repsMax
                       ? ` · ${ex.repsMin}-${ex.repsMax}`
                       : ''}
@@ -144,7 +151,7 @@ export function TodayBanner({
               ))}
               {overflow > 0 && (
                 <li className="px-3 pt-1 text-center text-[11px] text-muted-foreground">
-                  + 还有 {overflow} 个动作
+                  {t.plans.banner.overflow(overflow)}
                 </li>
               )}
             </motion.ul>

@@ -5,7 +5,8 @@ import { Calendar, Copy, LibraryBig, Sparkles } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { copyTemplateToUser } from '@/app/actions/plans'
 import { useToast } from '@/hooks/use-toast'
-import { goalLabels, levelLabels } from '@/lib/labels'
+import { useT } from '@/lib/i18n/provider'
+import { tLabel, tError } from '@/lib/i18n'
 import type { Database } from '@/lib/database.types'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -30,12 +31,13 @@ export function TemplateGrid({
   onCopied,
   className,
 }: TemplateGridProps) {
+  const t = useT()
   if (templates.length === 0) {
     return (
       <EmptyState
         icon={LibraryBig}
-        title="暂时还没有可用的系统模板"
-        description="管理员上线模板后，会自动出现在这里"
+        title={t.plans.template.emptyTitle}
+        description={t.plans.template.emptyDesc}
         size="inset"
         className={className}
       />
@@ -71,20 +73,19 @@ interface TemplateCardProps {
 
 function TemplateCard({ template, delay, userId, onCopied }: TemplateCardProps) {
   const { toast } = useToast()
+  const t = useT()
   const [isPending, startTransition] = useTransition()
   const [copied, setCopied] = useState(false)
 
-  const goalLabel = template.goal ? goalLabels[template.goal] ?? template.goal : null
-  const levelLabel = template.experience_level
-    ? levelLabels[template.experience_level] ?? template.experience_level
-    : null
+  const goalLabel = tLabel(t.labels.goals, template.goal)
+  const levelLabel = tLabel(t.labels.levels, template.experience_level)
 
   const handleCopy = () => {
     if (!userId) {
       toast({
         variant: 'destructive',
-        title: '请先登录',
-        description: '复制模板需要登录账户',
+        title: t.plans.template.loginRequired,
+        description: t.plans.template.loginCopyDesc,
       })
       return
     }
@@ -93,15 +94,15 @@ function TemplateCard({ template, delay, userId, onCopied }: TemplateCardProps) 
       if (result.success) {
         setCopied(true)
         toast({
-          title: '复制成功',
-          description: '模板已加入你的计划',
+          title: t.plans.template.copySuccess,
+          description: t.plans.template.copySuccessDesc,
         })
         onCopied?.()
       } else {
         toast({
           variant: 'destructive',
-          title: '复制失败',
-          description: typeof result.error === 'string' ? result.error : '请稍后再试',
+          title: t.plans.template.copyFailed,
+          description: typeof result.error === 'string' ? tError(t, result.error) : t.plans.list.tryLater,
         })
       }
     })
@@ -138,7 +139,7 @@ function TemplateCard({ template, delay, userId, onCopied }: TemplateCardProps) 
         )}
         <span className="inline-flex items-center gap-1 rounded-full bg-secondary/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
           <Calendar size={10} />
-          {template.frequency_per_week} 次/周
+          {t.plans.template.freqPerWeek(template.frequency_per_week)}
         </span>
       </div>
 
@@ -156,12 +157,12 @@ function TemplateCard({ template, delay, userId, onCopied }: TemplateCardProps) 
         {copied ? (
           <>
             <Sparkles size={12} />
-            已添加到我的计划
+            {t.plans.template.added}
           </>
         ) : (
           <>
             <Copy size={12} />
-            {isPending ? '复制中…' : '复制为我的计划'}
+            {isPending ? t.plans.template.copying : t.plans.template.copyToPlans}
           </>
         )}
       </button>

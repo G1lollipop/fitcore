@@ -3,6 +3,8 @@
 import { GripVertical, Minus } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useT } from '@/lib/i18n/provider'
+import { localizedName, type Dictionary } from '@/lib/i18n'
 import type { SelectedExercise, SortableField } from './types'
 
 interface SortableItemProps {
@@ -18,6 +20,7 @@ interface SortableItemProps {
  * Sortable via dnd-kit; visually dims while being dragged.
  */
 export function SortableItem({ exercise, index, onRemove, onUpdate }: SortableItemProps) {
+  const t = useT()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: exercise.exercise_id,
   })
@@ -43,20 +46,20 @@ export function SortableItem({ exercise, index, onRemove, onUpdate }: SortableIt
             {...attributes}
             {...listeners}
             className="touch-none p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
-            aria-label="拖动排序"
+            aria-label={t.plans.item.dragSort}
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </button>
           <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs shrink-0">
             {index + 1}
           </span>
-          <span className="font-medium text-foreground text-sm truncate">{exercise.name}</span>
+          <span className="font-medium text-foreground text-sm truncate">{localizedName(t, exercise.name, exercise.name_en)}</span>
         </div>
         <button
           type="button"
           onClick={onRemove}
           className="p-1 rounded hover:bg-destructive/10"
-          aria-label="移除"
+          aria-label={t.plans.item.remove}
         >
           <Minus className="w-4 h-4 text-muted-foreground group-hover:text-destructive shrink-0" />
         </button>
@@ -66,12 +69,14 @@ export function SortableItem({ exercise, index, onRemove, onUpdate }: SortableIt
         <SetsCounter
           value={exercise.target_sets}
           onChange={(v) => onUpdate('target_sets', v)}
+          t={t}
         />
         <RepsRange
           min={exercise.target_reps_min}
           max={exercise.target_reps_max}
           onChangeMin={(v) => onUpdate('target_reps_min', v)}
           onChangeMax={(v) => onUpdate('target_reps_max', v)}
+          t={t}
         />
       </div>
     </div>
@@ -85,20 +90,21 @@ export function SortableItem({ exercise, index, onRemove, onUpdate }: SortableIt
 interface SetsCounterProps {
   value: number
   onChange: (v: number) => void
+  t: Dictionary
 }
 
-function SetsCounter({ value, onChange }: SetsCounterProps) {
+function SetsCounter({ value, onChange, t }: SetsCounterProps) {
   return (
     <div className="flex items-center gap-1">
-      <StepButton sign="-" onClick={() => onChange(Math.max(1, value - 1))} />
+      <StepButton sign="-" onClick={() => onChange(Math.max(1, value - 1))} t={t} />
       <input
         type="number"
         value={value}
         onChange={(e) => onChange(Math.max(1, parseInt(e.target.value) || 1))}
         className="w-8 h-5 text-center text-xs bg-secondary rounded border-none focus:outline-none focus:ring-1 focus:ring-primary/50"
       />
-      <StepButton sign="+" onClick={() => onChange(value + 1)} />
-      <span className="text-xs text-muted-foreground ml-0.5">组</span>
+      <StepButton sign="+" onClick={() => onChange(value + 1)} t={t} />
+      <span className="text-xs text-muted-foreground ml-0.5">{t.plans.item.setsUnit}</span>
     </div>
   )
 }
@@ -108,12 +114,13 @@ interface RepsRangeProps {
   max: number
   onChangeMin: (v: number) => void
   onChangeMax: (v: number) => void
+  t: Dictionary
 }
 
-function RepsRange({ min, max, onChangeMin, onChangeMax }: RepsRangeProps) {
+function RepsRange({ min, max, onChangeMin, onChangeMax, t }: RepsRangeProps) {
   return (
     <div className="flex items-center gap-1">
-      <StepButton sign="-" onClick={() => onChangeMin(Math.max(1, min - 1))} />
+      <StepButton sign="-" onClick={() => onChangeMin(Math.max(1, min - 1))} t={t} />
       <input
         type="number"
         value={min}
@@ -132,8 +139,8 @@ function RepsRange({ min, max, onChangeMin, onChangeMax }: RepsRangeProps) {
         onChange={(e) => onChangeMax(Math.max(min, parseInt(e.target.value) || min))}
         className="w-8 h-5 text-center text-xs bg-secondary rounded border-none focus:outline-none focus:ring-1 focus:ring-primary/50"
       />
-      <StepButton sign="+" onClick={() => onChangeMax(max + 1)} />
-      <span className="text-xs text-muted-foreground ml-0.5">次</span>
+      <StepButton sign="+" onClick={() => onChangeMax(max + 1)} t={t} />
+      <span className="text-xs text-muted-foreground ml-0.5">{t.plans.item.repsUnit}</span>
     </div>
   )
 }
@@ -141,15 +148,16 @@ function RepsRange({ min, max, onChangeMin, onChangeMax }: RepsRangeProps) {
 interface StepButtonProps {
   sign: '-' | '+'
   onClick: () => void
+  t: Dictionary
 }
 
-function StepButton({ sign, onClick }: StepButtonProps) {
+function StepButton({ sign, onClick, t }: StepButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       className="w-5 h-5 rounded bg-secondary flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary text-xs"
-      aria-label={sign === '-' ? '减少' : '增加'}
+      aria-label={sign === '-' ? t.plans.item.decrease : t.plans.item.increase}
     >
       {sign === '-' ? '−' : '+'}
     </button>

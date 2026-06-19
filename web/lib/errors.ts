@@ -1,0 +1,38 @@
+/**
+ * Stable error codes returned by server actions in the `{ success: false,
+ * error }` shape. Server code must not embed user-facing language: it returns
+ * one of these codes (or a raw technical string for unexpected DB errors),
+ * and the client maps the code to a localized message via `tError`.
+ */
+export const ActionError = {
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  MISSING_PARAMS: 'MISSING_PARAMS',
+  MISSING_FOOD_DATA: 'MISSING_FOOD_DATA',
+  MISSING_ORIGINAL_ID: 'MISSING_ORIGINAL_ID',
+  AI_PARSE_FAILED: 'AI_PARSE_FAILED',
+  AI_PARSE_EMPTY: 'AI_PARSE_EMPTY',
+  DB_QUERY_FAILED: 'DB_QUERY_FAILED',
+  DB_INSERT_FAILED: 'DB_INSERT_FAILED',
+  DB_UPDATE_FAILED: 'DB_UPDATE_FAILED',
+  DB_DELETE_FAILED: 'DB_DELETE_FAILED',
+  RECORD_NOT_FOUND: 'RECORD_NOT_FOUND',
+  TODAY_RECORD_NOT_FOUND: 'TODAY_RECORD_NOT_FOUND',
+  ORIGINAL_RECORD_GONE: 'ORIGINAL_RECORD_GONE',
+  PLAN_NOT_FOUND: 'PLAN_NOT_FOUND',
+  EXERCISE_NOT_FOUND: 'EXERCISE_NOT_FOUND',
+  SAVE_FAILED: 'SAVE_FAILED',
+
+  // Validation (Zod) codes
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
+  FOOD_NAME_REQUIRED: 'FOOD_NAME_REQUIRED',
+  FOOD_NAME_TOO_LONG: 'FOOD_NAME_TOO_LONG',
+  AGE_INVALID: 'AGE_INVALID',
+  HEIGHT_INVALID: 'HEIGHT_INVALID',
+  WEIGHT_INVALID: 'WEIGHT_INVALID',
+  PLAN_NAME_REQUIRED: 'PLAN_NAME_REQUIRED',
+  PLAN_NAME_TOO_LONG: 'PLAN_NAME_TOO_LONG',
+  FREQUENCY_INVALID: 'FREQUENCY_INVALID',
+} as const
+
+export type ActionErrorCode = (typeof ActionError)[keyof typeof ActionError]

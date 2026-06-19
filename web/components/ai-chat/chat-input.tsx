@@ -4,8 +4,10 @@ import { AnimatePresence } from 'framer-motion'
 import { Loader2, Send, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
+import type { Dictionary } from '@/lib/i18n'
 import { SlashMenu } from './slash-menu'
-import { filterSlashCommands, SUGGESTED, type SlashCommand } from './types'
+import { buildSlashCommands, filterSlashCommands, type SlashCommand } from './types'
 
 interface ChatInputProps {
   input: string
@@ -28,11 +30,13 @@ interface ChatInputProps {
  *     match exists).
  */
 export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatInputProps) {
+  const t = useT()
   const [highlight, setHighlight] = useState(0)
   const wasOpenRef = useRef(false)
 
+  const commands = useMemo(() => buildSlashCommands(t), [t])
   const slashOpen = useMemo(() => input.trimStart().startsWith('/'), [input])
-  const filtered = useMemo(() => filterSlashCommands(input), [input])
+  const filtered = useMemo(() => filterSlashCommands(input, commands), [input, commands])
   const filteredCount = filtered.length
 
   // Reset the highlight back to the first item every time the menu
@@ -114,8 +118,8 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
         </AnimatePresence>
 
         <div className="flex gap-1.5 overflow-x-auto border-t border-border px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <SlashChip onClick={() => setInput('/')} disabled={isTyping} />
-          {SUGGESTED.map((s) => (
+          <SlashChip onClick={() => setInput('/')} disabled={isTyping} t={t} />
+          {t.aiChat.suggested.map((s) => (
             <button
               key={s}
               type="button"
@@ -136,7 +140,7 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="问问 AI 教练，输入 / 触发命令…"
+          placeholder={t.aiChat.inputPlaceholder}
           disabled={isTyping}
           role="combobox"
           aria-autocomplete="list"
@@ -153,7 +157,7 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
           onClick={() => onSend(input)}
           disabled={!input.trim() || isTyping}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-          aria-label="发送"
+          aria-label={t.aiChat.send}
         >
           {isTyping ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
         </button>
@@ -165,18 +169,19 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
 interface SlashChipProps {
   onClick: () => void
   disabled?: boolean
+  t: Dictionary
 }
 
-function SlashChip({ onClick, disabled }: SlashChipProps) {
+function SlashChip({ onClick, disabled, t }: SlashChipProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary transition-all hover:bg-primary/15 disabled:opacity-50"
-      aria-label="打开 Slash 命令菜单"
+      aria-label={t.aiChat.openSlashMenu}
     >
-      <Sparkles size={10} />/ 命令
+      <Sparkles size={10} />{t.aiChat.slashChip}
     </button>
   )
 }

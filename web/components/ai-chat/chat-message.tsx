@@ -2,8 +2,9 @@
 
 import { Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
 import { CitationsList } from './citations-list'
-import { MODE_LABEL, type Message } from './types'
+import { type Message } from './types'
 
 interface ChatMessageProps {
   msg: Message
@@ -58,6 +59,7 @@ export function ChatMessage({ msg }: ChatMessageProps) {
 
 /** Mode chip + timestamp + citations for assistant messages. Renders nothing if empty. */
 function AssistantMeta({ msg }: { msg: Message }) {
+  const t = useT()
   const hasMeta = Boolean(msg.mode || msg.timestamp)
   return (
     <>
@@ -66,9 +68,9 @@ function AssistantMeta({ msg }: { msg: Message }) {
           {msg.mode && (
             <span
               className="text-[10px] rounded-md border border-border bg-background/80 px-1.5 py-0.5 text-muted-foreground shrink-0"
-              title={msg.toolsUsed?.length ? `工具: ${msg.toolsUsed.join(', ')}` : undefined}
+              title={msg.toolsUsed?.length ? t.aiChat.tools(msg.toolsUsed.join(', ')) : undefined}
             >
-              {MODE_LABEL[msg.mode]}
+              {t.aiChat.modeLabel[msg.mode]}
             </span>
           )}
           {msg.timestamp && (

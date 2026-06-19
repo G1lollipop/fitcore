@@ -27,15 +27,11 @@ export type WeekStripCellKind = 'workout' | 'rest' | 'off'
 export interface WeekStripCell {
   /** ISO weekday position 1..7 (1 = Mon, 7 = Sun). */
   position: number
-  /** Localised single-character label: 一二三四五六日. */
-  shortLabel: string
   kind: WeekStripCellKind
   isToday: boolean
   /** Populated when `kind === 'workout'`. */
   workoutDay?: WeekStripDayInput
 }
-
-const DAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'] as const
 
 /** ISO weekday index 1..7 (Mon..Sun) for a JS Date. */
 function isoWeekday(date: Date): number {
@@ -97,7 +93,6 @@ export function buildWeekStrip(
 
     cells.push({
       position: pos,
-      shortLabel: DAY_LABELS[pos - 1],
       kind,
       isToday: pos === todayPos,
       workoutDay: wd,

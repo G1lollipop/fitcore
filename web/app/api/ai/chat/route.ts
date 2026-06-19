@@ -1,5 +1,5 @@
-import { auth } from "@clerk/nextjs/server"
 import { supabase } from "@/lib/supabaseClient"
+import { getUserIdOrNull } from "@/lib/auth/require-user"
 import { z } from "zod"
 
 import type { AgentSSEEvent, CoachChatMessage } from "@/lib/ai/types"
@@ -9,6 +9,7 @@ import { buildUserContext } from "@/lib/ai/user-context"
 const requestSchema = z.object({
   message: z.string().trim().min(1, "message is required"),
   conversationId: z.string().trim().optional(),
+  language: z.enum(["zh", "en"]).optional(),
 })
 
 async function saveMessage(
@@ -59,7 +60,7 @@ async function loadRecentMessages(
 }
 
 export async function POST(request: Request) {
-  const { userId } = await auth()
+  const userId = await getUserIdOrNull()
   if (!userId) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 })
   }
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { message, conversationId: bodyConversationId } = parsed.data
+  const { message, conversationId: bodyConversationId, language } = parsed.data
   const startedAt = Date.now()
   const effectiveConversationId =
     bodyConversationId?.trim() || `fitcore-${userId}-${startedAt}`
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
           sessionId: effectiveConversationId,
           userContext,
           conversationHistory,
+          language,
           onToken: (token) => {
             controller.enqueue(encodeEvent({ type: "token", content: token }))
           },
@@ -135,8 +137,10 @@ export async function POST(request: Request) {
         controller.enqueue(
           encodeEvent({
             type: "error",
-            message:
-              error instanceof Error ? error.message : "AI 服务暂时不可用，请稍后再试",
+            // Empty for the generic case so the client renders its own
+            // localized fallback (t.aiChat.streamError); real Error messages
+            // (often technical) are still forwarded for debugging.
+            message: error instanceof Error ? error.message : "",
           })
         )
         controller.close()

@@ -6,6 +6,7 @@ import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId } from '@/lib/auth/require-user';
 import { dietLogInputSchema, firstZodError } from '@/lib/validation/schemas';
+import { ActionError } from '@/lib/errors';
 import type { DietLogItem } from './types';
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -26,7 +27,7 @@ export async function saveDietLog(
   const a = await authedUserId();
   if (!a.ok) return a.result;
   const userId = a.userId;
-  if (!item) return { success: false, error: '缺少食物数据' };
+  if (!item) return { success: false, error: ActionError.MISSING_FOOD_DATA };
 
   const parsed = dietLogInputSchema.safeParse(item);
   if (!parsed.success) {
@@ -46,7 +47,7 @@ export async function saveDietLog(
   const queryError = queryResult.error;
 
   if (queryError && queryError.code !== 'PGRST116') {
-    return { success: false, error: `查询数据库失败: ${queryError.message}` };
+    return { success: false, error: ActionError.DB_QUERY_FAILED };
   }
 
   if (existingRecord) {
@@ -67,7 +68,7 @@ export async function saveDietLog(
       .eq('id', existingRecord.id);
 
     if (updateResult.error) {
-      return { success: false, error: `更新记录失败: ${updateResult.error.message}` };
+      return { success: false, error: ActionError.DB_UPDATE_FAILED };
     }
 
     revalidatePath('/');
@@ -92,7 +93,7 @@ export async function saveDietLog(
     .select();
 
   if (insertResult.error) {
-    return { success: false, error: `创建记录失败: ${insertResult.error.message}` };
+      return { success: false, error: ActionError.DB_INSERT_FAILED };
   }
 
   revalidatePath('/');

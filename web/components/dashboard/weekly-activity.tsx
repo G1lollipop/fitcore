@@ -4,12 +4,22 @@ import { motion } from 'framer-motion'
 import { Flame, UtensilsCrossed } from 'lucide-react'
 import type { WeeklyTrendData, WeeklyTrendDay } from '@/app/actions/types'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
 
 interface WeeklyActivityProps {
   data?: WeeklyTrendData
 }
 
-const FALLBACK_LABELS = ['一', '二', '三', '四', '五', '六', '日']
+/** Maps a JS `getDay()` (0=Sun) to a Monday-first index for `weekdays`. */
+function monFirstIndex(jsDay: number): number {
+  return (jsDay + 6) % 7
+}
+
+/** Week-of-month (1-based) for a given date, matching the server heuristic. */
+function weekOfMonth(date: Date): number {
+  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay()
+  return Math.ceil((date.getDate() + firstDay) / 7)
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -33,9 +43,10 @@ const cellVariants = {
  * higher of the two. Today is outlined and pulses softly.
  */
 export function WeeklyActivity({ data }: WeeklyActivityProps) {
+  const t = useT()
   const days: WeeklyTrendDay[] =
     data?.days ??
-    FALLBACK_LABELS.map((label, i) => ({
+    t.dashboard.weekdays.map((label, i) => ({
       dateIso: '',
       dayLabel: label,
       kcalIntake: 0,
@@ -46,7 +57,23 @@ export function WeeklyActivity({ data }: WeeklyActivityProps) {
       // skeleton states stay visually centered.
       ...(i === 0 ? { isToday: true } : {}),
     }))
-  const weekLabel = data?.weekLabel ?? ''
+
+  // Prefer a locale-derived weekday label from the ISO date so real data
+  // follows the selected language; fall back to the server-provided label.
+  const labelFor = (day: WeeklyTrendDay): string => {
+    if (day.dateIso) {
+      const d = new Date(day.dateIso)
+      if (!Number.isNaN(d.getTime())) {
+        return t.dashboard.weekdays[monFirstIndex(d.getDay())]
+      }
+    }
+    return day.dayLabel
+  }
+  // Derive the week label from the client clock so it follows the selected
+  // language, instead of using the server-rendered Chinese label.
+  const now = new Date()
+  const monthName = now.toLocaleDateString(t.common.locale, { month: 'long' })
+  const weekLabel = data ? t.dashboard.weeklyTrend.weekLabel(monthName, weekOfMonth(now)) : ''
   // The peak number we scale bars against — guard against zero so the empty
   // state doesn't divide by zero.
   const max = Math.max(1, data?.maxKcal ?? 0)
@@ -66,11 +93,21 @@ export function WeeklyActivity({ data }: WeeklyActivityProps) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Weekly Trend
           </p>
-          <h2 className="font-display mt-1 text-base font-semibold text-foreground">本周趋势</h2>
+          <h2 className="font-display mt-1 text-base font-semibold text-foreground">
+            {t.dashboard.weeklyTrend.title}
+          </h2>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-          <Legend swatchClass="bg-primary" icon={<UtensilsCrossed size={11} />} label="摄入" />
-          <Legend swatchClass="bg-accent" icon={<Flame size={11} />} label="消耗" />
+          <Legend
+            swatchClass="bg-primary"
+            icon={<UtensilsCrossed size={11} />}
+            label={t.dashboard.weeklyTrend.intake}
+          />
+          <Legend
+            swatchClass="bg-accent"
+            icon={<Flame size={11} />}
+            label={t.dashboard.weeklyTrend.burn}
+          />
           {weekLabel && <span className="ml-1">{weekLabel}</span>}
         </div>
       </header>
@@ -144,7 +181,7 @@ export function WeeklyActivity({ data }: WeeklyActivityProps) {
                   day.isToday ? 'font-semibold text-primary' : 'text-muted-foreground'
                 )}
               >
-                {day.dayLabel}
+                {labelFor(day)}
               </span>
             </motion.div>
           )
@@ -153,11 +190,11 @@ export function WeeklyActivity({ data }: WeeklyActivityProps) {
 
       <footer className="mt-5 flex items-center justify-between border-t border-border/60 pt-4 text-[11px] text-muted-foreground">
         <span>
-          本周累计摄入{' '}
+          {t.dashboard.weeklyTrend.totalIntake}{' '}
           <span className="font-semibold tabular-nums text-foreground">{totalIntake.toLocaleString()}</span> kcal
         </span>
         <span>
-          消耗{' '}
+          {t.dashboard.weeklyTrend.totalBurn}{' '}
           <span className="font-semibold tabular-nums text-foreground">{totalBurn.toLocaleString()}</span> kcal
         </span>
       </footer>

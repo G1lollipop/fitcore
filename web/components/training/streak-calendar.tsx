@@ -11,6 +11,8 @@ import {
   type WorkoutLogLike,
 } from '@/lib/training/calendar'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
+import type { Dictionary } from '@/lib/i18n'
 
 interface StreakCalendarProps {
   month: Date
@@ -20,12 +22,6 @@ interface StreakCalendarProps {
   onMonthChange: (delta: -1 | 1) => void
   className?: string
 }
-
-const WEEK_DAYS = ['日', '一', '二', '三', '四', '五', '六'] as const
-const MONTH_NAMES = [
-  '一月', '二月', '三月', '四月', '五月', '六月',
-  '七月', '八月', '九月', '十月', '十一月', '十二月',
-] as const
 
 const TODAY_ISO = new Date().toISOString().split('T')[0]
 
@@ -73,6 +69,11 @@ export function StreakCalendar({
   onMonthChange,
   className,
 }: StreakCalendarProps) {
+  const t = useT()
+  const monthLabel = month.toLocaleDateString(t.common.locale, {
+    year: 'numeric',
+    month: 'long',
+  })
   const calendarDays = useMemo(
     () => generateCalendarDays(month, workoutData),
     [month, workoutData]
@@ -97,16 +98,18 @@ export function StreakCalendar({
           </span>
           <div>
             <h3 className="font-display text-base font-semibold text-foreground">
-              训练日历
+              {t.training.calendar.title}
             </h3>
             <p className="text-[11px] text-muted-foreground">
               {longestStreak > 1 ? (
                 <>
-                  本月最长连击{' '}
-                  <span className="font-medium text-primary">{longestStreak} 天</span>
+                  {t.training.calendar.longestStreakPrefix}{' '}
+                  <span className="font-medium text-primary">
+                    {t.training.calendar.days(longestStreak)}
+                  </span>
                 </>
               ) : (
-                '点击日期查看当日训练'
+                t.training.calendar.tapHint
               )}
             </p>
           </div>
@@ -115,18 +118,18 @@ export function StreakCalendar({
           <button
             type="button"
             onClick={() => onMonthChange(-1)}
-            aria-label="上个月"
+            aria-label={t.training.calendar.prevMonth}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <ChevronLeft size={16} />
           </button>
           <span className="min-w-[5rem] text-center text-sm font-medium tabular-nums">
-            {month.getFullYear()} {MONTH_NAMES[month.getMonth()]}
+            {monthLabel}
           </span>
           <button
             type="button"
             onClick={() => onMonthChange(1)}
-            aria-label="下个月"
+            aria-label={t.training.calendar.nextMonth}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <ChevronRight size={16} />
@@ -136,9 +139,9 @@ export function StreakCalendar({
 
       <div className="px-3 pb-4 pt-3 sm:px-4">
         <div className="mb-1 grid grid-cols-7 gap-1.5 sm:gap-2">
-          {WEEK_DAYS.map((d) => (
+          {t.training.calendar.weekDaysSunFirst.map((d, i) => (
             <div
-              key={d}
+              key={i}
               className="py-1.5 text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
             >
               {d}
@@ -150,6 +153,7 @@ export function StreakCalendar({
           {calendarDays.map((dayData, index) => (
             <DayCell
               key={index}
+              t={t}
               day={dayData}
               streak={dayData.dateStr ? streaks[dayData.dateStr] : undefined}
               prevStreak={
@@ -168,13 +172,14 @@ export function StreakCalendar({
           ))}
         </div>
 
-        <Legend />
+        <Legend t={t} />
       </div>
     </section>
   )
 }
 
 interface DayCellProps {
+  t: Dictionary
   day: CalendarDay
   streak?: StreakInfo
   prevStreak?: StreakInfo
@@ -183,7 +188,7 @@ interface DayCellProps {
   onSelect: () => void
 }
 
-function DayCell({ day, streak, prevStreak, nextStreak, isSelected, onSelect }: DayCellProps) {
+function DayCell({ t, day, streak, prevStreak, nextStreak, isSelected, onSelect }: DayCellProps) {
   if (day.day === null) {
     return <div className="aspect-square" aria-hidden />
   }
@@ -204,7 +209,7 @@ function DayCell({ day, streak, prevStreak, nextStreak, isSelected, onSelect }: 
       onClick={onSelect}
       whileTap={{ scale: 0.94 }}
       transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-      aria-label={`${day.dateStr}${hasWorkout ? ` · ${day.workoutCount} 次训练` : ''}`}
+      aria-label={`${day.dateStr}${hasWorkout ? ` · ${t.training.calendar.workoutsCount(day.workoutCount)}` : ''}`}
       className={cn(
         'group relative flex aspect-square items-center justify-center text-sm font-medium tabular-nums transition-colors',
         // Rounding logic. When merging, keep only the outer corners.
@@ -239,11 +244,11 @@ function DayCell({ day, streak, prevStreak, nextStreak, isSelected, onSelect }: 
   )
 }
 
-function Legend() {
+function Legend({ t }: { t: Dictionary }) {
   return (
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-[11px] text-muted-foreground">
       <div className="flex items-center gap-2">
-        <span>连击强度</span>
+        <span>{t.training.calendar.legendIntensity}</span>
         <div className="flex items-center gap-1">
           {([0, 1, 2, 3] as const).map((tier) => (
             <span
@@ -253,11 +258,11 @@ function Legend() {
             />
           ))}
         </div>
-        <span className="tabular-nums">1 → 7+ 天</span>
+        <span className="tabular-nums">{t.training.calendar.legendRange}</span>
       </div>
       <div className="flex items-center gap-1.5">
         <Flame size={12} className="text-accent" />
-        <span>越长越亮</span>
+        <span>{t.training.calendar.legendBrighter}</span>
       </div>
     </div>
   )

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ActionError } from '@/lib/errors';
 
 /**
  * Input validation schemas for server actions that accept client-supplied
@@ -16,7 +17,11 @@ const macro = z.number().finite().min(0).max(100_000);
 export const dietLogInputSchema = z.object({
   // id / logged_at are server-managed in some paths; keep them lenient.
   id: z.string().max(200).optional(),
-  food_name: z.string().trim().min(1, '食物名称不能为空').max(200, '食物名称过长'),
+  food_name: z
+    .string()
+    .trim()
+    .min(1, ActionError.FOOD_NAME_REQUIRED)
+    .max(200, ActionError.FOOD_NAME_TOO_LONG),
   calories: macro,
   protein: macro,
   carbs: macro,
@@ -26,9 +31,13 @@ export const dietLogInputSchema = z.object({
 
 export const onboardingDataSchema = z.object({
   gender: z.enum(['male', 'female']),
-  age: z.number().int('年龄必须为整数').min(1, '年龄不合理').max(120, '年龄不合理'),
-  height: z.number().min(50, '身高不合理').max(260, '身高不合理'),
-  weight: z.number().min(20, '体重不合理').max(400, '体重不合理'),
+  age: z
+    .number()
+    .int(ActionError.AGE_INVALID)
+    .min(1, ActionError.AGE_INVALID)
+    .max(120, ActionError.AGE_INVALID),
+  height: z.number().min(50, ActionError.HEIGHT_INVALID).max(260, ActionError.HEIGHT_INVALID),
+  weight: z.number().min(20, ActionError.WEIGHT_INVALID).max(400, ActionError.WEIGHT_INVALID),
   activityLevel: z.enum(['sedentary', 'light', 'moderate', 'heavy']),
 });
 
@@ -43,15 +52,19 @@ export const nutritionRecommendationSchema = z.object({
 });
 
 export const planMetaSchema = z.object({
-  name: z.string().trim().min(1, '计划名称不能为空').max(100, '计划名称过长'),
+  name: z
+    .string()
+    .trim()
+    .min(1, ActionError.PLAN_NAME_REQUIRED)
+    .max(100, ActionError.PLAN_NAME_TOO_LONG),
   frequency_per_week: z
     .number()
-    .int('每周训练天数必须为整数')
-    .min(1, '每周至少训练 1 天')
-    .max(7, '每周最多训练 7 天'),
+    .int(ActionError.FREQUENCY_INVALID)
+    .min(1, ActionError.FREQUENCY_INVALID)
+    .max(7, ActionError.FREQUENCY_INVALID),
 });
 
-/** Pulls the first human-readable message out of a ZodError for the action's `error` field. */
+/** Pulls the first error code out of a ZodError for the action's `error` field. */
 export function firstZodError(err: z.ZodError): string {
-  return err.issues[0]?.message ?? '参数校验失败';
+  return err.issues[0]?.message ?? ActionError.VALIDATION_FAILED;
 }

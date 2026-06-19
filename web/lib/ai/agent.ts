@@ -46,6 +46,7 @@ import { openai } from "@/lib/openaiClient"
 import { AI_CHAT_MODEL } from "@/lib/ai/model"
 import type { Citation, AgentMode, UserContextPayload, CoachChatMessage } from "@/lib/ai/types"
 import { chatWithRagRetrieve } from "@/lib/ai/rag-client"
+import type { Language } from "@/lib/i18n"
 
 // ─── Tool 定义 ─────────────────────────────────────────────────────────────
 
@@ -116,7 +117,7 @@ const TOOLS: Parameters<typeof openai.chat.completions.create>[0]["tools"] = [
 
 // ─── System Prompt ─────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `你是 FitCore 的 AI 健身教练，专业、友善、富有洞察力。
+const SYSTEM_PROMPT_ZH = `你是 FitCore 的 AI 健身教练，专业、友善、富有洞察力。
 
 你有三个工具：
 - set_retrieval_params：声明知识库检索策略（k 值），与 query_knowledge_base 配套使用
@@ -133,6 +134,28 @@ const SYSTEM_PROMPT = `你是 FitCore 的 AI 健身教练，专业、友善、�
 - 使用中文，语气专业友善，适当使用 emoji
 - 严格基于工具返回的数据，不编造数字
 - 如知识库没有相关内容，如实告知`
+
+const SYSTEM_PROMPT_EN = `You are FitCore's AI fitness coach — professional, friendly, and insightful.
+
+You have three tools:
+- set_retrieval_params: declare the knowledge-base retrieval strategy (the k value), used together with query_knowledge_base
+- query_knowledge_base: query the fitness knowledge base (training technique, nutrition principles, plan templates, etc.)
+- get_user_stats: fetch the user's personal data for today (intake, expenditure, targets, etc.)
+
+Tool-calling rules:
+• User asks about exercises / nutrition knowledge / fitness principles → call set_retrieval_params + query_knowledge_base together
+• User asks "how much did I eat today" / "my data" / "is it enough" → call get_user_stats
+• Needs both knowledge and data to advise → call all three tools
+• Simple small talk or greeting → answer directly, no tools
+
+Answer requirements:
+- Reply in English, with a professional and friendly tone, using emoji where appropriate
+- Base answers strictly on the data returned by tools; never fabricate numbers
+- If the knowledge base has no relevant content, say so honestly`
+
+function buildSystemPrompt(language: Language): string {
+  return language === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_ZH
+}
 
 // ─── 工具执行 ───────────────────────────────────────────────────────────────
 
@@ -188,13 +211,15 @@ export async function runAgent(params: {
   sessionId: string
   userContext: UserContextPayload
   conversationHistory: CoachChatMessage[]
+  language?: Language
   onToken: (token: string) => void
 }): Promise<AgentResult> {
   const { message, sessionId, userContext, conversationHistory, onToken } = params
+  const language: Language = params.language === "en" ? "en" : "zh"
 
   // 构建消息历史（取最近 10 条，避免 context 过长）
   const messages: Parameters<typeof openai.chat.completions.create>[0]["messages"] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: buildSystemPrompt(language) },
     ...conversationHistory.slice(-10),
     { role: "user", content: message },
   ]

@@ -8,6 +8,7 @@ import { AI_FAST_MODEL } from '@/lib/ai/model';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId } from '@/lib/auth/require-user';
+import { ActionError } from '@/lib/errors';
 import type { DietLogItem, WorkoutLogItem } from './types';
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -131,12 +132,12 @@ export async function quickLog(userInput: string): Promise<QuickLogResponse> {
   const userId = a.userId;
   const trimmed = userInput.trim();
   if (!trimmed) {
-    return { success: false, error: '缺少必要参数' };
+    return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
   const segments = await parseQuickLog(trimmed);
   if (segments.length === 0) {
-    return { success: false, error: 'AI 未能解析这条输入，请换个说法或拆分成多次输入' };
+    return { success: false, error: ActionError.AI_PARSE_EMPTY };
   }
 
   const dietLogs: DietLogItem[] = [];
@@ -193,7 +194,7 @@ export async function quickLog(userInput: string): Promise<QuickLogResponse> {
 
   if (queryError && queryError.code !== 'PGRST116') {
     console.error('[quickLog] Query error:', queryError.message);
-    return { success: false, error: `查询数据库失败: ${queryError.message}` };
+    return { success: false, error: ActionError.DB_QUERY_FAILED };
   }
 
   const sumDiet = dietLogs.reduce(
@@ -240,7 +241,7 @@ export async function quickLog(userInput: string): Promise<QuickLogResponse> {
 
     if (updateResult.error) {
       console.error('[quickLog] Update error:', updateResult.error.message);
-      return { success: false, error: `更新记录失败: ${updateResult.error.message}` };
+      return { success: false, error: ActionError.DB_UPDATE_FAILED };
     }
   } else {
     const insertData: Omit<DailyStatsInsert, 'id'> = {
@@ -263,7 +264,7 @@ export async function quickLog(userInput: string): Promise<QuickLogResponse> {
 
     if (insertResult.error) {
       console.error('[quickLog] Insert error:', insertResult.error.message);
-      return { success: false, error: `创建记录失败: ${insertResult.error.message}` };
+      return { success: false, error: ActionError.DB_INSERT_FAILED };
     }
   }
 

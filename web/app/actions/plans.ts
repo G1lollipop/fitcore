@@ -6,6 +6,7 @@ import { logger, createModuleLogger } from '@/lib/logger';
 import { authedUserId } from '@/lib/auth/require-user';
 import { calculateTodayWorkout } from '@/lib/plans/today-workout';
 import { planMetaSchema, firstZodError } from '@/lib/validation/schemas';
+import { ActionError } from '@/lib/errors';
 
 type PlanExerciseInsert = Database['public']['Tables']['plan_exercises']['Insert'];
 type WorkoutDayInsert = Database['public']['Tables']['workout_days']['Insert'];
@@ -27,10 +28,10 @@ async function assertPlanOwner(
     .single();
 
   if (error || !data) {
-    return { success: false, error: '计划不存在' };
+    return { success: false, error: ActionError.PLAN_NOT_FOUND };
   }
   if (data.creator_id !== userId) {
-    return { success: false, error: 'FORBIDDEN' };
+    return { success: false, error: ActionError.FORBIDDEN };
   }
   return null;
 }
@@ -411,7 +412,7 @@ export async function getPlanById(planId: string) {
 
     if (error || !data) {
       planLogger.error('获取计划详情失败', { error: error?.message, planId });
-      return { success: false, error: '计划不存在' };
+      return { success: false, error: ActionError.PLAN_NOT_FOUND };
     }
 
     // Allow the owner, or anyone for read-only system templates.

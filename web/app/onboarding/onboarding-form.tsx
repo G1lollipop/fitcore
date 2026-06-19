@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useAuth, useUser } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/i18n/provider"
 import {
   calculateNutritionRecommendation,
   saveOnboardingData,
@@ -31,43 +31,22 @@ import {
 
 const TOTAL_STEPS = 3
 
-const GENDER_OPTIONS = [
-  { value: "male", label: "男性", icon: "👨" },
-  { value: "female", label: "女性", icon: "👩" },
+const GENDER_VALUES = [
+  { value: "male", icon: "👨" },
+  { value: "female", icon: "👩" },
 ] as const
 
-const ACTIVITY_OPTIONS = [
-  {
-    value: "sedentary",
-    label: "久坐",
-    description: "几乎不运动",
-    icon: "🪑",
-  },
-  {
-    value: "light",
-    label: "轻度活动",
-    description: "每周运动1-3天",
-    icon: "🚶",
-  },
-  {
-    value: "moderate",
-    label: "中度活动",
-    description: "每周运动3-5天",
-    icon: "🏃",
-  },
-  {
-    value: "heavy",
-    label: "重度活动",
-    description: "每周运动6-7天",
-    icon: "💪",
-  },
+const ACTIVITY_VALUES = [
+  { value: "sedentary", icon: "🪑" },
+  { value: "light", icon: "🚶" },
+  { value: "moderate", icon: "🏃" },
+  { value: "heavy", icon: "💪" },
 ] as const
 
-export default function OnboardingForm() {
+export default function OnboardingForm({ userName }: { userName: string }) {
+  const { t, language } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { userId, isLoaded } = useAuth()
-  const { user } = useUser()
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [isCalculating, setIsCalculating] = useState(false)
@@ -88,7 +67,7 @@ export default function OnboardingForm() {
   }, [searchParams])
 
   useEffect(() => {
-    if (isLoaded && userId && isReassess) {
+    if (isReassess) {
       const loadUserSettings = async () => {
         setIsLoadingSettings(true)
         const settings = await getUserSettings()
@@ -107,13 +86,7 @@ export default function OnboardingForm() {
     } else {
       setIsLoadingSettings(false)
     }
-  }, [isLoaded, userId, isReassess])
-
-  useEffect(() => {
-    if (isLoaded && !userId) {
-      router.push("/sign-in")
-    }
-  }, [isLoaded, userId, router])
+  }, [isReassess])
 
   const updateFormData = <K extends keyof OnboardingData>(
     key: K,
@@ -137,7 +110,7 @@ export default function OnboardingForm() {
   const handleCalculateRecommendation = async () => {
     setIsCalculating(true)
     try {
-      const result = await calculateNutritionRecommendation(formData)
+      const result = await calculateNutritionRecommendation(formData, language)
       if (result.success && result.recommendation) {
         setRecommendation(result.recommendation)
       }
@@ -155,7 +128,7 @@ export default function OnboardingForm() {
   }, [currentStep])
 
   const handleSubmit = async () => {
-    if (!userId || !recommendation) return
+    if (!recommendation) return
 
     setIsLoading(true)
     try {
@@ -175,9 +148,9 @@ export default function OnboardingForm() {
   const progress = (currentStep / TOTAL_STEPS) * 100
 
   const stepIcons = [User, Ruler, Sparkles]
-  const stepTitles = ["基本信息", "身体数据", "营养目标"]
+  const stepTitles = t.onboarding.steps
 
-  if (!isLoaded || isLoadingSettings) {
+  if (isLoadingSettings) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -197,10 +170,12 @@ export default function OnboardingForm() {
               <span className="font-bold text-xl tracking-tight text-foreground">FitCore</span>
             </div>
             <h1 className="text-2xl font-bold text-foreground mb-2">
-              {isReassess ? "重新评估营养目标" : `欢迎加入，${user?.firstName || "健身达人"}！`}
+              {isReassess
+                ? t.onboarding.reassessTitle
+                : t.onboarding.welcomeTitle(userName || t.onboarding.defaultName)}
             </h1>
             <p className="text-muted-foreground text-sm">
-              {isReassess ? "更新你的身体数据，获取最新的营养建议" : "让我们为你定制专属的健身计划"}
+              {isReassess ? t.onboarding.reassessSubtitle : t.onboarding.welcomeSubtitle}
             </p>
           </div>
 
@@ -252,15 +227,15 @@ export default function OnboardingForm() {
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <h2 className="text-lg font-bold text-foreground mb-1">基本信息</h2>
-                  <p className="text-sm text-muted-foreground">请告诉我们你的性别和年龄</p>
+                  <h2 className="text-lg font-bold text-foreground mb-1">{t.onboarding.step1Title}</h2>
+                  <p className="text-sm text-muted-foreground">{t.onboarding.step1Subtitle}</p>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-3 block">性别</label>
+                    <label className="text-sm font-medium text-foreground mb-3 block">{t.onboarding.genderLabel}</label>
                     <div className="grid grid-cols-2 gap-3">
-                      {GENDER_OPTIONS.map((option) => (
+                      {GENDER_VALUES.map((option) => (
                         <button
                           key={option.value}
                           type="button"
@@ -273,19 +248,19 @@ export default function OnboardingForm() {
                           )}
                         >
                           <span className="text-2xl">{option.icon}</span>
-                          <span className="font-medium">{option.label}</span>
+                          <span className="font-medium">{t.onboarding.genders[option.value]}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">年龄</label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">{t.onboarding.ageLabel}</label>
                     <Input
                       type="number"
                       value={formData.age}
                       onChange={(e) => updateFormData("age", parseInt(e.target.value) || 0)}
-                      placeholder="请输入年龄"
+                      placeholder={t.onboarding.agePlaceholder}
                       className="h-12 text-base"
                       min={10}
                       max={100}
@@ -298,18 +273,18 @@ export default function OnboardingForm() {
             {currentStep === 2 && (
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <h2 className="text-lg font-bold text-foreground mb-1">身体数据</h2>
-                  <p className="text-sm text-muted-foreground">这些数据将用于计算你的营养目标</p>
+                  <h2 className="text-lg font-bold text-foreground mb-1">{t.onboarding.step2Title}</h2>
+                  <p className="text-sm text-muted-foreground">{t.onboarding.step2Subtitle}</p>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">身高</label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">{t.onboarding.heightLabel}</label>
                     <Input
                       type="number"
                       value={formData.height}
                       onChange={(e) => updateFormData("height", parseInt(e.target.value) || 0)}
-                      placeholder="请输入身高"
+                      placeholder={t.onboarding.heightPlaceholder}
                       className="h-12 text-base"
                       min={100}
                       max={250}
@@ -317,12 +292,12 @@ export default function OnboardingForm() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">体重</label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">{t.onboarding.weightLabel}</label>
                     <Input
                       type="number"
                       value={formData.weight}
                       onChange={(e) => updateFormData("weight", parseInt(e.target.value) || 0)}
-                      placeholder="请输入体重"
+                      placeholder={t.onboarding.weightPlaceholder}
                       className="h-12 text-base"
                       min={30}
                       max={300}
@@ -335,12 +310,12 @@ export default function OnboardingForm() {
             {currentStep === 3 && (
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <h2 className="text-lg font-bold text-foreground mb-1">运动习惯</h2>
-                  <p className="text-sm text-muted-foreground">选择最符合你当前运动水平的选项</p>
+                  <h2 className="text-lg font-bold text-foreground mb-1">{t.onboarding.step3Title}</h2>
+                  <p className="text-sm text-muted-foreground">{t.onboarding.step3Subtitle}</p>
                 </div>
 
                 <div className="space-y-3">
-                  {ACTIVITY_OPTIONS.map((option) => (
+                  {ACTIVITY_VALUES.map((option) => (
                     <button
                       key={option.value}
                       type="button"
@@ -354,8 +329,8 @@ export default function OnboardingForm() {
                     >
                       <span className="text-2xl">{option.icon}</span>
                       <div className="flex-1">
-                        <div className="font-medium">{option.label}</div>
-                        <div className="text-xs text-muted-foreground">{option.description}</div>
+                        <div className="font-medium">{t.onboarding.activities[option.value].label}</div>
+                        <div className="text-xs text-muted-foreground">{t.onboarding.activities[option.value].description}</div>
                       </div>
                       {formData.activityLevel === option.value && (
                         <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
@@ -371,20 +346,20 @@ export default function OnboardingForm() {
                 {isCalculating ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
-                    <span className="text-muted-foreground">AI 正在为你计算营养目标...</span>
+                    <span className="text-muted-foreground">{t.onboarding.calculating}</span>
                   </div>
                 ) : recommendation ? (
                   <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20">
                     <div className="flex items-center gap-2 mb-4">
                       <Sparkles className="w-5 h-5 text-primary" />
-                      <span className="font-bold text-foreground">AI 推荐目标</span>
+                      <span className="font-bold text-foreground">{t.onboarding.aiTargetTitle}</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="bg-card/80 rounded-lg p-3 text-center">
                         <div className="flex items-center justify-center gap-1 mb-1">
                           <Flame className="w-4 h-4 text-primary" />
-                          <span className="text-xs text-muted-foreground">每日热量</span>
+                          <span className="text-xs text-muted-foreground">{t.onboarding.dailyCalories}</span>
                         </div>
                         <div className="text-xl font-bold text-foreground">{recommendation.targetCalories}</div>
                         <div className="text-xs text-muted-foreground">kcal</div>
@@ -393,28 +368,28 @@ export default function OnboardingForm() {
                       <div className="bg-card/80 rounded-lg p-3 text-center">
                         <div className="flex items-center justify-center gap-1 mb-1">
                           <Beef className="w-4 h-4 text-red-400" />
-                          <span className="text-xs text-muted-foreground">蛋白质</span>
+                          <span className="text-xs text-muted-foreground">{t.onboarding.protein}</span>
                         </div>
                         <div className="text-xl font-bold text-foreground">{recommendation.targetProtein}g</div>
-                        <div className="text-xs text-muted-foreground">每日目标</div>
+                        <div className="text-xs text-muted-foreground">{t.onboarding.dailyTarget}</div>
                       </div>
 
                       <div className="bg-card/80 rounded-lg p-3 text-center">
                         <div className="flex items-center justify-center gap-1 mb-1">
                           <Wheat className="w-4 h-4 text-amber-400" />
-                          <span className="text-xs text-muted-foreground">碳水化合物</span>
+                          <span className="text-xs text-muted-foreground">{t.onboarding.carbs}</span>
                         </div>
                         <div className="text-xl font-bold text-foreground">{recommendation.targetCarbs}g</div>
-                        <div className="text-xs text-muted-foreground">每日目标</div>
+                        <div className="text-xs text-muted-foreground">{t.onboarding.dailyTarget}</div>
                       </div>
 
                       <div className="bg-card/80 rounded-lg p-3 text-center">
                         <div className="flex items-center justify-center gap-1 mb-1">
                           <Droplet className="w-4 h-4 text-yellow-400" />
-                          <span className="text-xs text-muted-foreground">脂肪</span>
+                          <span className="text-xs text-muted-foreground">{t.onboarding.fat}</span>
                         </div>
                         <div className="text-xl font-bold text-foreground">{recommendation.targetFat}g</div>
-                        <div className="text-xs text-muted-foreground">每日目标</div>
+                        <div className="text-xs text-muted-foreground">{t.onboarding.dailyTarget}</div>
                       </div>
                     </div>
 
@@ -425,8 +400,8 @@ export default function OnboardingForm() {
                     </div>
 
                     <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>基础代谢: {recommendation.bmr} kcal</span>
-                      <span>每日消耗: {recommendation.tdee} kcal</span>
+                      <span>{t.onboarding.bmr(recommendation.bmr)}</span>
+                      <span>{t.onboarding.tdee(recommendation.tdee)}</span>
                     </div>
                   </div>
                 ) : null}
@@ -441,12 +416,12 @@ export default function OnboardingForm() {
                 className="gap-1"
               >
                 <ChevronLeft className="w-4 h-4" />
-                上一步
+                {t.onboarding.back}
               </Button>
 
               {currentStep < TOTAL_STEPS ? (
                 <Button onClick={handleNext} className="gap-1">
-                  下一步
+                  {t.onboarding.next}
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               ) : (
@@ -458,12 +433,12 @@ export default function OnboardingForm() {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      保存中...
+                      {t.onboarding.saving}
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      {isReassess ? "保存更新" : "开始健身之旅"}
+                      {isReassess ? t.onboarding.saveUpdate : t.onboarding.startJourney}
                     </>
                   )}
                 </Button>

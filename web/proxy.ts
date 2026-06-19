@@ -1,35 +1,39 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)',
-  '/profile(.*)',
-  '/settings(.*)',
-  '/workout(.*)',
-  '/nutrition(.*)',
-  '/plans(.*)',
-  '/exercises(.*)',
-  '/analytics(.*)',
-])
+/**
+ * Routes that never require authentication.
+ *   - /sign-in, /sign-up : auth screens
+ *   - /auth/*            : OAuth callback (code → session exchange)
+ *   - /api/*             : API routes do their own auth (see /api/ai/chat)
+ */
+function isPublicRoute(pathname: string): boolean {
+  return (
+    pathname.startsWith('/sign-in') ||
+    pathname.startsWith('/sign-up') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/api')
+  )
+}
 
-const isPublicRoute = createRouteMatcher([
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/api(.*)',
-])
+function isOnboardingRoute(pathname: string): boolean {
+  return pathname.startsWith('/onboarding')
+}
 
-const isOnboardingRoute = createRouteMatcher([
-  '/onboarding(.*)',
-])
-
+/**
+ * Has the user completed onboarding? Checked via a direct PostgREST call with
+ * the service-role key — this runs server-side in middleware (never shipped to
+ * the browser) and is scoped to the authenticated `userId`.
+ *
+ * Fails open (returns `true`) on any error so a transient Supabase hiccup never
+ * traps a legitimate user in a redirect loop.
+ */
 async function checkUserOnboarded(userId: string): Promise<boolean> {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    // Service-role key: this runs server-side in middleware (never shipped to
-    // the browser) and queries are scoped to the Clerk-authenticated userId.
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !serviceRoleKey) {
       return true
     }
 
@@ -37,8 +41,8 @@ async function checkUserOnboarded(userId: string): Promise<boolean> {
       `${supabaseUrl}/rest/v1/user_settings?user_id=eq.${userId}&select=user_id`,
       {
         headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
+          apikey: serviceRoleKey,
+          Authorization: `Bearer ${serviceRoleKey}`,
         },
       }
     )
@@ -48,48 +52,71 @@ async function checkUserOnboarded(userId: string): Promise<boolean> {
     }
 
     const data = await response.json()
-    return data && data.length > 0
+    return Array.isArray(data) && data.length > 0
   } catch (error) {
     console.error('[Proxy] Error checking onboarding status:', error)
     return true
   }
 }
 
-export default clerkMiddleware(async (auth, req) => {
-  const { userId } = await auth()
+export default async function proxy(request: NextRequest) {
+  // Start with a passthrough response we can attach refreshed cookies to.
+  let response = NextResponse.next({ request })
 
-  if (isPublicRoute(req)) {
-    return
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // IMPORTANT: getUser() refreshes the session and writes new cookies via
+  // setAll above. Do not run logic between createServerClient and getUser().
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { pathname } = request.nextUrl
+
+  if (isPublicRoute(pathname)) {
+    return response
   }
 
-  if (isProtectedRoute(req)) {
-    await auth.protect()
+  // Everything else requires a signed-in user.
+  if (!user) {
+    const signInUrl = new URL('/sign-in', request.url)
+    return NextResponse.redirect(signInUrl)
+  }
 
-    if (userId && !isOnboardingRoute(req)) {
-      const hasOnboarded = await checkUserOnboarded(userId)
+  const hasOnboarded = await checkUserOnboarded(user.id)
 
-      if (!hasOnboarded) {
-        const onboardingUrl = new URL('/onboarding', req.url)
-        return NextResponse.redirect(onboardingUrl)
-      }
+  // Unonboarded users are funneled to /onboarding (except while already there).
+  if (!hasOnboarded && !isOnboardingRoute(pathname)) {
+    return NextResponse.redirect(new URL('/onboarding', request.url))
+  }
+
+  // Onboarded users hitting /onboarding bounce home, unless re-assessing.
+  if (hasOnboarded && isOnboardingRoute(pathname)) {
+    const isReassess = request.nextUrl.searchParams.get('reassess') === 'true'
+    if (!isReassess) {
+      return NextResponse.redirect(new URL('/', request.url))
     }
   }
 
-  if (isOnboardingRoute(req) && userId) {
-    const hasOnboarded = await checkUserOnboarded(userId)
-
-    if (hasOnboarded) {
-      const url = new URL(req.url)
-      const isReassess = url.searchParams.get('reassess') === 'true'
-      if (!isReassess) {
-        const homeUrl = new URL('/', req.url)
-        return NextResponse.redirect(homeUrl)
-      }
-    }
-  }
-
-  return NextResponse.next()
-})
+  return response
+}
 
 export const config = {
   matcher: [

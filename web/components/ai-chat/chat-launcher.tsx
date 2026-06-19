@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
+import { useT } from '@/lib/i18n/provider'
 
 interface ChatLauncherProps {
   onClick: () => void
@@ -14,6 +15,7 @@ interface ChatLauncherProps {
  * palette's restraint.
  */
 export function ChatLauncher({ onClick }: ChatLauncherProps) {
+  const t = useT()
   return (
     <motion.button
       type="button"
@@ -24,7 +26,7 @@ export function ChatLauncher({ onClick }: ChatLauncherProps) {
       whileTap={{ scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 300, damping: 22 }}
       className="group fixed bottom-20 right-4 z-50 flex h-12 items-center gap-2 rounded-2xl border border-border bg-card pl-3 pr-4 shadow-md transition-shadow hover:border-primary/40 hover:shadow-lg md:bottom-6 md:right-6"
-      aria-label="打开 AI 教练"
+      aria-label={t.aiChat.openCoach}
     >
       <span
         aria-hidden
@@ -34,7 +36,7 @@ export function ChatLauncher({ onClick }: ChatLauncherProps) {
         <Sparkles size={14} />
       </span>
       <span className="font-display text-[13px] font-medium text-foreground">
-        AI 教练
+        {t.aiChat.coach}
       </span>
     </motion.button>
   )

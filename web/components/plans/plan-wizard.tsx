@@ -24,7 +24,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useToast } from '@/hooks/use-toast'
-import { goalLabels, levelLabels } from '@/lib/labels'
+import { useT } from '@/lib/i18n/provider'
+import { tLabel, tError, localizedName, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { SelectedExercise } from './exercise-selector'
 
@@ -75,28 +76,8 @@ interface WizardState {
   exercises: Record<number, SelectedExercise[]>
 }
 
-const WEEKDAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] as const
-
-const GOAL_OPTIONS = [
-  { value: 'general', label: goalLabels.general },
-  { value: 'strength', label: goalLabels.strength },
-  { value: 'muscle_gain', label: goalLabels.muscle_gain },
-  { value: 'fat_loss', label: goalLabels.fat_loss },
-  { value: 'endurance', label: goalLabels.endurance },
-] as const
-
-const LEVEL_OPTIONS = [
-  { value: 'beginner', label: levelLabels.beginner },
-  { value: 'intermediate', label: levelLabels.intermediate },
-  { value: 'advanced', label: levelLabels.advanced },
-] as const
-
-const STEP_LABELS: Record<WizardStep, string> = {
-  1: '基础信息',
-  2: '安排训练日',
-  3: '挑选动作',
-  4: '检查并创建',
-}
+const GOAL_VALUES = ['general', 'strength', 'muscle_gain', 'fat_loss', 'endurance'] as const
+const LEVEL_VALUES = ['beginner', 'intermediate', 'advanced'] as const
 
 const INITIAL_STATE: WizardState = {
   basics: {
@@ -126,6 +107,7 @@ export function PlanWizard({
   suspended = false,
 }: PlanWizardProps) {
   const { toast } = useToast()
+  const t = useT()
   const [state, setState] = useState<WizardState>(INITIAL_STATE)
   const [step, setStep] = useState<WizardStep>(1)
   const [isSubmitting, startSubmit] = useTransition()
@@ -174,8 +156,8 @@ export function PlanWizard({
     if (!userId) {
       toast({
         variant: 'destructive',
-        title: '请先登录',
-        description: '创建计划需要登录账户',
+        title: t.plans.wizard.loginRequired,
+        description: t.plans.wizard.loginCreateDesc,
       })
       return
     }
@@ -186,14 +168,14 @@ export function PlanWizard({
         const position = idx + 1
         if (!slot) {
           return {
-            name: '休息',
+            name: t.plans.wizard.restName,
             rest_day: true,
             exercises: [],
           }
         }
         const exs = state.exercises[position] ?? []
         return {
-          name: slot.name || `训练日 ${position}`,
+          name: slot.name || t.plans.wizard.trainingDayN(position),
           focus_muscles: slot.focus_muscles,
           rest_day: false,
           exercises: exs.map((e) => ({
@@ -218,16 +200,16 @@ export function PlanWizard({
 
       if (result.success) {
         toast({
-          title: '计划已创建',
-          description: `${state.basics.name} · ${trainingDays.length} 天/周`,
+          title: t.plans.wizard.planCreated,
+          description: t.plans.wizard.planCreatedDesc(state.basics.name, trainingDays.length),
         })
         onCreated?.()
         onOpenChange(false)
       } else {
         toast({
           variant: 'destructive',
-          title: '创建失败',
-          description: typeof result.error === 'string' ? result.error : '请稍后再试',
+          title: t.plans.wizard.createFailed,
+          description: typeof result.error === 'string' ? tError(t, result.error) : t.plans.wizard.tryLater,
         })
       }
     })
@@ -242,9 +224,9 @@ export function PlanWizard({
               <Sparkles size={16} />
             </span>
             <div>
-              <SheetTitle className="font-display text-base">创建训练计划</SheetTitle>
+              <SheetTitle className="font-display text-base">{t.plans.wizard.createTitle}</SheetTitle>
               <SheetDescription className="text-[11px]">
-                第 {step} / 4 步 · {STEP_LABELS[step]}
+                {t.plans.wizard.stepIndicator(step, t.plans.wizard.steps[step])}
               </SheetDescription>
             </div>
           </div>
@@ -264,6 +246,7 @@ export function PlanWizard({
                 <BasicsStep
                   basics={state.basics}
                   onChange={(basics) => setState((s) => ({ ...s, basics }))}
+                  t={t}
                 />
               </motion.div>
             )}
@@ -279,6 +262,7 @@ export function PlanWizard({
                 <ScheduleStep
                   schedule={state.schedule}
                   onChange={(schedule) => setState((s) => ({ ...s, schedule }))}
+                  t={t}
                 />
               </motion.div>
             )}
@@ -311,6 +295,7 @@ export function PlanWizard({
                       exercises: { ...s.exercises, [position]: [] },
                     }))
                   }
+                  t={t}
                 />
               </motion.div>
             )}
@@ -327,6 +312,7 @@ export function PlanWizard({
                   state={state}
                   trainingDays={trainingDays}
                   totalExercises={totalExercises}
+                  t={t}
                 />
               </motion.div>
             )}
@@ -341,7 +327,7 @@ export function PlanWizard({
             className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ChevronLeft size={14} />
-            上一步
+            {t.plans.wizard.back}
           </button>
 
           {step < 4 ? (
@@ -351,7 +337,7 @@ export function PlanWizard({
               disabled={!canAdvance}
               className="inline-flex items-center gap-1 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
             >
-              下一步
+              {t.plans.wizard.next}
               <ChevronRight size={14} />
             </button>
           ) : (
@@ -362,7 +348,7 @@ export function PlanWizard({
               className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Check size={14} />
-              {isSubmitting ? '创建中…' : '创建计划'}
+              {isSubmitting ? t.plans.wizard.creating : t.plans.wizard.create}
             </button>
           )}
         </footer>
@@ -396,51 +382,54 @@ function StepProgress({ step }: { step: WizardStep }) {
 interface BasicsStepProps {
   basics: WizardState['basics']
   onChange: (basics: WizardState['basics']) => void
+  t: Dictionary
 }
 
-function BasicsStep({ basics, onChange }: BasicsStepProps) {
+function BasicsStep({ basics, onChange, t }: BasicsStepProps) {
+  const goalOptions = GOAL_VALUES.map((value) => ({ value, label: t.labels.goals[value] }))
+  const levelOptions = LEVEL_VALUES.map((value) => ({ value, label: t.labels.levels[value] }))
   return (
     <div className="space-y-4">
-      <Field label="计划名称" required>
+      <Field label={t.plans.wizard.basics.nameLabel} required>
         <input
           type="text"
           value={basics.name}
           onChange={(e) => onChange({ ...basics, name: e.target.value })}
           maxLength={40}
-          placeholder="例：上下肢分化 · 8 周"
+          placeholder={t.plans.wizard.basics.namePlaceholder}
           className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </Field>
 
-      <Field label="计划简介" hint="可选 · 鼓励一句话描述目标">
+      <Field label={t.plans.wizard.basics.descLabel} hint={t.plans.wizard.basics.descHint}>
         <textarea
           value={basics.description}
           onChange={(e) => onChange({ ...basics, description: e.target.value })}
           maxLength={140}
           rows={2}
-          placeholder="例：以增肌为主，每周练 4 天，控制总训练时间在 60 分钟内"
+          placeholder={t.plans.wizard.basics.descPlaceholder}
           className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="主要目标">
+        <Field label={t.plans.wizard.basics.goalLabel}>
           <SelectChips
             value={basics.goal}
             onChange={(goal) => onChange({ ...basics, goal })}
-            options={GOAL_OPTIONS}
+            options={goalOptions}
           />
         </Field>
-        <Field label="经验水平">
+        <Field label={t.plans.wizard.basics.levelLabel}>
           <SelectChips
             value={basics.experience_level}
             onChange={(experience_level) => onChange({ ...basics, experience_level })}
-            options={LEVEL_OPTIONS}
+            options={levelOptions}
           />
         </Field>
       </div>
 
-      <Field label="计划周期" hint="估计持续多少周">
+      <Field label={t.plans.wizard.basics.durationLabel} hint={t.plans.wizard.basics.durationHint}>
         <div className="flex flex-wrap gap-1.5">
           {[4, 6, 8, 12, 16].map((w) => (
             <button
@@ -454,7 +443,7 @@ function BasicsStep({ basics, onChange }: BasicsStepProps) {
                   : 'border-border bg-secondary/40 text-muted-foreground hover:border-primary/30 hover:text-foreground'
               )}
             >
-              {w} 周
+              {t.plans.wizard.basics.weeksN(w)}
             </button>
           ))}
         </div>
@@ -466,9 +455,11 @@ function BasicsStep({ basics, onChange }: BasicsStepProps) {
 interface ScheduleStepProps {
   schedule: (ScheduleDay | null)[]
   onChange: (schedule: (ScheduleDay | null)[]) => void
+  t: Dictionary
 }
 
-function ScheduleStep({ schedule, onChange }: ScheduleStepProps) {
+function ScheduleStep({ schedule, onChange, t }: ScheduleStepProps) {
+  const weekdayLabels = t.plans.wizard.weekdaysMonFull
   const toggle = (idx: number) => {
     const next = [...schedule]
     if (next[idx]) {
@@ -476,7 +467,7 @@ function ScheduleStep({ schedule, onChange }: ScheduleStepProps) {
     } else {
       const dayCount = next.filter(Boolean).length + 1
       next[idx] = {
-        name: `训练日 ${dayCount}`,
+        name: t.plans.wizard.trainingDayN(dayCount),
         focus_muscles: [],
       }
     }
@@ -494,7 +485,7 @@ function ScheduleStep({ schedule, onChange }: ScheduleStepProps) {
   return (
     <div className="space-y-4">
       <p className="rounded-xl border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
-        点击下方日期切换训练 / 休息。每个训练日可以单独命名。
+        {t.plans.wizard.schedule.hint}
       </p>
 
       <div className="grid grid-cols-7 gap-1.5">
@@ -510,7 +501,7 @@ function ScheduleStep({ schedule, onChange }: ScheduleStepProps) {
                 : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
             )}
           >
-            <span className="text-[10px] uppercase tracking-wider">{WEEKDAY_LABELS[idx]}</span>
+            <span className="text-[10px] uppercase tracking-wider">{weekdayLabels[idx]}</span>
             <span className="mt-0.5">{day ? <Dumbbell size={12} /> : <Coffee size={12} />}</span>
           </button>
         ))}
@@ -524,23 +515,23 @@ function ScheduleStep({ schedule, onChange }: ScheduleStepProps) {
               className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5"
             >
               <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                {WEEKDAY_LABELS[idx]}
+                {weekdayLabels[idx]}
               </span>
               <input
                 type="text"
                 value={day.name}
                 onChange={(e) => updateDay(idx, { name: e.target.value })}
                 maxLength={20}
-                placeholder="例：上肢推 / 腿日 / 全身循环"
+                placeholder={t.plans.wizard.schedule.dayNamePlaceholder}
                 className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => toggle(idx)}
-                aria-label="改为休息"
+                aria-label={t.plans.wizard.schedule.toRest}
                 className="rounded-lg px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
               >
-                改为休息
+                {t.plans.wizard.schedule.toRest}
               </button>
             </div>
           ) : null
@@ -555,21 +546,23 @@ interface ExercisesStepProps {
   exercises: Record<number, SelectedExercise[]>
   onOpenSelector: (position: number) => void
   onClear: (position: number) => void
+  t: Dictionary
 }
 
-function ExercisesStep({ schedule, exercises, onOpenSelector, onClear }: ExercisesStepProps) {
+function ExercisesStep({ schedule, exercises, onOpenSelector, onClear, t }: ExercisesStepProps) {
+  const weekdayLabels = t.plans.wizard.weekdaysMonFull
   const trainingDays = schedule
     .map((d, idx) => (d ? { day: d, position: idx + 1 } : null))
     .filter((d): d is { day: ScheduleDay; position: number } => d !== null)
 
   if (trainingDays.length === 0) {
-    return <EmptyState size="inline" title="请先回到第二步选择训练日" />
+    return <EmptyState size="inline" title={t.plans.wizard.exercises.backToStep2} />
   }
 
   return (
     <div className="space-y-3">
       <p className="rounded-xl border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
-        给每个训练日挑选动作，至少 1 个训练日需要包含动作。
+        {t.plans.wizard.exercises.hint}
       </p>
 
       {trainingDays.map(({ day, position }) => {
@@ -582,12 +575,12 @@ function ExercisesStep({ schedule, exercises, onOpenSelector, onClear }: Exercis
             <header className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {WEEKDAY_LABELS[position - 1]}
+                  {weekdayLabels[position - 1]}
                 </p>
                 <h4 className="font-display text-sm font-semibold text-foreground">{day.name}</h4>
               </div>
               <span className="text-[11px] text-muted-foreground tabular-nums">
-                {list.length} 个动作
+                {t.plans.wizard.exercises.exercisesCount(list.length)}
               </span>
             </header>
 
@@ -598,7 +591,7 @@ function ExercisesStep({ schedule, exercises, onOpenSelector, onClear }: Exercis
                     key={ex.exercise_id}
                     className="flex items-center justify-between rounded-xl bg-secondary/40 px-3 py-2 text-xs"
                   >
-                    <span className="truncate font-medium text-foreground">{ex.name}</span>
+                    <span className="truncate font-medium text-foreground">{localizedName(t, ex.name, ex.name_en)}</span>
                     <span className="inline-flex items-center gap-1 text-muted-foreground tabular-nums">
                       <Target size={10} />
                       {ex.target_sets} × {ex.target_reps_min}–{ex.target_reps_max}
@@ -607,13 +600,13 @@ function ExercisesStep({ schedule, exercises, onOpenSelector, onClear }: Exercis
                 ))}
                 {list.length > 5 && (
                   <li className="px-3 text-center text-[11px] text-muted-foreground">
-                    + 还有 {list.length - 5} 个
+                    {t.plans.wizard.exercises.overflow(list.length - 5)}
                   </li>
                 )}
               </ul>
             ) : (
               <div className="mt-3">
-                <EmptyState size="inline" title="还没有动作" />
+                <EmptyState size="inline" title={t.plans.wizard.exercises.noExercises} />
               </div>
             )}
 
@@ -624,14 +617,14 @@ function ExercisesStep({ schedule, exercises, onOpenSelector, onClear }: Exercis
                 className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
               >
                 <Plus size={12} />
-                {list.length > 0 ? '编辑动作' : '挑选动作'}
+                {list.length > 0 ? t.plans.wizard.exercises.editExercises : t.plans.wizard.exercises.pickExercises}
               </button>
               {list.length > 0 && (
                 <button
                   type="button"
                   onClick={() => onClear(position)}
                   className="rounded-xl border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
-                  aria-label={`清空 ${day.name} 的动作`}
+                  aria-label={t.plans.wizard.exercises.clearDayAria(day.name)}
                 >
                   <Trash2 size={12} />
                 </button>
@@ -648,14 +641,16 @@ interface ReviewStepProps {
   state: WizardState
   trainingDays: { day: ScheduleDay; position: number }[]
   totalExercises: number
+  t: Dictionary
 }
 
-function ReviewStep({ state, trainingDays, totalExercises }: ReviewStepProps) {
+function ReviewStep({ state, trainingDays, totalExercises, t }: ReviewStepProps) {
+  const weekdayLabels = t.plans.wizard.weekdaysMonFull
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <h4 className="font-display text-sm font-semibold text-foreground">
-          {state.basics.name || '未命名计划'}
+          {state.basics.name || t.plans.wizard.review.unnamedPlan}
         </h4>
         {state.basics.description && (
           <p className="mt-1 text-xs text-muted-foreground">{state.basics.description}</p>
@@ -663,20 +658,24 @@ function ReviewStep({ state, trainingDays, totalExercises }: ReviewStepProps) {
         <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
           <ReviewRow
             icon={<Sparkles size={12} />}
-            label="目标"
-            value={goalLabels[state.basics.goal] ?? state.basics.goal}
+            label={t.plans.wizard.review.goal}
+            value={tLabel(t.labels.goals, state.basics.goal)}
           />
           <ReviewRow
             icon={<Dumbbell size={12} />}
-            label="经验"
-            value={levelLabels[state.basics.experience_level] ?? state.basics.experience_level}
+            label={t.plans.wizard.review.experience}
+            value={tLabel(t.labels.levels, state.basics.experience_level)}
           />
           <ReviewRow
             icon={<Calendar size={12} />}
-            label="频率"
-            value={`${trainingDays.length} 次/周`}
+            label={t.plans.wizard.review.frequency}
+            value={t.plans.wizard.review.freqValue(trainingDays.length)}
           />
-          <ReviewRow icon={<Target size={12} />} label="动作总数" value={`${totalExercises} 个`} />
+          <ReviewRow
+            icon={<Target size={12} />}
+            label={t.plans.wizard.review.totalExercises}
+            value={t.plans.wizard.review.totalExercisesValue(totalExercises)}
+          />
         </div>
       </section>
 
@@ -702,15 +701,15 @@ function ReviewStep({ state, trainingDays, totalExercises }: ReviewStepProps) {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {WEEKDAY_LABELS[idx]}
+                  {weekdayLabels[idx]}
                 </p>
                 <p className="truncate text-sm font-medium text-foreground">
-                  {slot ? slot.name : '休息'}
+                  {slot ? slot.name : t.plans.wizard.review.rest}
                 </p>
               </div>
               {slot && (
                 <span className="text-[11px] text-muted-foreground tabular-nums">
-                  {list.length} 个动作
+                  {t.plans.wizard.review.exercisesCount(list.length)}
                 </span>
               )}
             </div>

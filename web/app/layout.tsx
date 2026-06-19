@@ -3,7 +3,7 @@ import { Inter, Space_Grotesk } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/toaster'
 import { ThemeProvider } from '@/components/theme-provider'
-import { ClerkThemeProvider } from '@/components/clerk-theme-provider'
+import { LanguageProvider } from '@/lib/i18n/provider'
 import './globals.css'
 
 // Trim font weights to what we actually render — meaningful TTFB win.
@@ -53,11 +53,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ClerkThemeProvider>
+          <LanguageProvider>
             {children}
             <Toaster />
-            <Analytics />
-          </ClerkThemeProvider>
+          </LanguageProvider>
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>

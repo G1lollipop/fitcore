@@ -224,21 +224,6 @@ const MUSCLE_RULES: readonly MuscleRule[] = [
   },
 ] as const
 
-const MUSCLE_LABELS: Record<MuscleGroup, string> = {
-  chest: '胸',
-  back: '背',
-  legs: '腿',
-  shoulders: '肩',
-  arms: '手臂',
-  core: '核心',
-  cardio: '有氧',
-  other: '其他',
-}
-
-export function muscleLabel(group: MuscleGroup): string {
-  return MUSCLE_LABELS[group]
-}
-
 /** Classify a single workout name into a muscle group. */
 export function classifyMuscleGroup(name?: string | null): MuscleGroup {
   if (!name) return 'other'
@@ -253,7 +238,6 @@ export function classifyMuscleGroup(name?: string | null): MuscleGroup {
 
 export interface MuscleGroupStat {
   group: MuscleGroup
-  label: string
   /** Total minutes attributed to this group across the input. */
   minutes: number
   /** Number of logs attributed. */
@@ -290,7 +274,6 @@ export function topMuscleGroups(
 
   return populated.slice(0, limit).map(([group, v]) => ({
     group,
-    label: MUSCLE_LABELS[group],
     minutes: v.minutes,
     sessions: v.sessions,
     share: totalMinutes > 0 ? v.minutes / totalMinutes : 0,

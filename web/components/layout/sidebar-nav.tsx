@@ -1,8 +1,14 @@
 'use client'
 
 import { memo } from 'react'
-import { ChevronsLeft, ChevronsRight, Leaf, RefreshCw, type LucideIcon } from 'lucide-react'
-import { UserButton, useUser } from '@clerk/nextjs'
+import {
+  ChevronsLeft,
+  ChevronsRight,
+  Leaf,
+  LogOut,
+  RefreshCw,
+  type LucideIcon,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import {
   Tooltip,
@@ -12,11 +18,14 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useSidebarCollapsed } from '@/hooks/use-sidebar-collapsed'
+import { useT } from '@/lib/i18n/provider'
+import { signOut } from '@/app/actions/auth'
 import { NAV_ITEMS } from './nav-items'
 
 interface SidebarNavProps {
   activeNav: string
   onNavChange: (id: string) => void
+  userName: string
 }
 
 /**
@@ -29,11 +38,11 @@ interface SidebarNavProps {
  *
  * Mobile (<md) is hidden — `<MobileTabBar>` takes over there.
  */
-export function SidebarNav({ activeNav, onNavChange }: SidebarNavProps) {
-  const { user } = useUser()
+export function SidebarNav({ activeNav, onNavChange, userName }: SidebarNavProps) {
   const router = useRouter()
+  const t = useT()
   const [collapsed, toggle] = useSidebarCollapsed()
-  const userName = user?.firstName || user?.fullName || '我的账户'
+  const displayName = userName || t.sidebar.myAccount
 
   return (
     <TooltipProvider delayDuration={200} skipDelayDuration={0}>
@@ -67,7 +76,7 @@ export function SidebarNav({ activeNav, onNavChange }: SidebarNavProps) {
             <NavItem
               key={item.id}
               id={item.id}
-              label={item.label}
+              label={t.nav[item.labelKey]}
               icon={item.icon}
               isActive={activeNav === item.id}
               collapsed={collapsed}
@@ -78,7 +87,7 @@ export function SidebarNav({ activeNav, onNavChange }: SidebarNavProps) {
 
         {/* ── User profile + collapse toggle ── */}
         <div className="border-t border-sidebar-border p-2 space-y-1">
-          <UserProfile collapsed={collapsed} userName={userName} />
+          <UserProfile collapsed={collapsed} userName={displayName} />
           <ReassessButton
             collapsed={collapsed}
             onClick={() => router.push('/onboarding?reassess=true')}
@@ -151,28 +160,51 @@ interface UserProfileProps {
 }
 
 const UserProfile = memo(function UserProfile({ collapsed, userName }: UserProfileProps) {
+  const t = useT()
+  const initial = userName.trim().charAt(0).toUpperCase() || '?'
+
+  const avatar = (
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
+      {initial}
+    </span>
+  )
+
+  const signOutButton = (
+    <form action={signOut}>
+      <button
+        type="submit"
+        aria-label={t.sidebar.signOut}
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      >
+        <LogOut size={15} className="shrink-0" />
+      </button>
+    </form>
+  )
+
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>{avatar}</TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8} className="text-xs">
+            {userName}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>{signOutButton}</TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8} className="text-xs">
+            {t.sidebar.signOut}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    )
+  }
+
   return (
-    <div
-      className={cn(
-        'flex items-center gap-2.5 px-2 py-2 rounded-lg',
-        collapsed && 'justify-center'
-      )}
-    >
-      <UserButton
-        appearance={{
-          variables: {
-            colorPrimary: '#3a7d44',
-            borderRadius: '0.5rem',
-          },
-          elements: {
-            avatarBox: 'w-8 h-8',
-            rootBox: collapsed ? '' : 'w-full',
-          },
-        }}
-      />
-      {!collapsed && (
-        <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{userName}</p>
-      )}
+    <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg">
+      {avatar}
+      <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{userName}</p>
+      {signOutButton}
     </div>
   )
 })
@@ -183,6 +215,7 @@ interface ReassessButtonProps {
 }
 
 const ReassessButton = memo(function ReassessButton({ collapsed, onClick }: ReassessButtonProps) {
+  const t = useT()
   const button = (
     <button
       type="button"
@@ -193,7 +226,7 @@ const ReassessButton = memo(function ReassessButton({ collapsed, onClick }: Reas
       )}
     >
       <RefreshCw size={13} className="shrink-0" />
-      {!collapsed && <span>重新评估营养</span>}
+      {!collapsed && <span>{t.sidebar.reassess}</span>}
     </button>
   )
 
@@ -202,7 +235,7 @@ const ReassessButton = memo(function ReassessButton({ collapsed, onClick }: Reas
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent side="right" sideOffset={8} className="text-xs">
-        重新评估营养
+        {t.sidebar.reassess}
       </TooltipContent>
     </Tooltip>
   )
@@ -214,11 +247,12 @@ interface CollapseToggleProps {
 }
 
 const CollapseToggle = memo(function CollapseToggle({ collapsed, onClick }: CollapseToggleProps) {
+  const t = useT()
   const button = (
     <button
       type="button"
       onClick={onClick}
-      aria-label={collapsed ? '展开侧栏' : '收起侧栏'}
+      aria-label={collapsed ? t.sidebar.expand : t.sidebar.collapseSidebar}
       className={cn(
         'w-full flex items-center gap-2 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors',
         collapsed ? 'h-9 justify-center px-0' : 'h-9 px-3'
@@ -229,7 +263,7 @@ const CollapseToggle = memo(function CollapseToggle({ collapsed, onClick }: Coll
       ) : (
         <ChevronsLeft size={14} className="shrink-0" />
       )}
-      {!collapsed && <span>收起</span>}
+      {!collapsed && <span>{t.sidebar.collapse}</span>}
     </button>
   )
 
@@ -238,7 +272,7 @@ const CollapseToggle = memo(function CollapseToggle({ collapsed, onClick }: Coll
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent side="right" sideOffset={8} className="text-xs">
-        展开侧栏
+        {t.sidebar.expand}
       </TooltipContent>
     </Tooltip>
   )

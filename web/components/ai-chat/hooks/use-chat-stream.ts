@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from 'react'
 import type { AgentSSEEvent } from '@/lib/ai/types'
+import { useLanguage } from '@/lib/i18n/provider'
+import type { Dictionary } from '@/lib/i18n'
 import type { Message } from '../types'
 import { nowHHMM } from '../utils'
 
@@ -42,6 +44,7 @@ function applyEvent(
   event: AgentSSEEvent,
   aiMsgId: string,
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
+  t: Dictionary,
   onAssistantDone?: () => void
 ) {
   if (event.type === 'token') {
@@ -75,7 +78,7 @@ function applyEvent(
     setMessages((prev) =>
       prev.map((m) =>
         m.id === aiMsgId
-          ? { ...m, content: event.message || '抱歉，发生了错误', isStreaming: false }
+          ? { ...m, content: event.message || t.aiChat.streamError, isStreaming: false }
           : m
       )
     )
@@ -96,6 +99,7 @@ export function useChatStream({
   setMessages,
   onAssistantDone,
 }: UseChatStreamArgs): UseChatStreamResult {
+  const { t, language } = useLanguage()
   const [isTyping, setIsTyping] = useState(false)
 
   const sendMessage = useCallback(
@@ -134,11 +138,12 @@ export function useChatStream({
           body: JSON.stringify({
             message: trimmed,
             conversationId: conversationId || undefined,
+            language,
           }),
         })
 
         if (!response.ok || !response.body) {
-          throw new Error(`请求失败 (${response.status})`)
+          throw new Error(t.aiChat.requestFailed(response.status))
         }
 
         // 3. Read the SSE stream. Each "block" is terminated with \n\n.
@@ -157,7 +162,7 @@ export function useChatStream({
 
           for (const block of blocks) {
             const event = parseSSEBlock(block)
-            if (event) applyEvent(event, aiMsgId, setMessages, onAssistantDone)
+            if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone)
           }
         }
 
@@ -166,7 +171,7 @@ export function useChatStream({
         const tail = buffer.trim()
         if (tail) {
           const event = parseSSEBlock(tail)
-          if (event) applyEvent(event, aiMsgId, setMessages, onAssistantDone)
+          if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone)
         }
       } catch (error) {
         setMessages((prev) =>
@@ -177,7 +182,7 @@ export function useChatStream({
                   content:
                     error instanceof Error
                       ? error.message
-                      : '抱歉，我暂时无法回答，请稍后再试。',
+                      : t.aiChat.cantAnswer,
                   isStreaming: false,
                 }
               : m
@@ -188,7 +193,7 @@ export function useChatStream({
         setIsTyping(false)
       }
     },
-    [conversationId, isTyping, setMessages, onAssistantDone]
+    [conversationId, isTyping, setMessages, onAssistantDone, t, language]
   )
 
   return { isTyping, sendMessage }

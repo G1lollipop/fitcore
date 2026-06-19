@@ -7,6 +7,8 @@ import { deleteDietLog } from '@/app/actions/logFood'
 import { useToast } from '@/hooks/use-toast'
 import { sumMacros } from '@/lib/metrics/macros'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
+import { tError } from '@/lib/i18n'
 import { EmptyState } from '@/components/ui/empty-state'
 import type { DietLogItem } from '@/app/actions/types'
 
@@ -14,7 +16,6 @@ type MealSlot = 'breakfast' | 'lunch' | 'snack' | 'dinner' | 'lateNight'
 
 interface MealConfig {
   slot: MealSlot
-  label: string
   icon: ComponentType<{ size?: number; className?: string }>
   /** Used for the per-meal kcal pill background and timeline node. */
   accent: string
@@ -30,11 +31,11 @@ const MEAL_ORDER: readonly MealSlot[] = [
 ] as const
 
 const MEAL_CONFIG: Record<MealSlot, MealConfig> = {
-  breakfast: { slot: 'breakfast', label: '早餐', icon: Coffee, accent: 'var(--color-chart-2)' },
-  lunch: { slot: 'lunch', label: '午餐', icon: Salad, accent: 'var(--color-primary)' },
-  snack: { slot: 'snack', label: '加餐', icon: Cookie, accent: 'var(--color-accent)' },
-  dinner: { slot: 'dinner', label: '晚餐', icon: UtensilsCrossed, accent: 'var(--color-chart-3)' },
-  lateNight: { slot: 'lateNight', label: '夜宵', icon: Moon, accent: 'var(--color-chart-5)' },
+  breakfast: { slot: 'breakfast', icon: Coffee, accent: 'var(--color-chart-2)' },
+  lunch: { slot: 'lunch', icon: Salad, accent: 'var(--color-primary)' },
+  snack: { slot: 'snack', icon: Cookie, accent: 'var(--color-accent)' },
+  dinner: { slot: 'dinner', icon: UtensilsCrossed, accent: 'var(--color-chart-3)' },
+  lateNight: { slot: 'lateNight', icon: Moon, accent: 'var(--color-chart-5)' },
 }
 
 /**
@@ -56,8 +57,8 @@ function bucketByLoggedAt(iso: string): MealSlot {
   return 'lateNight' // 21:30–04:00 (wraps midnight)
 }
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('zh-CN', {
+function formatTime(iso: string, locale: string): string {
+  return new Date(iso).toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -77,6 +78,7 @@ interface MealTimelineProps {
  * then rendered as a vertical timeline. Empty buckets are hidden.
  */
 export function MealTimeline({ logs, userId, onChange, className }: MealTimelineProps) {
+  const t = useT()
   const groups = useMemo(() => {
     const buckets: Record<MealSlot, DietLogItem[]> = {
       breakfast: [],
@@ -102,8 +104,8 @@ export function MealTimeline({ logs, userId, onChange, className }: MealTimeline
     return (
       <EmptyState
         icon={UtensilsCrossed}
-        title="还没有饮食记录"
-        description="用上方输入框或 ⌘K 快速添加一条"
+        title={t.nutrition.empty.title}
+        description={t.nutrition.empty.description}
         size="inset"
         className={className}
       />
@@ -137,6 +139,7 @@ interface MealSectionProps {
 }
 
 function MealSection({ config, logs, userId, onChange, isLast }: MealSectionProps) {
+  const t = useT()
   const totals = useMemo(() => sumMacros(logs), [logs])
   const Icon = config.icon
 
@@ -167,7 +170,7 @@ function MealSection({ config, logs, userId, onChange, isLast }: MealSectionProp
       </span>
 
       <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h4 className="text-sm font-semibold text-foreground">{config.label}</h4>
+        <h4 className="text-sm font-semibold text-foreground">{t.nutrition.meals[config.slot]}</h4>
         <span
           className="rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums"
           style={{
@@ -178,7 +181,7 @@ function MealSection({ config, logs, userId, onChange, isLast }: MealSectionProp
           {totals.calories} kcal
         </span>
         <span className="text-[11px] text-muted-foreground tabular-nums">
-          蛋白 {totals.protein}g · 碳水 {totals.carbs}g · 脂肪 {totals.fat}g
+          {t.nutrition.macroLine(totals.protein, totals.carbs, totals.fat)}
         </span>
       </header>
 
@@ -208,6 +211,7 @@ interface MealRowProps {
 
 function MealRow({ log, userId, onChange, accent }: MealRowProps) {
   const { toast } = useToast()
+  const t = useT()
   const [isPending, startTransition] = useTransition()
   const [isRemoving, setIsRemoving] = useState(false)
 
@@ -220,12 +224,12 @@ function MealRow({ log, userId, onChange, accent }: MealRowProps) {
         setIsRemoving(false)
         toast({
           variant: 'destructive',
-          title: '删除失败',
-          description: result.error ?? '请稍后再试',
+          title: t.nutrition.deleteFailed,
+          description: result.error ? tError(t, result.error) : t.nutrition.tryLater,
         })
         return
       }
-      toast({ title: '已删除', description: log.food_name })
+      toast({ title: t.nutrition.deleted, description: log.food_name })
       onChange?.()
     })
   }
@@ -247,15 +251,15 @@ function MealRow({ log, userId, onChange, accent }: MealRowProps) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">{log.food_name}</p>
         <p className="text-[11px] text-muted-foreground tabular-nums">
-          {formatTime(log.logged_at)} · {log.calories} kcal · 蛋白 {log.protein}g · 碳水{' '}
-          {log.carbs}g · 脂肪 {log.fat}g
+          {formatTime(log.logged_at, t.common.locale)} · {log.calories} kcal ·{' '}
+          {t.nutrition.macroLine(log.protein, log.carbs, log.fat)}
         </p>
       </div>
       <button
         type="button"
         onClick={handleDelete}
         disabled={!userId || isPending}
-        aria-label={`删除 ${log.food_name}`}
+        aria-label={t.nutrition.deleteAria(log.food_name)}
         className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Trash2 size={14} />

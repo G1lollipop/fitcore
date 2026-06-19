@@ -6,16 +6,10 @@ import { CornerDownLeft, Sparkles, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { useQuickLog } from '@/hooks/use-quick-log'
+import { useT } from '@/lib/i18n/provider'
+import { tError, type Dictionary } from '@/lib/i18n'
 import { quickLog, type QuickLogResult } from '@/app/actions/quickLog'
 import { cn } from '@/lib/utils'
-
-const SUGGESTIONS = [
-  '鸡胸肉 200g',
-  '糙米饭 150g + 蒸蛋 2个',
-  '深蹲 4x10',
-  '跑步 30 分钟',
-  '吃了 30g 蛋白粉，做了俯卧撑 50 个',
-] as const
 
 /**
  * Floating "⌘K" command bar.
@@ -28,6 +22,7 @@ const SUGGESTIONS = [
 export function QuickLogBar() {
   const { open, setOpen, userId, onLogged } = useQuickLog()
   const { toast } = useToast()
+  const t = useT()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [text, setText] = useState('')
@@ -45,7 +40,7 @@ export function QuickLogBar() {
     const trimmed = text.trim()
     if (!trimmed) return
     if (!userId) {
-      toast({ variant: 'destructive', title: '尚未登录', description: '请先登录后再记录' })
+      toast({ variant: 'destructive', title: t.logForm.quick.notLoggedIn, description: t.logForm.quick.loginFirst })
       return
     }
 
@@ -54,28 +49,28 @@ export function QuickLogBar() {
     setOpen(false)
     setRecents((prev) => [trimmed, ...prev.filter((r) => r !== trimmed)].slice(0, 5))
 
-    const loading = toast({ title: '正在解析', description: `「${trimmed}」` })
+    const loading = toast({ title: t.logForm.quick.parsing, description: t.logForm.quick.parsingDesc(trimmed) })
 
     void (async () => {
       try {
         const res = await quickLog(trimmed)
         loading.dismiss()
         if (!res.success) {
-          toast({ variant: 'destructive', title: '记录失败', description: res.error })
+          toast({ variant: 'destructive', title: t.logForm.quick.logFailed, description: tError(t, res.error) })
           return
         }
         onLogged?.()
-        toast({ title: '已记录', description: summarizeResults(res.items) })
+        toast({ title: t.logForm.quick.logged, description: summarizeResults(res.items, t) })
       } catch (err) {
         loading.dismiss()
         toast({
           variant: 'destructive',
-          title: '记录失败',
-          description: err instanceof Error ? err.message : '请稍后再试',
+          title: t.logForm.quick.logFailed,
+          description: err instanceof Error ? err.message : t.logForm.quick.tryLater,
         })
       }
     })()
-  }, [text, userId, toast, onLogged, setOpen])
+  }, [text, userId, toast, onLogged, setOpen, t])
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -110,9 +105,9 @@ export function QuickLogBar() {
                   'overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-foreground/20'
                 )}
               >
-                <DialogPrimitive.Title className="sr-only">快捷记录</DialogPrimitive.Title>
+                <DialogPrimitive.Title className="sr-only">{t.logForm.quick.srTitle}</DialogPrimitive.Title>
 
-                <Header onClose={() => setOpen(false)} />
+                <Header onClose={() => setOpen(false)} t={t} />
 
                 <InputRow
                   inputRef={inputRef}
@@ -121,6 +116,7 @@ export function QuickLogBar() {
                   onSubmit={handleSubmit}
                   onKeyDown={onKeyDown}
                   disabled={!userId}
+                  t={t}
                 />
 
                 <Body
@@ -129,9 +125,10 @@ export function QuickLogBar() {
                     setText(s)
                     inputRef.current?.focus()
                   }}
+                  t={t}
                 />
 
-                <Footer />
+                <Footer t={t} />
               </motion.div>
             </DialogPrimitive.Content>
           </DialogPrimitive.Portal>
@@ -143,7 +140,7 @@ export function QuickLogBar() {
 
 // ─── Subcomponents ──────────────────────────────────────────────────────────
 
-function Header({ onClose }: { onClose: () => void }) {
+function Header({ onClose, t }: { onClose: () => void; t: Dictionary }) {
   return (
     <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
       <div className="flex items-center gap-2">
@@ -151,13 +148,13 @@ function Header({ onClose }: { onClose: () => void }) {
           <Sparkles size={12} />
         </span>
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Quick Log
+          {t.logForm.quick.srTitle}
         </p>
       </div>
       <button
         type="button"
         onClick={onClose}
-        aria-label="关闭"
+        aria-label={t.logForm.quick.close}
         className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
       >
         <X size={14} />
@@ -173,9 +170,10 @@ interface InputRowProps {
   onSubmit: () => void
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
   disabled?: boolean
+  t: Dictionary
 }
 
-function InputRow({ inputRef, value, onChange, onSubmit, onKeyDown, disabled }: InputRowProps) {
+function InputRow({ inputRef, value, onChange, onSubmit, onKeyDown, disabled, t }: InputRowProps) {
   return (
     <div className="relative px-4 pt-4 pb-3">
       <div
@@ -194,7 +192,7 @@ function InputRow({ inputRef, value, onChange, onSubmit, onKeyDown, disabled }: 
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
           disabled={disabled}
-          placeholder="说说你刚吃了什么 / 练了什么…  比如「鸡胸肉200g + 跑步30分钟」"
+          placeholder={t.logForm.quick.placeholder}
           className="flex-1 bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/70"
         />
         <button
@@ -208,7 +206,7 @@ function InputRow({ inputRef, value, onChange, onSubmit, onKeyDown, disabled }: 
               : 'bg-secondary text-muted-foreground'
           )}
         >
-          记录
+          {t.logForm.quick.submit}
           <CornerDownLeft size={12} />
         </button>
       </div>
@@ -219,9 +217,10 @@ function InputRow({ inputRef, value, onChange, onSubmit, onKeyDown, disabled }: 
 interface BodyProps {
   recents: string[]
   onPick: (s: string) => void
+  t: Dictionary
 }
 
-function Body({ recents, onPick }: BodyProps) {
+function Body({ recents, onPick, t }: BodyProps) {
   return (
     <div className="px-4 pb-4 min-h-[148px]">
       <motion.div
@@ -230,16 +229,16 @@ function Body({ recents, onPick }: BodyProps) {
         className="space-y-3"
       >
         {recents.length > 0 ? (
-          <Section title="最近输入">
+          <Section title={t.logForm.quick.recentTitle}>
             <ChipRow items={recents} onPick={onPick} />
           </Section>
         ) : (
-          <Section title="试试这些">
-            <ChipRow items={SUGGESTIONS as readonly string[]} onPick={onPick} />
+          <Section title={t.logForm.quick.suggestTitle}>
+            <ChipRow items={t.logForm.quick.suggestions} onPick={onPick} />
           </Section>
         )}
         <p className="pt-1 text-[11px] text-muted-foreground">
-          支持一句话同时记录饮食和训练，AI 会自动拆分。提交后可继续操作，结果稍后通过通知告知你。
+          {t.logForm.quick.hint}
         </p>
       </motion.div>
     </div>
@@ -274,19 +273,19 @@ function ChipRow({ items, onPick }: { items: readonly string[]; onPick: (s: stri
   )
 }
 
-function Footer() {
+function Footer({ t }: { t: Dictionary }) {
   return (
     <div className="flex items-center justify-between border-t border-border/60 bg-secondary/30 px-4 py-2.5 text-[11px] text-muted-foreground">
       <div className="flex items-center gap-3">
         <span className="inline-flex items-center gap-1">
-          <Kbd>↵</Kbd> 提交
+          <Kbd>↵</Kbd> {t.logForm.quick.footerSubmit}
         </span>
         <span className="inline-flex items-center gap-1">
-          <Kbd>Esc</Kbd> 关闭
+          <Kbd>Esc</Kbd> {t.logForm.quick.footerClose}
         </span>
       </div>
       <span className="hidden items-center gap-1 sm:inline-flex">
-        <Sparkles size={10} className="text-primary" /> AI 自动识别食物 / 训练
+        <Sparkles size={10} className="text-primary" /> {t.logForm.quick.footerAi}
       </span>
     </div>
   )
@@ -300,7 +299,7 @@ function Kbd({ children }: { children: React.ReactNode }) {
   )
 }
 
-function summarizeResults(items: QuickLogResult[]): string {
+function summarizeResults(items: QuickLogResult[], t: Dictionary): string {
   const parts: string[] = []
   const foods = items.filter((i): i is Extract<QuickLogResult, { kind: 'food' }> => i.kind === 'food')
   const workouts = items.filter(
@@ -308,11 +307,11 @@ function summarizeResults(items: QuickLogResult[]): string {
   )
   if (foods.length) {
     const total = foods.reduce((acc, f) => acc + f.calories, 0)
-    parts.push(`${foods.length} 项饮食 (+${total} kcal)`)
+    parts.push(t.logForm.quick.summaryFood(foods.length, total))
   }
   if (workouts.length) {
     const total = workouts.reduce((acc, w) => acc + w.caloriesBurned, 0)
-    parts.push(`${workouts.length} 项训练 (−${total} kcal)`)
+    parts.push(t.logForm.quick.summaryWorkout(workouts.length, total))
   }
   return parts.join(' · ')
 }

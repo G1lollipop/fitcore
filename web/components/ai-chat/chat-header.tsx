@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { Bot, MessageSquarePlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
 import type { ChatConversationSummary } from '@/app/actions/chat'
 import { sessionSelectLabel } from './utils'
 
@@ -38,6 +39,7 @@ export function ChatHeader({
   rightControls,
   compact = false,
 }: ChatHeaderProps) {
+  const t = useT()
   return (
     <div
       className={cn(
@@ -55,7 +57,7 @@ export function ChatHeader({
       </div>
 
       <div className={cn('flex-1 min-w-0 flex flex-col', compact ? 'gap-1' : 'gap-1.5')}>
-        <p className="text-sm font-medium text-foreground leading-none">健身助手</p>
+        <p className="text-sm font-medium text-foreground leading-none">{t.aiChat.assistant}</p>
 
         <div className="flex items-center gap-1.5 min-w-0">
           {conversationId ? (
@@ -69,17 +71,17 @@ export function ChatHeader({
                   ? 'bg-background/80 rounded-md px-1.5 py-1'
                   : 'max-w-[200px] bg-secondary rounded-lg px-2 py-1.5'
               )}
-              aria-label="切换会话"
+              aria-label={t.aiChat.switchSession}
             >
               {sessionOptions.map((c) => (
                 <option key={c.conversationId} value={c.conversationId}>
-                  {sessionSelectLabel(c, conversationId)}
+                  {sessionSelectLabel(c, conversationId, t)}
                 </option>
               ))}
             </select>
           ) : (
             <span className="text-[11px] text-muted-foreground">
-              {compact ? '加载…' : '加载会话…'}
+              {compact ? t.aiChat.loadingShort : t.aiChat.loading}
             </span>
           )}
 
@@ -93,7 +95,7 @@ export function ChatHeader({
                 ? 'p-1 rounded-md bg-background/80'
                 : 'p-2 rounded-lg bg-secondary'
             )}
-            aria-label="新建会话"
+            aria-label={t.aiChat.newSession}
           >
             <MessageSquarePlus size={compact ? 14 : 16} />
           </button>
@@ -101,7 +103,7 @@ export function ChatHeader({
 
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-          <span className="text-[10px] text-muted-foreground">在线</span>
+          <span className="text-[10px] text-muted-foreground">{t.aiChat.online}</span>
         </div>
       </div>
 

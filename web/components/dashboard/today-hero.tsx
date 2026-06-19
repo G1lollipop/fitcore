@@ -4,6 +4,7 @@ import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import { Flame, UtensilsCrossed, Timer } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
 
 interface TodayHeroProps {
   kcalIntake: number
@@ -27,8 +28,8 @@ function clamp01(v: number) {
   return v >= 1 ? 1 : v
 }
 
-function formatDate(d: Date): string {
-  return d.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
+function formatDate(d: Date, locale: string): string {
+  return d.toLocaleDateString(locale, { month: 'long', day: 'numeric', weekday: 'long' })
 }
 
 /**
@@ -60,6 +61,7 @@ export function TodayHero({
   workoutMinutes,
   className,
 }: TodayHeroProps) {
+  const t = useT()
   const intakePct = clamp01(kcalIntake / Math.max(1, kcalGoal))
   // Burn ring is sized against half of intake goal — keeps a 500 kcal burn from
   // looking trivial next to a 2500 kcal intake target.
@@ -97,7 +99,7 @@ export function TodayHero({
             Today
           </p>
           <h2 className="font-display mt-1 text-lg font-semibold text-foreground">
-            {formatDate(new Date())}
+            {formatDate(new Date(), t.common.locale)}
           </h2>
         </div>
         <span
@@ -110,7 +112,11 @@ export function TodayHero({
                 : 'bg-primary/10 text-primary'
           )}
         >
-          {overBudget ? '已超出目标' : remaining < kcalGoal * 0.1 ? '即将达成' : '能量充裕'}
+          {overBudget
+            ? t.dashboard.hero.statusOver
+            : remaining < kcalGoal * 0.1
+              ? t.dashboard.hero.statusClose
+              : t.dashboard.hero.statusOk}
         </span>
       </header>
 
@@ -170,7 +176,7 @@ export function TodayHero({
 
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              净摄入
+              {t.dashboard.hero.netIntake}
             </span>
             <span
               className={cn(
@@ -181,7 +187,9 @@ export function TodayHero({
               {displayNet}
             </span>
             <span className="mt-1 text-[11px] text-muted-foreground">
-              {overBudget ? `超 ${displayNet - kcalGoal} kcal` : `还剩 ${Math.max(0, kcalGoal - displayNet)} kcal`}
+              {overBudget
+                ? t.dashboard.hero.over(displayNet - kcalGoal)
+                : t.dashboard.hero.remaining(Math.max(0, kcalGoal - displayNet))}
             </span>
           </div>
         </div>
@@ -190,26 +198,26 @@ export function TodayHero({
           <Stat
             tone="primary"
             icon={<UtensilsCrossed size={14} />}
-            label="今日摄入"
+            label={t.dashboard.hero.todayIntake}
             value={displayIntake}
             unit="kcal"
-            sub={`目标 ${kcalGoal} kcal`}
+            sub={t.dashboard.hero.goalKcal(kcalGoal)}
           />
           <Stat
             tone="accent"
             icon={<Flame size={14} />}
-            label="今日消耗"
+            label={t.dashboard.hero.todayBurn}
             value={displayBurn}
             unit="kcal"
-            sub="运动 + 基础代谢"
+            sub={t.dashboard.hero.burnSub}
           />
           <Stat
             tone="muted"
             icon={<Timer size={14} />}
-            label="训练时长"
+            label={t.dashboard.hero.workoutDuration}
             value={displayMinutes}
-            unit="分钟"
-            sub={workoutMinutes > 0 ? '已完成今日训练' : '尚未开始'}
+            unit={t.common.minutes}
+            sub={workoutMinutes > 0 ? t.dashboard.hero.workoutDone : t.dashboard.hero.workoutNotStarted}
           />
         </div>
       </div>

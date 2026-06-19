@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
+import { ActionError } from '@/lib/errors';
 import { calculateTodayWorkout, type PlanInput } from '@/lib/plans/today-workout';
 import type {
   DashboardData,
@@ -150,7 +151,7 @@ export async function logWater(
   if (!a.ok) return a.result;
   const userId = a.userId;
   if (amountMl <= 0) {
-    return { success: false, error: '缺少必要参数' };
+    return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
   const today = getTodayDate();
@@ -167,7 +168,7 @@ export async function logWater(
 
   if (queryError && queryError.code !== 'PGRST116') {
     console.error('[logWater] Query error:', JSON.stringify(queryError, null, 2));
-    return { success: false, error: `查询数据库失败: ${queryError.message}` };
+    return { success: false, error: ActionError.DB_QUERY_FAILED };
   }
 
   if (existingRecord) {
@@ -182,7 +183,7 @@ export async function logWater(
 
     if (updateError) {
       console.error('[logWater] Update error:', JSON.stringify(updateError, null, 2));
-      return { success: false, error: `更新记录失败: ${updateError.message}` };
+      return { success: false, error: ActionError.DB_UPDATE_FAILED };
     }
 
     revalidatePath('/');
@@ -211,7 +212,7 @@ export async function logWater(
 
     if (insertError) {
       console.error('[logWater] Insert error:', JSON.stringify(insertError, null, 2));
-      return { success: false, error: `创建记录失败: ${insertError.message}` };
+      return { success: false, error: ActionError.DB_INSERT_FAILED };
     }
 
     revalidatePath('/');

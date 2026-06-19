@@ -10,6 +10,7 @@ import {
   nutritionRecommendationSchema,
   firstZodError,
 } from '@/lib/validation/schemas';
+import { ActionError } from '@/lib/errors';
 
 type UserSettingsInsert = Database['public']['Tables']['user_settings']['Insert'];
 
@@ -45,6 +46,13 @@ const ACTIVITY_LABELS = {
   heavy: '重度活动（每周运动6-7天）',
 };
 
+const ACTIVITY_LABELS_EN = {
+  sedentary: 'Sedentary (little to no exercise)',
+  light: 'Lightly active (exercise 1-3 days/week)',
+  moderate: 'Moderately active (exercise 3-5 days/week)',
+  heavy: 'Very active (exercise 6-7 days/week)',
+};
+
 function calculateBMR(gender: 'male' | 'female', age: number, height: number, weight: number): number {
   if (gender === 'male') {
     return 10 * weight + 6.25 * height - 5 * age + 5;
@@ -65,28 +73,43 @@ function calculateMacros(tdee: number): { protein: number; carbs: number; fat: n
 }
 
 export async function calculateNutritionRecommendation(
-  data: OnboardingData
+  data: OnboardingData,
+  language: 'zh' | 'en' = 'zh'
 ): Promise<{ success: boolean; recommendation?: NutritionRecommendation; error?: string }> {
   const parsed = onboardingDataSchema.safeParse(data);
   if (!parsed.success) {
     return { success: false, error: firstZodError(parsed.error) };
   }
+  const isEn = language === 'en';
   try {
     const bmr = calculateBMR(data.gender, data.age, data.height, data.weight);
     const tdee = calculateTDEE(bmr, data.activityLevel);
     const macros = calculateMacros(tdee);
 
-    const genderText = data.gender === 'male' ? '男性' : '女性';
-    const activityText = ACTIVITY_LABELS[data.activityLevel];
+    const prompt = isEn
+      ? `You are a professional nutritionist and fitness coach. Based on the user info below, give a short (under 60 words) personalized nutrition tip.
 
-    const prompt = `你是一位专业的营养师和健身教练。请根据以下用户信息，给出一段简短（100字以内）的个性化营养建议。
+User info:
+- Gender: ${data.gender === 'male' ? 'Male' : 'Female'}
+- Age: ${data.age}
+- Height: ${data.height} cm
+- Weight: ${data.weight} kg
+- Activity level: ${ACTIVITY_LABELS_EN[data.activityLevel]}
+- BMR: ${Math.round(bmr)} kcal
+- TDEE: ${tdee} kcal
+
+Requirements:
+1. Concise and friendly, in English
+2. You may include a small fitness tip or encouragement
+3. Don't restate the numbers — give advice directly`
+      : `你是一位专业的营养师和健身教练。请根据以下用户信息，给出一段简短（100字以内）的个性化营养建议。
 
 用户信息：
-- 性别：${genderText}
+- 性别：${data.gender === 'male' ? '男性' : '女性'}
 - 年龄：${data.age}岁
 - 身高：${data.height}cm
 - 体重：${data.weight}kg
-- 活动水平：${activityText}
+- 活动水平：${ACTIVITY_LABELS[data.activityLevel]}
 - 基础代谢率(BMR)：${Math.round(bmr)} kcal
 - 每日总能量消耗(TDEE)：${tdee} kcal
 
@@ -102,7 +125,11 @@ export async function calculateNutritionRecommendation(
       max_tokens: 200,
     });
 
-    const aiAdvice = response.choices[0]?.message?.content || '保持健康的生活方式，均衡饮食，适量运动！';
+    const aiAdvice =
+      response.choices[0]?.message?.content ||
+      (isEn
+        ? 'Maintain a healthy lifestyle with balanced nutrition and regular exercise!'
+        : '保持健康的生活方式，均衡饮食，适量运动！');
 
     return {
       success: true,
@@ -131,7 +158,9 @@ export async function calculateNutritionRecommendation(
         targetFat: macros.fat,
         bmr: Math.round(bmr),
         tdee,
-        aiAdvice: '根据您的身体数据，我们为您制定了个性化的营养目标。坚持记录，保持健康！',
+        aiAdvice: isEn
+          ? 'Based on your body data, we tailored personalized nutrition goals for you. Keep logging and stay healthy!'
+          : '根据您的身体数据，我们为您制定了个性化的营养目标。坚持记录，保持健康！',
       },
     };
   }
@@ -174,13 +203,13 @@ export async function saveOnboardingData(
 
     if (error) {
       console.error('[saveOnboardingData] Supabase error:', error);
-      return { success: false, error: `保存失败: ${error.message}` };
+      return { success: false, error: ActionError.SAVE_FAILED };
     }
 
     return { success: true };
   } catch (error) {
     console.error('[saveOnboardingData] Error:', error);
-    return { success: false, error: '保存数据时发生错误' };
+    return { success: false, error: ActionError.SAVE_FAILED };
   }
 }
 

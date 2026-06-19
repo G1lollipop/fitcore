@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useT } from "@/lib/i18n/provider"
 import { getWorkoutHistory } from "@/app/actions/history"
 import {
   summarizeMonth,
@@ -20,6 +21,7 @@ interface TrainingHistoryProps {
 const TODAY_ISO = new Date().toISOString().split('T')[0]
 
 export function TrainingHistory({ userId, onLogSuccess }: TrainingHistoryProps) {
+  const t = useT()
   const [selectedMonth, setSelectedMonth] = useState(new Date())
   const [workoutData, setWorkoutData] = useState<Record<string, WorkoutLogItem[]>>({})
   const [loading, setLoading] = useState(true)
@@ -40,7 +42,7 @@ export function TrainingHistory({ userId, onLogSuccess }: TrainingHistoryProps) 
       const grouped = await getWorkoutHistory(startStr, endStr)
       setWorkoutData(grouped)
     } catch (error) {
-      console.error('加载训练数据失败:', error)
+      console.error('Failed to load workout data:', error)
     } finally {
       setLoading(false)
     }
@@ -102,9 +104,9 @@ export function TrainingHistory({ userId, onLogSuccess }: TrainingHistoryProps) 
             onClick={() => handleSelectDate(TODAY_ISO)}
             className="w-full rounded-2xl border border-dashed border-border bg-card/40 px-5 py-4 text-left text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-card hover:text-foreground"
           >
-            今日记录 →
+            {t.training.todayRecord}
             <span className="ml-2 text-xs text-muted-foreground">
-              点击打开右侧抽屉，添加或查看今日训练
+              {t.training.todayRecordHint}
             </span>
           </button>
         </>

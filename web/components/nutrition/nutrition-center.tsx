@@ -8,6 +8,8 @@ import { getNutritionByDate } from "@/app/actions/history"
 import { useToast } from "@/hooks/use-toast"
 import { sumMacros } from "@/lib/metrics/macros"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n/provider"
+import { tError, type Dictionary } from "@/lib/i18n"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MealTimeline } from "./meal-timeline"
 import { RadialMacroChart } from "./radial-macro-chart"
@@ -27,6 +29,7 @@ const DEFAULT_GOALS: { calories: number; protein: number; carbs: number; fat: nu
 
 export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) {
   const { toast } = useToast()
+  const t = useT()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [dietData, setDietData] = useState<DietLogItem[]>([])
   const [goals, setGoals] = useState({ ...DEFAULT_GOALS })
@@ -50,7 +53,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
       setGoals(nextGoals)
       setDietData(dietLogs)
     } catch (error) {
-      console.error('加载饮食数据失败:', error)
+      console.error('Failed to load nutrition data:', error)
     } finally {
       setLoading(false)
     }
@@ -76,13 +79,13 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
       if (result.success) {
         await loadDietData()
         setInputText("")
-        toast({ title: "记录成功", description: `已添加: ${result.data?.food_name}` })
+        toast({ title: t.nutrition.logSuccess, description: t.nutrition.added(result.data?.food_name ?? "") })
         onLogSuccess?.()
       } else {
-        toast({ variant: "destructive", title: "记录失败", description: result.error })
+        toast({ variant: "destructive", title: t.nutrition.logFailed, description: tError(t, result.error) })
       }
     } catch (error) {
-      console.error('添加饮食失败:', error)
+      console.error('Failed to add food:', error)
     } finally {
       setIsSubmitting(false)
     }
@@ -103,14 +106,14 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
           <button
             type="button"
             onClick={handlePrevDay}
-            aria-label="前一天"
+            aria-label={t.nutrition.prevDay}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <ChevronLeft size={18} />
           </button>
           <div className="min-w-[10rem] rounded-xl bg-secondary/60 px-4 py-2 text-center">
             <p className="text-sm font-medium text-foreground tabular-nums">
-              {selectedDate.toLocaleDateString('zh-CN', {
+              {selectedDate.toLocaleDateString(t.common.locale, {
                 month: 'long',
                 day: 'numeric',
                 weekday: 'long',
@@ -121,7 +124,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
             type="button"
             onClick={handleNextDay}
             disabled={isFuture}
-            aria-label="后一天"
+            aria-label={t.nutrition.nextDay}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
           >
             <ChevronRight size={18} />
@@ -133,7 +136,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
             onClick={() => setSelectedDate(new Date())}
             className="text-xs font-medium text-primary hover:underline"
           >
-            返回今天
+            {t.nutrition.backToToday}
           </button>
         )}
       </div>
@@ -150,7 +153,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
           >
             <header className="mb-4 flex items-baseline justify-between">
               <h3 className="font-display text-base font-semibold text-foreground">
-                营养摄入
+                {t.nutrition.intakeTitle}
               </h3>
               <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 Macros
@@ -167,7 +170,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
           >
             <header className="mb-4 flex items-baseline justify-between">
               <h3 className="font-display text-base font-semibold text-foreground">
-                饮食时间线
+                {t.nutrition.timelineTitle}
               </h3>
               <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 Today
@@ -175,6 +178,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
             </header>
 
             <AddFoodInput
+              t={t}
               value={inputText}
               onChange={setInputText}
               onSubmit={handleAddFood}
@@ -203,6 +207,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
 }
 
 interface AddFoodInputProps {
+  t: Dictionary
   value: string
   onChange: (v: string) => void
   onSubmit: () => void
@@ -210,7 +215,7 @@ interface AddFoodInputProps {
   disabled?: boolean
 }
 
-function AddFoodInput({ value, onChange, onSubmit, isSubmitting, disabled }: AddFoodInputProps) {
+function AddFoodInput({ t, value, onChange, onSubmit, isSubmitting, disabled }: AddFoodInputProps) {
   return (
     <div
       className={cn(
@@ -224,7 +229,7 @@ function AddFoodInput({ value, onChange, onSubmit, isSubmitting, disabled }: Add
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
-        placeholder={disabled ? '历史记录暂不可编辑' : '例：鸡胸肉 200g、糙米饭一碗…'}
+        placeholder={disabled ? t.nutrition.addInput.disabledPlaceholder : t.nutrition.addInput.placeholder}
         disabled={isSubmitting || disabled}
         className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed"
       />
@@ -234,7 +239,7 @@ function AddFoodInput({ value, onChange, onSubmit, isSubmitting, disabled }: Add
         disabled={isSubmitting || disabled || !value.trim()}
         className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSubmitting ? '解析中…' : '添加'}
+        {isSubmitting ? t.nutrition.addInput.parsing : t.common.add}
       </button>
     </div>
   )

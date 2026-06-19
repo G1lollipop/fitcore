@@ -12,25 +12,27 @@ import {
   loadOrCreateConversationId,
   persistConversationId,
 } from '@/lib/ai/conversation-id'
+import { useT } from '@/lib/i18n/provider'
+import type { Dictionary } from '@/lib/i18n'
 import type { Message } from '../types'
 import { nowHHMM } from '../utils'
 
 /** Initial assistant greeting shown for fresh conversations. */
-function welcomeMessage(): Message {
+function welcomeMessage(t: Dictionary): Message {
   return {
     id: '0',
     role: 'assistant',
-    content: '你好！有关饮食、训练或健身计划的问题，随时问我。',
+    content: t.aiChat.welcome,
     timestamp: nowHHMM(),
   }
 }
 
 /** Message shown right after the user clears their conversation. */
-function clearedMessage(): Message {
+function clearedMessage(t: Dictionary): Message {
   return {
     id: '0',
     role: 'assistant',
-    content: '当前会话已清除。有什么新问题想问我吗？',
+    content: t.aiChat.cleared,
     timestamp: nowHHMM(),
   }
 }
@@ -57,6 +59,7 @@ export interface UseConversationsResult {
  * have to know how any of this works.
  */
 export function useConversations(userId: string): UseConversationsResult {
+  const t = useT()
   const [conversationId, setConversationId] = useState('')
   const [conversations, setConversations] = useState<ChatConversationSummary[]>([])
   const [messages, setMessages] = useState<Message[]>([])
@@ -82,11 +85,11 @@ export function useConversations(userId: string): UseConversationsResult {
           }))
         )
       } else {
-        setMessages([welcomeMessage()])
+        setMessages([welcomeMessage(t)])
       }
       setIsLoadingHistory(false)
     },
-    []
+    [t]
   )
 
   // Initial mount: pull the persisted conversation id, load history,
@@ -110,11 +113,11 @@ export function useConversations(userId: string): UseConversationsResult {
       base.unshift({
         conversationId,
         lastAt: new Date().toISOString(),
-        preview: '（当前新会话）',
+        preview: t.aiChat.newSessionPreview,
       })
     }
     return base
-  }, [conversations, conversationId])
+  }, [conversations, conversationId, t])
 
   const switchConversation = useCallback(
     (cid: string) => {
@@ -131,13 +134,13 @@ export function useConversations(userId: string): UseConversationsResult {
     const next = createConversationId(userId)
     persistConversationId(userId, next)
     setConversationId(next)
-    setMessages([welcomeMessage()])
+    setMessages([welcomeMessage(t)])
     void refreshSummaries()
-  }, [userId, refreshSummaries])
+  }, [userId, refreshSummaries, t])
 
   const clearHistory = useCallback(async () => {
     if (!conversationId) return
-    if (!confirm('确定清除当前会话的所有消息？')) return
+    if (!confirm(t.aiChat.confirmClear)) return
 
     const result = await clearChatHistory(conversationId)
     if (!result.success) return
@@ -145,9 +148,9 @@ export function useConversations(userId: string): UseConversationsResult {
     const next = createConversationId(userId)
     persistConversationId(userId, next)
     setConversationId(next)
-    setMessages([clearedMessage()])
+    setMessages([clearedMessage(t)])
     void refreshSummaries()
-  }, [userId, conversationId, refreshSummaries])
+  }, [userId, conversationId, refreshSummaries, t])
 
   return {
     conversationId,

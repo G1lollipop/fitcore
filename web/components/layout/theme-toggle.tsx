@@ -4,6 +4,7 @@ import { memo, useEffect, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
 
 interface ThemeToggleProps {
   className?: string
@@ -16,6 +17,7 @@ interface ThemeToggleProps {
  */
 export const ThemeToggle = memo(function ThemeToggle({ className }: ThemeToggleProps) {
   const { resolvedTheme, setTheme } = useTheme()
+  const t = useT()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
@@ -25,14 +27,14 @@ export const ThemeToggle = memo(function ThemeToggle({ className }: ThemeToggleP
     <button
       type="button"
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      aria-label={isDark ? '切换到浅色' : '切换到深色'}
+      aria-label={isDark ? t.theme.toLight : t.theme.toDark}
       className={cn(
         'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary',
         className
       )}
     >
       {/* Reserve box even before mount to avoid layout shift / flash. */}
-      <span className="sr-only">切换主题</span>
+      <span className="sr-only">{t.theme.toggle}</span>
       {mounted ? (
         isDark ? (
           <Sun size={16} />

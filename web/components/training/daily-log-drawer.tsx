@@ -14,10 +14,11 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import {
   classifyMuscleGroup,
-  muscleLabel,
   type MuscleGroup,
 } from '@/lib/training/calendar'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
+import { tError, type Dictionary } from '@/lib/i18n'
 import { EmptyState } from '@/components/ui/empty-state'
 import type { WorkoutLogItem } from '@/app/actions/types'
 
@@ -43,19 +44,22 @@ const MUSCLE_BADGE_COLOR: Record<MuscleGroup, string> = {
   other: 'var(--color-muted-foreground)',
 }
 
-function formatHeading(dateStr: string | null): {
+function formatHeading(
+  dateStr: string | null,
+  t: Dictionary
+): {
   title: string
   description: string
 } {
   if (!dateStr) return { title: '', description: '' }
   const d = new Date(`${dateStr}T00:00:00`)
   const isToday = dateStr === TODAY_ISO
-  const title = d.toLocaleDateString('zh-CN', {
+  const title = d.toLocaleDateString(t.common.locale, {
     month: 'long',
     day: 'numeric',
     weekday: 'long',
   })
-  const description = isToday ? '今日训练 · 可添加或删除' : '历史记录 · 仅查看'
+  const description = isToday ? t.training.drawer.todayDesc : t.training.drawer.historyDesc
   return { title, description }
 }
 
@@ -73,12 +77,13 @@ export function DailyLogDrawer({
   onChange,
 }: DailyLogDrawerProps) {
   const { toast } = useToast()
+  const t = useT()
   const [inputText, setInputText] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isToday = dateStr === TODAY_ISO
   const canEdit = isToday && !!userId
-  const { title, description } = formatHeading(dateStr)
+  const { title, description } = formatHeading(dateStr, t)
 
   const totals = useMemo(() => {
     return logs.reduce(
@@ -98,16 +103,16 @@ export function DailyLogDrawer({
       const result = await logWorkout(inputText)
       if (result.success) {
         toast({
-          title: '记录成功',
-          description: `已添加: ${result.data?.workout_name}`,
+          title: t.training.drawer.logSuccess,
+          description: t.training.drawer.added(result.data?.workout_name ?? ''),
         })
         setInputText('')
         onChange?.()
       } else {
         toast({
           variant: 'destructive',
-          title: '记录失败',
-          description: result.error,
+          title: t.training.drawer.logFailed,
+          description: tError(t, result.error),
         })
       }
     } finally {
@@ -138,17 +143,17 @@ export function DailyLogDrawer({
             <div className="mt-3 grid grid-cols-3 gap-2">
               <SummaryStat
                 icon={<Dumbbell size={12} />}
-                label="次数"
+                label={t.training.drawer.sessions}
                 value={`${totals.sessions}`}
               />
               <SummaryStat
                 icon={<Clock size={12} />}
-                label="时长"
-                value={`${totals.minutes} 分`}
+                label={t.training.drawer.duration}
+                value={t.training.drawer.minutesValue(totals.minutes)}
               />
               <SummaryStat
                 icon={<Flame size={12} />}
-                label="消耗"
+                label={t.training.drawer.burned}
                 value={`${totals.kcal} kcal`}
               />
             </div>
@@ -164,7 +169,7 @@ export function DailyLogDrawer({
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                placeholder="例：深蹲 5 组 × 10 个、慢跑 30 分钟…"
+                placeholder={t.training.drawer.placeholder}
                 disabled={isSubmitting}
                 className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
               />
@@ -174,7 +179,7 @@ export function DailyLogDrawer({
                 disabled={isSubmitting || !inputText.trim()}
                 className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSubmitting ? '解析中…' : '添加'}
+                {isSubmitting ? t.training.drawer.parsing : t.common.add}
               </button>
             </div>
           )}
@@ -182,8 +187,8 @@ export function DailyLogDrawer({
           {logs.length === 0 ? (
             <EmptyState
               icon={Dumbbell}
-              title={isToday ? '今天还没有训练记录' : '该日无训练记录'}
-              description={isToday ? '在上方输入或用 ⌘K 快速记录' : undefined}
+              title={isToday ? t.training.drawer.emptyTodayTitle : t.training.drawer.emptyOtherTitle}
+              description={isToday ? t.training.drawer.emptyTodayDesc : undefined}
               size="inset"
             />
           ) : (
@@ -238,6 +243,7 @@ interface WorkoutRowProps {
 
 function WorkoutRow({ log, canDelete, userId, onChange }: WorkoutRowProps) {
   const { toast } = useToast()
+  const t = useT()
   const [isPending, startTransition] = useTransition()
   const [isRemoving, setIsRemoving] = useState(false)
 
@@ -253,12 +259,12 @@ function WorkoutRow({ log, canDelete, userId, onChange }: WorkoutRowProps) {
         setIsRemoving(false)
         toast({
           variant: 'destructive',
-          title: '删除失败',
-          description: result.error ?? '请稍后再试',
+          title: t.training.drawer.deleteFailed,
+          description: result.error ? tError(t, result.error) : t.training.drawer.tryLater,
         })
         return
       }
-      toast({ title: '已删除', description: log.workout_name })
+      toast({ title: t.training.drawer.deleted, description: log.workout_name })
       onChange?.()
     })
   }
@@ -294,20 +300,20 @@ function WorkoutRow({ log, canDelete, userId, onChange }: WorkoutRowProps) {
               color: accent,
             }}
           >
-            {muscleLabel(group)}
+            {t.training.muscles[group]}
           </span>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground tabular-nums">
           {log.sets ? (
             <span className="inline-flex items-center gap-1">
               <Target size={10} />
-              {log.sets} 组
+              {t.training.drawer.sets(log.sets)}
             </span>
           ) : null}
           {log.duration_minutes ? (
             <span className="inline-flex items-center gap-1">
               <Clock size={10} />
-              {log.duration_minutes} 分
+              {t.training.drawer.minutesValue(log.duration_minutes)}
             </span>
           ) : null}
           {log.calories_burned ? (
@@ -318,7 +324,7 @@ function WorkoutRow({ log, canDelete, userId, onChange }: WorkoutRowProps) {
           ) : null}
           {log.logged_at && (
             <span className="text-muted-foreground/70">
-              {new Date(log.logged_at).toLocaleTimeString('zh-CN', {
+              {new Date(log.logged_at).toLocaleTimeString(t.common.locale, {
                 hour: '2-digit',
                 minute: '2-digit',
               })}
@@ -331,7 +337,7 @@ function WorkoutRow({ log, canDelete, userId, onChange }: WorkoutRowProps) {
           type="button"
           onClick={handleDelete}
           disabled={isPending}
-          aria-label={`删除 ${log.workout_name}`}
+          aria-label={t.training.drawer.deleteAria(log.workout_name)}
           className={cn(
             'flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50'
           )}

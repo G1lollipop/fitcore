@@ -1,21 +1,26 @@
-import { auth } from '@clerk/nextjs/server';
+import { createAuthServerClient } from '@/lib/supabase/server';
 
 /**
  * Server-only auth guard for Server Actions.
  *
- * Returns the Clerk-authenticated user id, deriving it from the request session
- * rather than trusting a client-supplied value. Throws `UNAUTHORIZED` when there
- * is no signed-in user so callers can map it to a uniform failure response.
+ * Returns the Supabase-authenticated user id (a UUID), deriving it from the
+ * request session cookie rather than trusting a client-supplied value. Throws
+ * `UNAUTHORIZED` when there is no signed-in user so callers can map it to a
+ * uniform failure response.
  *
- * Never accept `userId` from the client and pass it to the database — always
- * resolve identity here.
+ * `getUser()` revalidates the JWT against Supabase Auth on each call, so the
+ * returned id is trustworthy. Never accept `userId` from the client and pass it
+ * to the database — always resolve identity here.
  */
 export async function requireUserId(): Promise<string> {
-  const { userId } = await auth();
-  if (!userId) {
+  const supabase = await createAuthServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
     throw new Error('UNAUTHORIZED');
   }
-  return userId;
+  return user.id;
 }
 
 /**

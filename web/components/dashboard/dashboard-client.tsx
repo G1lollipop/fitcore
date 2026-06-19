@@ -13,6 +13,8 @@ import { NutritionCenter } from '@/components/nutrition/nutrition-center'
 import { TrainingHistory } from '@/components/training/training-history'
 import { getDashboardData } from '@/app/actions/dashboard'
 import type { DashboardData } from '@/app/actions/types'
+import { useT } from '@/lib/i18n/provider'
+import type { Dictionary } from '@/lib/i18n'
 
 /**
  * AI chat is opened on demand — defer its bundle until after first paint.
@@ -35,14 +37,14 @@ const MealPhotoUpload = dynamic(
   { ssr: false }
 )
 
-function getGreeting(): string {
+function getGreeting(t: Dictionary): string {
   const hour = new Date().getHours()
-  if (hour < 6) return '夜深了'
-  if (hour < 12) return '早上好'
-  if (hour < 14) return '中午好'
-  if (hour < 18) return '下午好'
-  if (hour < 22) return '晚上好'
-  return '夜深了'
+  if (hour < 6) return t.greeting.lateNight
+  if (hour < 12) return t.greeting.morning
+  if (hour < 14) return t.greeting.noon
+  if (hour < 18) return t.greeting.afternoon
+  if (hour < 22) return t.greeting.evening
+  return t.greeting.lateNight
 }
 
 interface DashboardClientProps {
@@ -64,6 +66,7 @@ export function DashboardClient({
   userName,
   initialDashboardData,
 }: DashboardClientProps) {
+  const t = useT()
   const [activeNav, setActiveNav] = useState('dashboard')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     initialDashboardData
@@ -71,11 +74,16 @@ export function DashboardClient({
   const [, startTransition] = useTransition()
 
   // Greeting is computed once per render; that's fine — it's pure and cheap.
-  const greeting = getGreeting()
+  const greeting = getGreeting(t)
 
-  // Page title is derived from the shared NAV_ITEMS source, eliminating the
-  // duplicate Record map that previously lived here.
-  const pageTitle = useMemo(() => findNavItem(activeNav)?.label ?? '', [activeNav])
+  // Page title is derived from the shared NAV_ITEMS source via the active
+  // dictionary, eliminating the duplicate Record map that lived here.
+  const pageTitle = useMemo(() => {
+    const item = findNavItem(activeNav)
+    return item ? t.nav[item.labelKey] : ''
+  }, [activeNav, t])
+
+  const displayName = userName || t.greeting.defaultUserName
 
   const refreshDashboardData = useCallback(() => {
     startTransition(async () => {
@@ -83,7 +91,7 @@ export function DashboardClient({
         const data = await getDashboardData()
         setDashboardData(data)
       } catch (error) {
-        console.error('获取仪表盘数据失败:', error)
+        console.error('Failed to refresh dashboard data:', error)
       }
     })
   }, [])
@@ -98,7 +106,7 @@ export function DashboardClient({
       onNavChange={setActiveNav}
       pageTitle={pageTitle}
       greeting={greeting}
-      userName={userName}
+      userName={displayName}
       userId={userId}
       onQuickLogged={handleLogSuccess}
       overlay={
@@ -145,7 +153,7 @@ export function DashboardClient({
         <TrainingHistory userId={userId} onLogSuccess={handleLogSuccess} />
       )}
 
-      {activeNav === 'plans' && <MyPlans />}
+      {activeNav === 'plans' && <MyPlans userId={userId} />}
 
       {activeNav === 'knowledge' && <KnowledgeBase />}
     </AppShell>
@@ -154,10 +162,13 @@ export function DashboardClient({
 
 /** Tiny placeholder — replaced by a real KB view in a later phase step. */
 function KnowledgeBase() {
+  const t = useT()
   return (
     <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-      <h2 className="font-display text-base font-semibold text-foreground mb-2">知识库</h2>
-      <p className="text-sm text-muted-foreground">功能开发中，敬请期待。</p>
+      <h2 className="font-display text-base font-semibold text-foreground mb-2">
+        {t.knowledge.title}
+      </h2>
+      <p className="text-sm text-muted-foreground">{t.knowledge.comingSoon}</p>
     </div>
   )
 }

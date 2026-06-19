@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { ChevronDown, Loader2, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, type RefObject } from 'react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
 import type { ChatConversationSummary } from '@/app/actions/chat'
 import { ChatBody } from './chat-body'
 import { ChatHeader } from './chat-header'
@@ -85,6 +86,7 @@ function MobileSheet({
   bottomRef,
   inputRef,
 }: VariantProps) {
+  const t = useT()
   return (
     <motion.div
       key="ai-chat-mobile"
@@ -105,12 +107,12 @@ function MobileSheet({
           <>
             <IconButton
               onClick={onClearHistory}
-              ariaLabel="清除当前会话"
+              ariaLabel={t.aiChat.clearSession}
               tone="destructive"
             >
               <Trash2 size={16} />
             </IconButton>
-            <IconButton onClick={onClose} ariaLabel="关闭聊天">
+            <IconButton onClick={onClose} ariaLabel={t.aiChat.closeChat}>
               <ChevronDown size={16} />
             </IconButton>
           </>
@@ -151,11 +153,12 @@ function DesktopDock({
   bottomRef,
   inputRef,
 }: VariantProps) {
+  const t = useT()
   return (
     <motion.aside
       key="ai-chat-desktop"
       role="complementary"
-      aria-label="AI 教练"
+      aria-label={t.aiChat.coach}
       initial={{ x: '100%', opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '100%', opacity: 0 }}
@@ -176,12 +179,12 @@ function DesktopDock({
           <div className="flex items-center gap-1">
             <IconButton
               onClick={onClearHistory}
-              ariaLabel="清除当前会话"
+              ariaLabel={t.aiChat.clearSession}
               tone="destructive"
             >
               <Trash2 size={14} />
             </IconButton>
-            <IconButton onClick={onClose} ariaLabel="关闭">
+            <IconButton onClick={onClose} ariaLabel={t.aiChat.close}>
               <X size={14} />
             </IconButton>
           </div>

@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { createAuthServerClient } from '@/lib/supabase/server'
 import { DashboardClient } from '@/components/dashboard/dashboard-client'
 import { getDashboardData } from '@/app/actions/dashboard'
+import { resolveDisplayName } from '@/lib/auth/display-name'
 
 /**
  * Home is a server component: it resolves auth and fetches the dashboard
@@ -10,17 +11,21 @@ import { getDashboardData } from '@/app/actions/dashboard'
  * widgets) lives in the `DashboardClient` child.
  */
 export default async function DashboardPage() {
-  const { userId } = await auth()
-  if (!userId) {
+  const supabase = await createAuthServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
     redirect('/sign-in')
   }
 
-  const [dashboardData, user] = await Promise.all([getDashboardData(), currentUser()])
-  const userName = user?.firstName || user?.fullName || '用户'
+  const dashboardData = await getDashboardData()
+  // Fall back to a localized default in the client (DashboardClient) when empty.
+  const userName = resolveDisplayName(user)
 
   return (
     <DashboardClient
-      userId={userId}
+      userId={user.id}
       userName={userName}
       initialDashboardData={dashboardData}
     />

@@ -4,7 +4,8 @@ import { motion } from 'framer-motion'
 import { CornerDownLeft } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { cn } from '@/lib/utils'
-import { filterSlashCommands, type SlashCommand } from './types'
+import { useT } from '@/lib/i18n/provider'
+import { buildSlashCommands, filterSlashCommands, type SlashCommand } from './types'
 
 interface SlashMenuProps {
   /** Current input value — used to filter the command list. */
@@ -31,7 +32,9 @@ export function SlashMenu({
   onSelect,
   onClose,
 }: SlashMenuProps) {
-  const filtered = useMemo(() => filterSlashCommands(query), [query])
+  const t = useT()
+  const commands = useMemo(() => buildSlashCommands(t), [t])
+  const filtered = useMemo(() => filterSlashCommands(query, commands), [query, commands])
 
   // Whenever the filter changes, clamp the highlight back into range so
   // the parent doesn't have to do it.
@@ -43,7 +46,7 @@ export function SlashMenu({
   if (filtered.length === 0) {
     return (
       <div className="rounded-2xl border border-border bg-card/95 px-3 py-2 text-[11px] text-muted-foreground shadow-lg backdrop-blur">
-        没有匹配的命令 · 按 Esc 关闭
+        {t.aiChat.noMatchCommands}
       </div>
     )
   }
@@ -51,7 +54,7 @@ export function SlashMenu({
   return (
     <motion.div
       role="listbox"
-      aria-label="Slash 命令"
+      aria-label={t.aiChat.slashAria}
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 6 }}
@@ -59,7 +62,7 @@ export function SlashMenu({
       className="overflow-hidden rounded-2xl border border-border bg-card/95 shadow-lg backdrop-blur"
     >
       <div className="border-b border-border/70 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        Slash 命令
+        {t.aiChat.slashTitle}
       </div>
       <ul className="max-h-64 overflow-y-auto p-1">
         {filtered.map((cmd, idx) => {
@@ -113,7 +116,7 @@ export function SlashMenu({
         })}
       </ul>
       <div className="border-t border-border/70 px-3 py-1.5 text-[10px] text-muted-foreground">
-        ↑↓ 选择 · Enter 插入 · Esc 关闭
+        {t.aiChat.slashHint}
       </div>
     </motion.div>
   )

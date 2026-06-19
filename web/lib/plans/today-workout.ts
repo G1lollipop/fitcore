@@ -25,7 +25,7 @@ export interface PlanExerciseRow {
   target_reps_min?: number | null
   target_reps_max?: number | null
   target_weight_kg?: number | null
-  exercises?: { name?: string | null } | null
+  exercises?: { name?: string | null; name_en?: string | null } | null
 }
 
 export interface WorkoutDayRow {
@@ -45,6 +45,7 @@ export interface TodayWorkoutExercise {
   id: string
   text: string
   exerciseName?: string
+  exerciseNameEn?: string
   sets?: number | null
   repsMin?: number | null
   repsMax?: number | null
@@ -89,6 +90,7 @@ function mapExercises(day: WorkoutDayRow | null | undefined): TodayWorkoutExerci
     id: pe.id,
     text: formatExerciseText(pe),
     exerciseName: pe.exercises?.name ?? undefined,
+    exerciseNameEn: pe.exercises?.name_en ?? undefined,
     sets: pe.target_sets ?? undefined,
     repsMin: pe.target_reps_min ?? undefined,
     repsMax: pe.target_reps_max ?? undefined,

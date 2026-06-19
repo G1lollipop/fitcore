@@ -9,6 +9,8 @@ import {
   type MacroTotals,
 } from '@/lib/metrics/macros'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
+import type { Dictionary } from '@/lib/i18n'
 
 interface RadialMacroChartProps {
   totals: MacroTotals
@@ -20,7 +22,6 @@ type MacroKey = 'calories' | 'protein' | 'carbs' | 'fat'
 
 interface RingSpec {
   key: MacroKey
-  label: string
   unit: string
   /** SVG radius in viewBox units (viewBox is 200×200, center 100,100). */
   radius: number
@@ -28,10 +29,10 @@ interface RingSpec {
 
 // Outermost → innermost. Stroke width is 9 → leaves ~3 unit gap between rings.
 const RINGS: readonly RingSpec[] = [
-  { key: 'calories', label: '热量', unit: 'kcal', radius: 88 },
-  { key: 'protein', label: '蛋白质', unit: 'g', radius: 72 },
-  { key: 'carbs', label: '碳水', unit: 'g', radius: 56 },
-  { key: 'fat', label: '脂肪', unit: 'g', radius: 40 },
+  { key: 'calories', unit: 'kcal', radius: 88 },
+  { key: 'protein', unit: 'g', radius: 72 },
+  { key: 'carbs', unit: 'g', radius: 56 },
+  { key: 'fat', unit: 'g', radius: 40 },
 ] as const
 
 /**
@@ -46,10 +47,10 @@ function ringColor(macro: MacroKey, status: MacroProgress['status']): string {
   return macro === 'protein' ? 'var(--color-accent)' : 'var(--color-destructive)'
 }
 
-function statusLabel(status: MacroProgress['status']): string {
-  if (status === 'on-track') return '达标'
-  if (status === 'under') return '未达'
-  return '已超'
+function statusLabel(status: MacroProgress['status'], t: Dictionary): string {
+  if (status === 'on-track') return t.nutrition.status.onTrack
+  if (status === 'under') return t.nutrition.status.under
+  return t.nutrition.status.over
 }
 
 /**
@@ -59,6 +60,7 @@ function statusLabel(status: MacroProgress['status']): string {
  * underneath listing each macro's current/target.
  */
 export function RadialMacroChart({ totals, goals, className }: RadialMacroChartProps) {
+  const t = useT()
   const progress = useMemo(() => macroProgressBundle(totals, goals), [totals, goals])
 
   return (
@@ -92,14 +94,14 @@ export function RadialMacroChart({ totals, goals, className }: RadialMacroChartP
 
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            今日热量
+            {t.nutrition.todayCalories}
           </span>
           <AnimatedNumber
             value={progress.calories.current}
             className="font-display mt-0.5 text-3xl font-semibold tabular-nums leading-none text-foreground sm:text-4xl"
           />
           <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-            目标 {progress.calories.target} kcal · {progress.calories.pct}%
+            {t.nutrition.caloriesGoal(progress.calories.target, progress.calories.pct)}
           </p>
         </div>
       </div>
@@ -120,7 +122,7 @@ export function RadialMacroChart({ totals, goals, className }: RadialMacroChartP
                   aria-hidden
                 />
                 <span className="text-[11px] font-medium text-muted-foreground">
-                  {ring.label}
+                  {t.nutrition.rings[ring.key]}
                 </span>
               </div>
               <p className="font-display text-sm font-semibold tabular-nums text-foreground">
@@ -137,7 +139,7 @@ export function RadialMacroChart({ totals, goals, className }: RadialMacroChartP
                   color,
                 }}
               >
-                {statusLabel(p.status)}
+                {statusLabel(p.status, t)}
               </span>
             </div>
           )

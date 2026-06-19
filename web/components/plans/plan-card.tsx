@@ -3,7 +3,9 @@
 import { motion } from 'framer-motion'
 import { Calendar, Check, Clock, Sparkles, Trash2 } from 'lucide-react'
 import { useMemo } from 'react'
-import { goalLabels, levelLabels } from '@/lib/labels'
+import { useT } from '@/lib/i18n/provider'
+import { tLabel } from '@/lib/i18n'
+import type { Dictionary } from '@/lib/i18n'
 import {
   buildWeekStrip,
   findTodayCell,
@@ -43,13 +45,12 @@ export function PlanCard({
   onDelete,
   className,
 }: PlanCardProps) {
+  const t = useT()
   const cells = useMemo(() => buildWeekStrip(plan), [plan])
   const todayCell = useMemo(() => findTodayCell(cells), [cells])
 
-  const goalLabel = plan.goal ? goalLabels[plan.goal] ?? plan.goal : null
-  const levelLabel = plan.experience_level
-    ? levelLabels[plan.experience_level] ?? plan.experience_level
-    : null
+  const goalLabel = tLabel(t.labels.goals, plan.goal)
+  const levelLabel = tLabel(t.labels.levels, plan.experience_level)
 
   return (
     <motion.article
@@ -81,7 +82,7 @@ export function PlanCard({
             {isCurrent && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
                 <Sparkles size={10} />
-                当前
+                {t.plans.card.current}
               </span>
             )}
           </div>
@@ -95,7 +96,7 @@ export function PlanCard({
           type="button"
           onClick={onDelete}
           disabled={isPending}
-          aria-label={`删除 ${plan.name}`}
+          aria-label={t.plans.card.deleteAria(plan.name)}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/70 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Trash2 size={14} />
@@ -106,28 +107,28 @@ export function PlanCard({
         {goalLabel && <Pill>{goalLabel}</Pill>}
         {levelLabel && <Pill>{levelLabel}</Pill>}
         <Pill icon={<Calendar size={10} />}>
-          {plan.frequency_per_week ?? '—'} 次/周
+          {t.plans.card.freqPerWeek(plan.frequency_per_week ?? '—')}
         </Pill>
         {plan.duration_weeks ? (
-          <Pill icon={<Clock size={10} />}>{plan.duration_weeks} 周</Pill>
+          <Pill icon={<Clock size={10} />}>{t.plans.card.weeks(plan.duration_weeks)}</Pill>
         ) : null}
       </div>
 
       <div className="mt-auto pt-5">
         <div className="mb-2 flex items-baseline justify-between">
           <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            本周节奏
+            {t.plans.card.weekRhythm}
           </span>
           {todayCell?.workoutDay && (
             <span className="text-[11px] text-muted-foreground">
-              今日 ·{' '}
+              {t.plans.card.todayPrefix} ·{' '}
               <span className="font-medium text-primary">
-                {todayCell.workoutDay.name ?? '训练日'}
+                {todayCell.workoutDay.name ?? t.plans.card.trainingDayDefault}
               </span>
             </span>
           )}
         </div>
-        <WeekStrip cells={cells} />
+        <WeekStrip cells={cells} t={t} />
       </div>
 
       {!isCurrent && (
@@ -138,7 +139,7 @@ export function PlanCard({
           className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Check size={12} />
-          {isPending ? '设置中…' : '设为当前计划'}
+          {isPending ? t.plans.card.setting : t.plans.card.setCurrent}
         </button>
       )}
     </motion.article>
@@ -147,6 +148,7 @@ export function PlanCard({
 
 interface WeekStripProps {
   cells: WeekStripCell[]
+  t: Dictionary
 }
 
 /**
@@ -154,27 +156,27 @@ interface WeekStripProps {
  * workout, and pops a pill on today's slot. Workout cells preview the day
  * label (or first focus muscle) under the letter when there's room.
  */
-export function WeekStrip({ cells }: WeekStripProps) {
+export function WeekStrip({ cells, t }: WeekStripProps) {
   return (
     <ol className="grid grid-cols-7 gap-1.5">
       {cells.map((cell) => (
-        <WeekCell key={cell.position} cell={cell} />
+        <WeekCell key={cell.position} cell={cell} t={t} />
       ))}
     </ol>
   )
 }
 
-function WeekCell({ cell }: { cell: WeekStripCell }) {
+function WeekCell({ cell, t }: { cell: WeekStripCell; t: Dictionary }) {
   const isWorkout = cell.kind === 'workout'
   const isRest = cell.kind === 'rest'
 
   const subLabel = useMemo(() => {
     if (!isWorkout || !cell.workoutDay) return null
     const muscles = cell.workoutDay.focus_muscles ?? []
-    if (muscles.length > 0) return abbreviateMuscle(muscles[0]!)
+    if (muscles.length > 0) return abbreviateMuscle(muscles[0]!, t)
     if (cell.workoutDay.name) return abbreviateName(cell.workoutDay.name)
     return null
-  }, [cell.workoutDay, isWorkout])
+  }, [cell.workoutDay, isWorkout, t])
 
   return (
     <li
@@ -187,7 +189,7 @@ function WeekCell({ cell }: { cell: WeekStripCell }) {
       )}
     >
       <span className="text-[10px] font-medium uppercase tracking-wider">
-        {cell.shortLabel}
+        {t.training.calendar.weekDaysMonFirst[cell.position - 1]}
       </span>
       <span
         className={cn(
@@ -195,14 +197,14 @@ function WeekCell({ cell }: { cell: WeekStripCell }) {
           isWorkout ? 'font-semibold' : 'font-normal opacity-70'
         )}
       >
-        {isRest ? '休' : isWorkout ? subLabel ?? '✓' : '·'}
+        {isRest ? t.plans.card.rest : isWorkout ? subLabel ?? '✓' : '·'}
       </span>
       {cell.isToday && (
         <span
           aria-hidden
           className="absolute -top-1.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-px text-[8px] font-semibold uppercase tracking-wider text-primary-foreground shadow-sm"
         >
-          今
+          {t.plans.card.today}
         </span>
       )}
     </li>
@@ -225,21 +227,22 @@ function Pill({
 }
 
 /**
- * Squeeze a long muscle name down to a 1-2 char hint for the cell. Falls
- * back to the first character when no rule matches.
+ * Squeeze a long muscle name down to a short hint for the cell, localized.
+ * Falls back to the first character when no rule matches.
  */
-function abbreviateMuscle(name: string): string {
+function abbreviateMuscle(name: string, t: Dictionary): string {
   const lc = name.toLowerCase()
-  if (lc.includes('chest') || lc.includes('胸')) return '胸'
-  if (lc.includes('back') || lc.includes('背')) return '背'
+  const abbr = t.plans.card.muscleAbbr
+  if (lc.includes('chest') || lc.includes('胸')) return abbr.chest
+  if (lc.includes('back') || lc.includes('背')) return abbr.back
   if (lc.includes('leg') || lc.includes('腿') || lc.includes('quad') || lc.includes('hamstring'))
-    return '腿'
-  if (lc.includes('shoulder') || lc.includes('肩') || lc.includes('delt')) return '肩'
+    return abbr.legs
+  if (lc.includes('shoulder') || lc.includes('肩') || lc.includes('delt')) return abbr.shoulders
   if (lc.includes('arm') || lc.includes('臂') || lc.includes('bicep') || lc.includes('tricep'))
-    return '臂'
+    return abbr.arms
   if (lc.includes('core') || lc.includes('abs') || lc.includes('腹') || lc.includes('核心'))
-    return '核'
-  if (lc.includes('cardio') || lc.includes('有氧')) return '氧'
+    return abbr.core
+  if (lc.includes('cardio') || lc.includes('有氧')) return abbr.cardio
   return name.slice(0, 1)
 }
 

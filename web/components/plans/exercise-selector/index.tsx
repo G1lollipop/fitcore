@@ -3,6 +3,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { useCallback, useState } from 'react'
 import { X } from 'lucide-react'
+import { useT } from '@/lib/i18n/provider'
 import type { Database } from '@/lib/database.types'
 import { ExerciseList } from './exercise-list'
 import { FilterBar } from './filter-bar'
@@ -59,6 +60,7 @@ export function ExerciseSelector({
   onConfirm,
   initialSelected = [],
 }: ExerciseSelectorProps) {
+  const t = useT()
   /* ── search (debounced) ───────────────────────────────────────────── */
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, SEARCH_DEBOUNCE_MS)
@@ -167,23 +169,23 @@ export function ExerciseSelector({
           // dialog opens inside another Radix Dialog/Sheet.
           className="fixed left-1/2 top-1/2 z-[101] flex max-h-[90vh] w-full max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
-          <DialogPrimitive.Title className="sr-only">选择动作</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">{t.plans.selector.title}</DialogPrimitive.Title>
           <DialogPrimitive.Description className="sr-only">
-            搜索并挑选动作，拖拽调整顺序，确认后回到训练计划。
+            {t.plans.selector.srDesc}
           </DialogPrimitive.Description>
 
           <header className="flex shrink-0 items-center justify-between border-b border-border p-4">
             <div>
-              <h3 className="text-lg font-bold text-foreground">选择动作</h3>
+              <h3 className="text-lg font-bold text-foreground">{t.plans.selector.title}</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                已选择 {selectedExercises.length} 个动作 · 拖拽可排序
+                {t.plans.selector.selectedCount(selectedExercises.length)}
               </p>
             </div>
             <DialogPrimitive.Close asChild>
               <button
                 type="button"
                 className="rounded-lg p-2 hover:bg-secondary"
-                aria-label="关闭"
+                aria-label={t.plans.selector.close}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -230,7 +232,7 @@ export function ExerciseSelector({
               onClick={handleCancel}
               className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
             >
-              取消
+              {t.plans.selector.cancel}
             </button>
             <button
               type="button"
@@ -238,7 +240,7 @@ export function ExerciseSelector({
               disabled={selectedExercises.length === 0}
               className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              确认选择 ({selectedExercises.length})
+              {t.plans.selector.confirm(selectedExercises.length)}
             </button>
           </footer>
         </DialogPrimitive.Content>

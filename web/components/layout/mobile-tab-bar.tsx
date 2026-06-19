@@ -3,6 +3,7 @@
 import { memo } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
 import { NAV_ITEMS } from './nav-items'
 
 interface MobileTabBarProps {
@@ -19,9 +20,10 @@ interface MobileTabBarProps {
  * tab items so toggling the active id only re-renders two items.
  */
 export function MobileTabBar({ activeNav, onNavChange }: MobileTabBarProps) {
+  const t = useT()
   return (
     <nav
-      aria-label="主导航"
+      aria-label={t.sidebar.mainNav}
       className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40"
     >
       <div className="flex items-center gap-1 rounded-full border border-border bg-card/85 backdrop-blur-xl shadow-lg shadow-black/5 dark:shadow-black/40 px-1.5 py-1.5">
@@ -29,7 +31,7 @@ export function MobileTabBar({ activeNav, onNavChange }: MobileTabBarProps) {
           <TabItem
             key={item.id}
             id={item.id}
-            label={item.shortLabel}
+            label={t.nav[item.shortLabelKey]}
             icon={item.icon}
             isActive={activeNav === item.id}
             onClick={onNavChange}

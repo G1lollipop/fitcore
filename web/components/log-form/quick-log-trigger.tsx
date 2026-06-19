@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Plus, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useQuickLog } from '@/hooks/use-quick-log'
+import { useT } from '@/lib/i18n/provider'
 import { cn } from '@/lib/utils'
 
 function useIsMac() {
@@ -22,12 +23,13 @@ function useIsMac() {
 export function QuickLogTriggerPill({ className }: { className?: string }) {
   const { setOpen } = useQuickLog()
   const isMac = useIsMac()
+  const t = useT()
 
   return (
     <button
       type="button"
       onClick={() => setOpen(true)}
-      aria-label="打开快捷记录"
+      aria-label={t.logForm.trigger.openQuickLog}
       className={cn(
         'group hidden md:inline-flex items-center gap-2 h-9 pl-2 pr-1.5 rounded-lg',
         'border border-border bg-card text-muted-foreground',
@@ -37,7 +39,7 @@ export function QuickLogTriggerPill({ className }: { className?: string }) {
       )}
     >
       <Sparkles size={14} className="text-primary" />
-      <span className="text-xs">快捷记录</span>
+      <span className="text-xs">{t.logForm.trigger.quickLog}</span>
       <kbd className="ml-1 inline-flex h-5 items-center gap-0.5 rounded border border-border bg-background px-1.5 font-sans text-[10px] font-medium text-muted-foreground group-hover:text-foreground">
         <span className="text-[11px] leading-none">{isMac ? '⌘' : 'Ctrl'}</span>
         <span>K</span>
@@ -52,12 +54,13 @@ export function QuickLogTriggerPill({ className }: { className?: string }) {
  */
 export function QuickLogFab({ className }: { className?: string }) {
   const { setOpen, open } = useQuickLog()
+  const t = useT()
 
   return (
     <motion.button
       type="button"
       onClick={() => setOpen(true)}
-      aria-label="快捷记录"
+      aria-label={t.logForm.trigger.quickLog}
       initial={{ opacity: 0, scale: 0.6, y: 16 }}
       animate={{ opacity: open ? 0 : 1, scale: open ? 0.6 : 1, y: 0 }}
       whileTap={{ scale: 0.92 }}

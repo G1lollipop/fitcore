@@ -8,6 +8,7 @@ import { AI_FAST_MODEL } from '@/lib/ai/model';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
+import { ActionError } from '@/lib/errors';
 import type { DietLogItem, DailyStatsData } from './types';
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -75,12 +76,12 @@ export async function logFood(
   if (!a.ok) return a.result;
   const userId = a.userId;
   if (!userInput) {
-    return { success: false, error: '缺少必要参数' };
+    return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
   const foodData = await parseFoodWithAI(userInput);
   if (!foodData) {
-    return { success: false, error: 'AI 解析失败，请检查 GOOGLE_AI_STUDIO_API_KEY 配置' };
+    return { success: false, error: ActionError.AI_PARSE_FAILED };
   }
 
   const today = getTodayDate();
@@ -97,7 +98,7 @@ export async function logFood(
 
   if (queryError && queryError.code !== 'PGRST116') {
     console.error('[logFood] Query error:', queryError.message);
-    return { success: false, error: `查询数据库失败: ${queryError.message}` };
+    return { success: false, error: ActionError.DB_QUERY_FAILED };
   }
 
   if (existingRecord) {
@@ -126,7 +127,7 @@ export async function logFood(
 
     if (updateError) {
       console.error('[logFood] Update error:', updateError.message);
-      return { success: false, error: `更新记录失败: ${updateError.message}` };
+      return { success: false, error: ActionError.DB_UPDATE_FAILED };
     }
 
     revalidatePath('/');
@@ -153,7 +154,7 @@ export async function logFood(
 
     if (insertError) {
       console.error('[logFood] Insert error:', insertError.message);
-      return { success: false, error: `创建记录失败: ${insertError.message}` };
+      return { success: false, error: ActionError.DB_INSERT_FAILED };
     }
 
     revalidatePath('/');
@@ -200,7 +201,7 @@ export async function deleteDietLog(
   if (!a.ok) return a.result;
   const userId = a.userId;
   if (!logId) {
-    return { success: false, error: '缺少必要参数' };
+    return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
   const today = getTodayDate();
@@ -216,14 +217,14 @@ export async function deleteDietLog(
   const queryError = queryResult.error;
 
   if (queryError || !existingRecord) {
-    return { success: false, error: '未找到今日记录' };
+    return { success: false, error: ActionError.TODAY_RECORD_NOT_FOUND };
   }
 
   const currentDietLogs = (existingRecord.diet_logs as DietLogItem[]) || [];
   const targetLog = currentDietLogs.find((log) => log.id === logId);
 
   if (!targetLog) {
-    return { success: false, error: '未找到该记录' };
+    return { success: false, error: ActionError.RECORD_NOT_FOUND };
   }
 
   const updatedDietLogs = currentDietLogs.filter((log) => log.id !== logId);
@@ -248,7 +249,7 @@ export async function deleteDietLog(
 
   if (updateResult.error) {
     console.error('[deleteDietLog] Update error:', updateResult.error);
-    return { success: false, error: `删除记录失败: ${updateResult.error.message}` };
+    return { success: false, error: ActionError.DB_DELETE_FAILED };
   }
 
   revalidatePath('/');
