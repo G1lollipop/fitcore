@@ -6,6 +6,14 @@
 |------|----------|------|-----------|
 | `eval_retrieval.py` | **检索层**（向量+BM25+可选重排） | Recall@k / Precision@k / MRR@k / nDCG@k / hit_rate@k + abstention | 否（只需 embedding） |
 | `evaluate.py` | **端到端答案**（/v1/chat 生成结果） | relevance / completeness / accuracy（LLM-as-Judge）+ latency | 是 |
+| `eval_faithfulness.py` | **生成层接地**（/v1/chat） | faithfulness / answer_relevancy（RAGAS-style LLM-judge） | 是 |
+| `eval_abstention.py` | **生成层弃答**（/v1/chat） | abstention precision / recall / F1 | 是（chat） |
+
+Agent 评估（`web/lib/ai/eval/`）：
+
+| 脚本 | 评估对象 | 指标 |
+|------|----------|------|
+| `eval-agent.ts` | Agent Step-1 工具选择 | tool-selection accuracy / per-tool P/R/F1 / k 命中率 / 闲聊误触发率 |
 
 数据集：
 - **`golden_dataset_en.json`（主集 / 默认 / CI 门禁）** — 英文 query 对英文 KB，同语种检索，
@@ -129,6 +137,8 @@ python eval/eval_retrieval.py --dataset golden_dataset_en.json --variant ensembl
 - `rag-ci.yml` — 每个 PR/push 跑 `ruff check` + `pytest`（含本目录指标单测）。不调外部 API。
 - `rag-retrieval-eval.yml` — **检索回归门禁**：nightly + 手动 + 改到 `eval/` `data/` `services/retrieval/` 的 PR 触发。读**已灌好的 Supabase**（只 embed query，不在 CI 重灌，避免炸免费额度），跑上面的 `--gate`。
 - `rag-nightly-eval.yml` — 答案层 LLM-as-Judge nightly 门禁（`evaluate.py`）。
+- `rag-generation-eval.yml` — **生成层** faithfulness + abstention nightly 门禁（`eval_faithfulness.py` + `eval_abstention.py`）。
+- `agent-eval.yml` — **Agent 工具选择** nightly + PR 门禁（`web/lib/ai/eval/eval-agent.ts`）。
 
 > KB 变更后需先跑手动 workflow「RAG KB ingest (Supabase)」把新文档灌进库，检索门禁才看得到。
 
@@ -136,7 +146,9 @@ python eval/eval_retrieval.py --dataset golden_dataset_en.json --variant ensembl
 
 ## abstention 说明
 
-检索层无相似度阈值时永远返回 k 条，所以 `false_retrieval_rate` 只有在后端提供**可比分数**（纯向量 Chroma 相似度、或开启 reranker）时才有意义；base ensemble 下该项返回 -1（不适用）。真正的「弃答」评估在 `/v1/chat` 生成层，属于 P2。
+检索层无相似度阈值时永远返回 k 条，所以 `false_retrieval_rate` 只有在后端提供**可比分数**（纯向量 Chroma 相似度、或开启 reranker）时才有意义；base ensemble 下该项返回 -1（不适用）。
+
+**生成层弃答**（Track A3）：设置 `RETRIEVAL_MIN_SCORE>0`（Supabase 下 `relevance_score = 1 - distance`）时，`RagService.chat()` 会在 top-1 分数低于阈值时清空 context 并设 `retrievalMeta.abstained=true`。用 `eval_abstention.py` 在 golden 全集上量 precision/recall。
 
 ---
 

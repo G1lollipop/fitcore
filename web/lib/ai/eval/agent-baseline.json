@@ -1,0 +1,9 @@
+{
+  "_comment": "Agent Step-1 tool-selection regression floors. Conservative — catches real regressions without flaking on LLM variance.",
+  "dataset": "agent-golden-set.json",
+  "thresholds": {
+    "tool_selection_accuracy": 0.72,
+    "k_hit_rate": 0.55,
+    "max_false_tool_call_rate": 0.25
+  }
+}

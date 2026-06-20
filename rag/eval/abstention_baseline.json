@@ -1,0 +1,9 @@
+{
+  "_comment": "Generation-layer abstention floors. recall = correct refusal on out-of-scope; max_false_abstention_rate caps in-scope wrongly refused.",
+  "dataset": "golden_dataset_en.json",
+  "thresholds": {
+    "recall": 0.50,
+    "f1": 0.55
+  },
+  "max_false_abstention_rate": 0.15
+}

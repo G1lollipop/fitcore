@@ -27,6 +27,10 @@ class Citation(BaseModel):
 
 class RetrievalMeta(BaseModel):
     retrievedCount: int = 0
+    k: int | None = None
+    kAuto: bool | None = None
+    abstained: bool | None = None
+    topScore: float | None = None
 
 
 class StructuredChatResponse(BaseModel):

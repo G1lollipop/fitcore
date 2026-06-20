@@ -1,163 +1,20 @@
 /**
  * FitCore AI Agent — Tool Calling 架构
  *
- * ## 为什么要用 Agent，而不是原来的关键词分类？
- *
- * 旧方案：在 intent.ts 里写死大量关键词权重表，用词语匹配来猜意图。
- *   问题：覆盖不全、容易误判、每次新增场景都要手动加词。
- *
- * 新方案（Agent + Tool Calling）：
- *   1. 你给 LLM 定义一组"工具"（functions），告诉它每个工具是干什么的。
- *   2. LLM 读懂用户问题后，自主决定要不要调用工具、调哪个、传什么参数。
- *   3. 你执行工具、把结果返回给 LLM，LLM 最终基于真实数据生成回答。
- *
- * ## 三个工具
- *
- * Tool 1: set_retrieval_params（检索策略声明）
- *   → LLM 在决定查询知识库时，同时声明本次应召回多少文档（k）
- *   → k 由 LLM 根据问题复杂度判断，而不是写死的规则
- *   → k=3：简单事实  k=5：一般问题  k=8：复杂对比/综合方案
- *   → 与 query_knowledge_base 同时输出，零额外 API 调用
- *
- * Tool 2: query_knowledge_base
- *   → 调用 RAG 后端的 /v1/retrieve（纯检索，不调 LLM）
- *   → 拿回相关文档片段，使用 set_retrieval_params 指定的 k
- *
- * Tool 3: get_user_stats
- *   → 读取当前用户的个人数据（体重、今日摄入、运动记录等）
- *
- * ## 执行流程（三步，只有两次 LLM 调用）
- *
- * Step 1 — 规划（非流式，低温度）：
- *   LLM 看到用户消息 + 工具列表，一次性输出所有工具调用：
- *   e.g. [set_retrieval_params(k=8), query_knowledge_base("深蹲和硬拉区别"), get_user_stats()]
- *
- * Step 2 — 工具执行（并行）：
- *   - set_retrieval_params → 提取 k，不发网络请求
- *   - query_knowledge_base → fetch /v1/retrieve?topK=k
- *   - get_user_stats       → 直接使用已有的 userContext
- *
- * Step 3 — 流式生成（高温度）：
- *   把工具结果拼进消息历史，让 LLM 生成最终回答（stream: true）
- *   每个 token 通过 onToken 回调实时推给前端
+ * Step 1 — 规划：plan-step.ts（单次 LLM 调用）
+ * Step 2 — 工具执行（并行）
+ * Step 3 — 流式生成（高温度）
  */
 
 import { openai } from "@/lib/openaiClient"
 import { AI_CHAT_MODEL } from "@/lib/ai/model"
+import { createAgentPlan } from "@/lib/ai/plan-step"
 import type { Citation, AgentMode, UserContextPayload, CoachChatMessage } from "@/lib/ai/types"
 import { chatWithRagRetrieve } from "@/lib/ai/rag-client"
 import type { Language } from "@/lib/i18n"
 
-// ─── Tool 定义 ─────────────────────────────────────────────────────────────
-
-const TOOLS: Parameters<typeof openai.chat.completions.create>[0]["tools"] = [
-  {
-    type: "function",
-    function: {
-      name: "set_retrieval_params",
-      description:
-        "声明本次知识库检索策略。当你打算调用 query_knowledge_base 时，必须同时调用此工具来指定召回文档数量 k。" +
-        "k 根据问题复杂度选择：简单事实问题选 3，一般问题选 5，需要多角度覆盖的复杂问题选 8。",
-      parameters: {
-        type: "object",
-        properties: {
-          k: {
-            type: "integer",
-            enum: [3, 5, 8],
-            description:
-              "最终使用的文档数量。" +
-              "3=简单事实（'X是什么'/'多少克'）；" +
-              "5=一般问题（默认）；" +
-              "8=复杂多概念（含'区别'/'对比'/'计划'/'如何搭配'等）",
-          },
-          reason: {
-            type: "string",
-            description: "选择此 k 值的简短理由，用于调试和追踪",
-          },
-        },
-        required: ["k", "reason"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "query_knowledge_base",
-      description:
-        "查询健身知识库，获取关于训练动作要领、营养原理、训练计划方案等专业健身知识。" +
-        "调用此工具时必须同时调用 set_retrieval_params 来指定召回数量。",
-      parameters: {
-        type: "object",
-        properties: {
-          query: {
-            type: "string",
-            description: "要查询的问题或关键词，用中文描述，尽量具体",
-          },
-        },
-        required: ["query"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_user_stats",
-      description:
-        "获取当前用户的个人信息和今日运动/饮食数据，包括体重、身高、目标热量、" +
-        "今日摄入的热量/蛋白质/碳水/脂肪、饮水量、运动记录等。" +
-        "当需要根据用户的具体数据给出个性化建议时调用此工具。",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: [],
-      },
-    },
-  },
-]
-
-// ─── System Prompt ─────────────────────────────────────────────────────────
-
-const SYSTEM_PROMPT_ZH = `你是 FitCore 的 AI 健身教练，专业、友善、富有洞察力。
-
-你有三个工具：
-- set_retrieval_params：声明知识库检索策略（k 值），与 query_knowledge_base 配套使用
-- query_knowledge_base：查询健身知识库（训练技术、营养原理、计划模板等）
-- get_user_stats：获取用户今日的个人数据（摄入、消耗、目标等）
-
-调用规则：
-• 用户问训练动作/营养知识/健身原理 → 同时调用 set_retrieval_params + query_knowledge_base
-• 用户问"我今天吃了多少"/"我的数据"/"够不够" → 调用 get_user_stats
-• 需要结合知识和数据给建议 → 同时调用三个工具
-• 简单闲聊或问候 → 直接回答，不调用工具
-
-回答要求：
-- 使用中文，语气专业友善，适当使用 emoji
-- 严格基于工具返回的数据，不编造数字
-- 如知识库没有相关内容，如实告知`
-
-const SYSTEM_PROMPT_EN = `You are FitCore's AI fitness coach — professional, friendly, and insightful.
-
-You have three tools:
-- set_retrieval_params: declare the knowledge-base retrieval strategy (the k value), used together with query_knowledge_base
-- query_knowledge_base: query the fitness knowledge base (training technique, nutrition principles, plan templates, etc.)
-- get_user_stats: fetch the user's personal data for today (intake, expenditure, targets, etc.)
-
-Tool-calling rules:
-• User asks about exercises / nutrition knowledge / fitness principles → call set_retrieval_params + query_knowledge_base together
-• User asks "how much did I eat today" / "my data" / "is it enough" → call get_user_stats
-• Needs both knowledge and data to advise → call all three tools
-• Simple small talk or greeting → answer directly, no tools
-
-Answer requirements:
-- Reply in English, with a professional and friendly tone, using emoji where appropriate
-- Base answers strictly on the data returned by tools; never fabricate numbers
-- If the knowledge base has no relevant content, say so honestly`
-
-function buildSystemPrompt(language: Language): string {
-  return language === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_ZH
-}
-
-// ─── 工具执行 ───────────────────────────────────────────────────────────────
+export { AGENT_TOOLS, buildAgentSystemPrompt } from "@/lib/ai/agent-tools"
+export { planAgentStep } from "@/lib/ai/plan-step"
 
 function formatUserContext(ctx: UserContextPayload): string {
   const lines: string[] = ["【用户个人数据】"]
@@ -193,18 +50,14 @@ function formatUserContext(ctx: UserContextPayload): string {
   return lines.join("\n")
 }
 
-// ─── Agent 结果 ─────────────────────────────────────────────────────────────
-
 export interface AgentResult {
   answer: string
   citations: Citation[]
   mode: AgentMode
   toolsUsed: string[]
-  retrievalK?: number       // LLM 选择的 k 值（供调试 / 评估使用）
-  retrievalKReason?: string // LLM 给出的理由
+  retrievalK?: number
+  retrievalKReason?: string
 }
-
-// ─── 主入口：runAgent ────────────────────────────────────────────────────────
 
 export async function runAgent(params: {
   message: string
@@ -217,53 +70,20 @@ export async function runAgent(params: {
   const { message, sessionId, userContext, conversationHistory, onToken } = params
   const language: Language = params.language === "en" ? "en" : "zh"
 
-  // 构建消息历史（取最近 10 条，避免 context 过长）
-  const messages: Parameters<typeof openai.chat.completions.create>[0]["messages"] = [
-    { role: "system", content: buildSystemPrompt(language) },
-    ...conversationHistory.slice(-10),
-    { role: "user", content: message },
-  ]
+  const { messages, planChoice, parsed } = await createAgentPlan({
+    message,
+    language,
+    conversationHistory,
+  })
 
   const toolsUsed: string[] = []
   let citations: Citation[] = []
-  let retrievalK: number | undefined
-  let retrievalKReason: string | undefined
+  let retrievalK = parsed.retrievalK
+  let retrievalKReason = parsed.retrievalKReason
 
-  // ── Step 1: 规划 ─────────────────────────────────────────────────────────
-  // LLM 一次性输出所有工具调用（可并行）：
-  //   e.g. [set_retrieval_params(k=8, reason="..."), query_knowledge_base("深蹲和硬拉区别")]
-  const planResponse = await openai.chat.completions.create({
-    model: AI_CHAT_MODEL,
-    messages,
-    tools: TOOLS,
-    tool_choice: "auto",
-    temperature: 0.2,   // 规划阶段低温度，保持决策稳定
-    max_tokens: 300,
-  })
-
-  const planChoice = planResponse.choices[0]
-
-  // ── Step 2: 并行执行工具 ─────────────────────────────────────────────────
   if (planChoice.finish_reason === "tool_calls" && planChoice.message.tool_calls?.length) {
     messages.push(planChoice.message)
 
-    // 先扫描一遍 tool_calls，提取 set_retrieval_params 的 k 值
-    // （query_knowledge_base 执行时需要用到 k，所以要先拿到）
-    for (const toolCall of planChoice.message.tool_calls) {
-      if (!("function" in toolCall)) continue
-      if (toolCall.function.name === "set_retrieval_params") {
-        try {
-          const args = JSON.parse(toolCall.function.arguments || "{}")
-          retrievalK = args.k as number
-          retrievalKReason = args.reason as string
-        } catch {
-          // 解析失败则 k 保持 undefined，后端自动判断
-        }
-        break
-      }
-    }
-
-    // 并行执行所有工具
     const toolResults = await Promise.all(
       planChoice.message.tool_calls.map(async (toolCall) => {
         if (!("function" in toolCall)) {
@@ -274,14 +94,13 @@ export async function runAgent(params: {
         try {
           args = JSON.parse(toolCall.function.arguments || "{}")
         } catch {
-          // 忽略
+          // ignore
         }
 
         toolsUsed.push(toolName)
         let content = ""
 
         if (toolName === "set_retrieval_params") {
-          // 这个工具只是声明参数，不需要发网络请求，直接确认即可
           content = `检索参数已设定：k=${args.k}，理由：${args.reason ?? "未说明"}`
 
         } else if (toolName === "query_knowledge_base") {
@@ -290,7 +109,7 @@ export async function runAgent(params: {
               query: (args.query as string) || message,
               sessionId,
               userContext,
-              topK: retrievalK,   // 把 LLM 决定的 k 传给检索后端
+              topK: retrievalK,
             })
             citations = result.citations
             if (result.chunks.length === 0) {
@@ -324,7 +143,6 @@ export async function runAgent(params: {
     messages.push(...toolResults)
   }
 
-  // ── Step 3: 流式生成最终回答 ─────────────────────────────────────────────
   const streamResponse = await openai.chat.completions.create({
     model: AI_CHAT_MODEL,
     messages,

@@ -195,6 +195,33 @@ class RagService(object):
         docs = retriever.invoke(query)
         return docs[:k]
 
+    @staticmethod
+    def _top_relevance_score(docs: list[Document]) -> float | None:
+        if not docs:
+            return None
+        meta = docs[0].metadata or {}
+        score = meta.get("relevance_score")
+        if score is None:
+            score = meta.get("score")
+        return float(score) if isinstance(score, (int, float)) else None
+
+    @staticmethod
+    def _should_abstain_retrieval(
+        docs: list[Document], threshold: float
+    ) -> tuple[bool, float | None]:
+        """
+        Score-gated abstention. Only applies when threshold > 0 AND a comparable
+        top-1 score exists (e.g. Supabase pgvector). Ensemble-only Chroma skips.
+        """
+        if threshold <= 0:
+            return False, RagService._top_relevance_score(docs)
+        top_score = RagService._top_relevance_score(docs)
+        if top_score is None:
+            return False, None
+        if not docs or top_score < threshold:
+            return True, top_score
+        return False, top_score
+
     def chat(
         self,
         query: str,
@@ -213,8 +240,24 @@ class RagService(object):
         session_config = {"configurable": {"session_id": session_id}}
         docs = self.retrieve(query, k)
 
-        citations = build_citations(docs)
-        context = self._format_documents(docs)
+        settings = get_settings()
+        abstained, top_score = self._should_abstain_retrieval(
+            docs, settings.retrieval_min_score
+        )
+
+        if abstained:
+            context = (
+                "No relevant reference materials were found in the knowledge base "
+                "for this question (retrieval confidence below threshold). "
+                "State clearly that there is insufficient evidence — do not invent facts."
+            )
+            citations: list[dict[str, Any]] = []
+            retrieved_count = 0
+        else:
+            citations = build_citations(docs)
+            context = self._format_documents(docs)
+            retrieved_count = len(citations)
+
         answer = self.chain.invoke(
             {"input": query, "user_context": user_context or {}, "context": context},
             session_config,
@@ -223,8 +266,10 @@ class RagService(object):
             "answer": answer,
             "citations": citations,
             "retrieval_meta": {
-                "retrievedCount": len(citations),
+                "retrievedCount": retrieved_count,
                 "k": k,
                 "kAuto": top_k is None,
+                "abstained": abstained,
+                "topScore": top_score,
             },
         }

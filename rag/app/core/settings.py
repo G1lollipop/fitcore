@@ -100,6 +100,12 @@ class Settings(BaseSettings):
     retrieval_vector_weight: float = Field(
         default=0.5, alias="RETRIEVAL_VECTOR_WEIGHT", ge=0.0, le=1.0
     )
+    # When > 0 and the backend exposes a top-1 relevance score, documents below
+    # this threshold trigger generation-layer abstention (empty context + flag).
+    # 0 = disabled (default). Supabase pgvector uses relevance_score = 1 - distance.
+    retrieval_min_score: float = Field(
+        default=0.0, alias="RETRIEVAL_MIN_SCORE", ge=0.0, le=1.0
+    )
 
     # ── Vector store backend ──────────────────────────────────────────────
     vector_backend: str = Field(default="chroma", alias="VECTOR_BACKEND")

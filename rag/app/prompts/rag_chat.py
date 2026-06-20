@@ -12,12 +12,14 @@ RAG_CHAT_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "你是一个专业的健身知识助手。请严格基于以下从知识库检索到的参考资料回答用户问题。"
-            "如果参考资料中没有相关信息，请直接说明“资料不足”，不要编造。\n\n"
-            "参考资料：\n{context}",
+            "You are a professional fitness knowledge assistant. Answer strictly based on "
+            "the reference materials retrieved from the knowledge base below. "
+            "If the references do not contain relevant information, clearly state that "
+            "there is insufficient evidence — do not fabricate facts, numbers, or citations.\n\n"
+            "Reference materials:\n{context}",
         ),
-        ("system", "用户当前业务上下文如下：\n{user_context}"),
-        ("system", "用户的历史对话记录如下："),
+        ("system", "User business context:\n{user_context}"),
+        ("system", "Conversation history:"),
         MessagesPlaceholder("history"),
         ("user", "{input}"),
     ]

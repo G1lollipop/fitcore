@@ -1,0 +1,411 @@
+[
+  {
+    "id": "agent_001",
+    "message": "How much protein should I eat per day to build muscle?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 3,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_002",
+    "message": "What does creatine do and how should I take it?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_003",
+    "message": "Compare low-carb vs balanced diets for body composition — which works better?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 8,
+    "acceptable_k": [5, 8]
+  },
+  {
+    "id": "agent_004",
+    "message": "How does caffeine affect exercise performance?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 3,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_005",
+    "message": "How should I time carbs around training?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5, 8]
+  },
+  {
+    "id": "agent_006",
+    "message": "How do I preserve muscle while cutting calories?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 5,
+    "acceptable_k": [5, 8]
+  },
+  {
+    "id": "agent_007",
+    "message": "What are progressive overload and periodization?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 8,
+    "acceptable_k": [5, 8]
+  },
+  {
+    "id": "agent_008",
+    "message": "How many sets per muscle group per week for hypertrophy?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 3,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_009",
+    "message": "Does cardio interfere with strength gains?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 5,
+    "acceptable_k": [5, 8]
+  },
+  {
+    "id": "agent_010",
+    "message": "How long should I rest between sets for muscle growth?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 3,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_011",
+    "message": "What is beta-alanine and how much should I take?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 3,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_012",
+    "message": "Do probiotics help athletes with immunity or recovery?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_013",
+    "message": "增肌期每天应该摄入多少蛋白质？",
+    "language": "zh",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 3,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_014",
+    "message": "肌酸有什么作用，应该怎么吃？",
+    "language": "zh",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_015",
+    "message": "减脂期和增肌期饮食有什么区别，应该怎么搭配？",
+    "language": "zh",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 8,
+    "acceptable_k": [5, 8]
+  },
+  {
+    "id": "agent_016",
+    "message": "训练前后怎么吃碳水比较好？",
+    "language": "zh",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_017",
+    "message": "咖啡因对运动表现有什么影响？",
+    "language": "zh",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 3,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_018",
+    "message": "什么是渐进超负荷和周期化训练？",
+    "language": "zh",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 8,
+    "acceptable_k": [5, 8]
+  },
+  {
+    "id": "agent_019",
+    "message": "How much did I eat today?",
+    "language": "en",
+    "intent_mode": "personal",
+    "expected_tools": ["get_user_stats"]
+  },
+  {
+    "id": "agent_020",
+    "message": "Am I hitting my protein target today?",
+    "language": "en",
+    "intent_mode": "personal",
+    "expected_tools": ["get_user_stats"]
+  },
+  {
+    "id": "agent_021",
+    "message": "What's my calorie intake so far?",
+    "language": "en",
+    "intent_mode": "personal",
+    "expected_tools": ["get_user_stats"]
+  },
+  {
+    "id": "agent_022",
+    "message": "Show me my workout logs for today.",
+    "language": "en",
+    "intent_mode": "personal",
+    "expected_tools": ["get_user_stats"]
+  },
+  {
+    "id": "agent_023",
+    "message": "Did I drink enough water today?",
+    "language": "en",
+    "intent_mode": "personal",
+    "expected_tools": ["get_user_stats"]
+  },
+  {
+    "id": "agent_024",
+    "message": "How many calories have I burned today?",
+    "language": "en",
+    "intent_mode": "personal",
+    "expected_tools": ["get_user_stats"]
+  },
+  {
+    "id": "agent_025",
+    "message": "我今天吃了多少热量？",
+    "language": "zh",
+    "intent_mode": "personal",
+    "expected_tools": ["get_user_stats"]
+  },
+  {
+    "id": "agent_026",
+    "message": "我今天的蛋白质够吗？",
+    "language": "zh",
+    "intent_mode": "personal",
+    "expected_tools": ["get_user_stats"]
+  },
+  {
+    "id": "agent_027",
+    "message": "看看我今天的运动记录。",
+    "language": "zh",
+    "intent_mode": "personal",
+    "expected_tools": ["get_user_stats"]
+  },
+  {
+    "id": "agent_028",
+    "message": "Based on what I ate today, am I eating enough protein for muscle gain?",
+    "language": "en",
+    "intent_mode": "hybrid",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base", "get_user_stats"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5, 8]
+  },
+  {
+    "id": "agent_029",
+    "message": "I'm in a deficit — how much protein do I need and am I hitting it today?",
+    "language": "en",
+    "intent_mode": "hybrid",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base", "get_user_stats"],
+    "expected_k": 8,
+    "acceptable_k": [5, 8]
+  },
+  {
+    "id": "agent_030",
+    "message": "Given my calories today, should I add a post-workout meal with carbs?",
+    "language": "en",
+    "intent_mode": "hybrid",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base", "get_user_stats"],
+    "expected_k": 5,
+    "acceptable_k": [5, 8]
+  },
+  {
+    "id": "agent_031",
+    "message": "Compare creatine dosing guidelines with what I've logged — anything to adjust?",
+    "language": "en",
+    "intent_mode": "hybrid",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base", "get_user_stats"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5, 8]
+  },
+  {
+    "id": "agent_032",
+    "message": "结合我今天的摄入，蛋白质够不够增肌？",
+    "language": "zh",
+    "intent_mode": "hybrid",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base", "get_user_stats"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5, 8]
+  },
+  {
+    "id": "agent_033",
+    "message": "我在减脂，看看我今天热量和蛋白质是否合理？",
+    "language": "zh",
+    "intent_mode": "hybrid",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base", "get_user_stats"],
+    "expected_k": 8,
+    "acceptable_k": [5, 8]
+  },
+  {
+    "id": "agent_034",
+    "message": "Hi there!",
+    "language": "en",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  },
+  {
+    "id": "agent_035",
+    "message": "Good morning!",
+    "language": "en",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  },
+  {
+    "id": "agent_036",
+    "message": "Thanks, that helps!",
+    "language": "en",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  },
+  {
+    "id": "agent_037",
+    "message": "How are you doing?",
+    "language": "en",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  },
+  {
+    "id": "agent_038",
+    "message": "You're awesome!",
+    "language": "en",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  },
+  {
+    "id": "agent_039",
+    "message": "Tell me a joke.",
+    "language": "en",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  },
+  {
+    "id": "agent_040",
+    "message": "What can you help me with?",
+    "language": "en",
+    "intent_mode": "small_talk",
+    "expected_tools": [],
+    "note": "Meta question — no KB/personal tools needed"
+  },
+  {
+    "id": "agent_041",
+    "message": "你好！",
+    "language": "zh",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  },
+  {
+    "id": "agent_042",
+    "message": "谢谢你的建议！",
+    "language": "zh",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  },
+  {
+    "id": "agent_043",
+    "message": "在吗？",
+    "language": "zh",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  },
+  {
+    "id": "agent_044",
+    "message": "今天天气不错。",
+    "language": "zh",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  },
+  {
+    "id": "agent_045",
+    "message": "Does meal frequency boost metabolism?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_046",
+    "message": "How should I warm up before lifting?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 3,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_047",
+    "message": "Is HMB useful for muscle preservation?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_048",
+    "message": "How many times per week should I train each muscle?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 3,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_049",
+    "message": "Should I take sodium bicarbonate before HIIT?",
+    "language": "en",
+    "intent_mode": "knowledge",
+    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_k": 5,
+    "acceptable_k": [3, 5]
+  },
+  {
+    "id": "agent_050",
+    "message": "Hey coach 👋",
+    "language": "en",
+    "intent_mode": "small_talk",
+    "expected_tools": []
+  }
+]

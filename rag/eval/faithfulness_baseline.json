@@ -1,0 +1,8 @@
+{
+  "_comment": "Faithfulness regression floors (RAGAS-style LLM-judge). Conservative — LLM variance tolerated.",
+  "dataset": "golden_dataset_en.json",
+  "thresholds": {
+    "faithfulness": 0.65,
+    "answer_relevancy": 0.75
+  }
+}
