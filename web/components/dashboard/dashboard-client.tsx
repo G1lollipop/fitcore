@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState, useTransition } from 'react'
+import { useCallback, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { AppShell } from '@/components/layout/app-shell'
 import { findNavItem } from '@/components/layout/nav-items'
@@ -116,47 +116,83 @@ export function DashboardClient({
         </>
       }
     >
-      {activeNav === 'dashboard' && (
-        <>
-          <StatsCards
+      <TabPanel active={activeNav === 'dashboard'} className="space-y-6">
+        <StatsCards
+          userId={userId}
+          kcalIntake={dashboardData?.today.total_calories}
+          kcalBurn={dashboardData?.today.calories_burned}
+          kcalGoal={dashboardData?.goals.target_calories}
+          workoutMinutes={dashboardData?.today.workout_duration}
+          waterIntake={dashboardData?.today.water_intake}
+          waterGoal={dashboardData?.goals.water_goal}
+          onWaterLogged={handleLogSuccess}
+        />
+
+        <AdvancedLogDisclosure>
+          <DailyLogForm
             userId={userId}
-            kcalIntake={dashboardData?.today.total_calories}
-            kcalBurn={dashboardData?.today.calories_burned}
-            kcalGoal={dashboardData?.goals.target_calories}
-            workoutMinutes={dashboardData?.today.workout_duration}
-            waterIntake={dashboardData?.today.water_intake}
-            waterGoal={dashboardData?.goals.water_goal}
-            onWaterLogged={handleLogSuccess}
+            onLogSuccess={handleLogSuccess}
+            initialDietLogs={dashboardData?.today.diet_logs ?? []}
+            initialWorkoutLogs={dashboardData?.today.workout_logs ?? []}
+            yesterdayWorkout={dashboardData?.yesterdayWorkout}
+            todayWorkout={dashboardData?.todayWorkout}
+            compact
           />
+        </AdvancedLogDisclosure>
 
-          <AdvancedLogDisclosure>
-            <DailyLogForm
-              userId={userId}
-              onLogSuccess={handleLogSuccess}
-              initialDietLogs={dashboardData?.today.diet_logs ?? []}
-              initialWorkoutLogs={dashboardData?.today.workout_logs ?? []}
-              yesterdayWorkout={dashboardData?.yesterdayWorkout}
-              todayWorkout={dashboardData?.todayWorkout}
-              compact
-            />
-          </AdvancedLogDisclosure>
+        <WeeklyActivity data={dashboardData?.weeklyTrend} />
+      </TabPanel>
 
-          <WeeklyActivity data={dashboardData?.weeklyTrend} />
-        </>
-      )}
-
-      {activeNav === 'nutrition' && (
+      <TabPanel active={activeNav === 'nutrition'}>
         <NutritionCenter userId={userId} onLogSuccess={handleLogSuccess} />
-      )}
+      </TabPanel>
 
-      {activeNav === 'training' && (
+      <TabPanel active={activeNav === 'training'}>
         <TrainingHistory userId={userId} onLogSuccess={handleLogSuccess} />
-      )}
+      </TabPanel>
 
-      {activeNav === 'plans' && <MyPlans userId={userId} />}
+      <TabPanel active={activeNav === 'plans'}>
+        <MyPlans userId={userId} />
+      </TabPanel>
 
-      {activeNav === 'knowledge' && <KnowledgeBase />}
+      <TabPanel active={activeNav === 'knowledge'}>
+        <KnowledgeBase />
+      </TabPanel>
     </AppShell>
+  )
+}
+
+/**
+ * Keep-alive tab wrapper.
+ *
+ * Mounts a tab's subtree the first time it becomes active, then keeps it in
+ * the DOM (toggling the `hidden` attribute) instead of unmounting it. This is
+ * what makes re-visiting a tab instant: no remount, no `useEffect` refetch, no
+ * skeleton flash, and per-tab state (selected date/month, scroll, etc.) is
+ * preserved across nav switches.
+ *
+ * Inactive panels render `hidden` → `display:none`, so they're out of the
+ * layout and the accessibility tree. Tailwind's `space-y-*` selectors use
+ * `:not([hidden])`, so a hidden sibling never injects stray margins.
+ */
+function TabPanel({
+  active,
+  className,
+  children,
+}: {
+  active: boolean
+  className?: string
+  children: ReactNode
+}) {
+  // Latches to true on first activation and stays mounted thereafter.
+  const everActive = useRef(active)
+  if (active) everActive.current = true
+  if (!everActive.current) return null
+
+  return (
+    <div hidden={!active} className={active ? className : undefined}>
+      {children}
+    </div>
   )
 }
 
