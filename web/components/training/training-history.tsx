@@ -130,7 +130,7 @@ export function TrainingHistory({ userId, onLogSuccess }: TrainingHistoryProps) 
 function TrainingSkeleton() {
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="glass rounded-2xl p-6">
         <Skeleton className="mb-4 h-5 w-40" />
         <div className="grid grid-cols-3 gap-3">
           <Skeleton className="h-20 rounded-xl" />
@@ -144,7 +144,7 @@ function TrainingSkeleton() {
           <Skeleton className="h-12 rounded-xl" />
         </div>
       </div>
-      <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="glass rounded-2xl p-5">
         <Skeleton className="mb-4 h-5 w-32" />
         <div className="grid grid-cols-7 gap-2">
           {Array.from({ length: 35 }).map((_, i) => (

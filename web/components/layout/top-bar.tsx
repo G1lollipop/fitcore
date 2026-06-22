@@ -19,7 +19,7 @@ interface TopBarProps {
 export const TopBar = memo(function TopBar({ pageTitle, greeting, userName }: TopBarProps) {
   const t = useT()
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/60 backdrop-blur-xl">
       <div className="flex items-center justify-between px-5 md:px-8 h-16">
         <div className="min-w-0">
           <h1 className="font-display text-lg md:text-xl font-semibold text-foreground tracking-tight truncate">

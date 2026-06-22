@@ -101,7 +101,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="glass glass-highlight flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -149,7 +149,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
+            className="glass glass-highlight rounded-2xl p-5 sm:p-6"
           >
             <header className="mb-4 flex items-baseline justify-between">
               <h3 className="font-display text-base font-semibold text-foreground">
@@ -166,7 +166,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
-            className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
+            className="glass glass-highlight rounded-2xl p-5 sm:p-6"
           >
             <header className="mb-4 flex items-baseline justify-between">
               <h3 className="font-display text-base font-semibold text-foreground">
@@ -248,7 +248,7 @@ function AddFoodInput({ t, value, onChange, onSubmit, isSubmitting, disabled }: 
 function NutritionSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="glass rounded-2xl p-6">
         <Skeleton className="mb-4 h-5 w-24" />
         <div className="flex flex-col items-center gap-4">
           <Skeleton className="h-56 w-56 rounded-full" />
@@ -259,7 +259,7 @@ function NutritionSkeleton() {
           </div>
         </div>
       </div>
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="glass rounded-2xl p-6">
         <Skeleton className="mb-4 h-5 w-32" />
         <Skeleton className="mb-5 h-10 w-full rounded-xl" />
         <div className="space-y-4">

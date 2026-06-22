@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Leaf, Loader2 } from 'lucide-react'
 import { createAuthBrowserClient } from '@/lib/supabase/client'
 import { useT } from '@/lib/i18n/provider'
 
@@ -82,12 +82,20 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-[0_0_40px_rgba(249,115,22,0.2)] md:p-8">
-      <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-white">
+    <div className="glass-strong glass-highlight rounded-2xl p-6 md:p-8">
+      <div className="mb-6 flex flex-col items-center text-center">
+        <div className="mb-4 flex items-center gap-2.5">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-sm">
+            <Leaf className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
+          </span>
+          <span className="font-display text-xl font-semibold tracking-tight text-foreground">
+            FitCore
+          </span>
+        </div>
+        <h1 className="font-display text-2xl font-semibold text-foreground">
           {isSignUp ? t.auth.signUpTitle : t.auth.signInTitle}
         </h1>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-muted-foreground">
           {isSignUp ? t.auth.signUpSubtitle : t.auth.signInSubtitle}
         </p>
       </div>
@@ -96,21 +104,21 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         type="button"
         onClick={handleGoogle}
         disabled={loading}
-        className="flex w-full items-center justify-center gap-3 rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-card/70 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:opacity-50"
       >
         <GoogleIcon />
         {t.auth.continueWithGoogle}
       </button>
 
       <div className="my-5 flex items-center gap-3">
-        <span className="h-px flex-1 bg-zinc-700" />
-        <span className="text-xs uppercase text-zinc-500">{t.auth.or}</span>
-        <span className="h-px flex-1 bg-zinc-700" />
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-xs uppercase text-muted-foreground">{t.auth.or}</span>
+        <span className="h-px flex-1 bg-border" />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-white">
+          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-foreground">
             {t.auth.emailLabel}
           </label>
           <input
@@ -121,12 +129,12 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t.auth.emailPlaceholder}
-            className="h-11 w-full rounded-lg border border-zinc-600 bg-zinc-50 px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30"
+            className="h-11 w-full rounded-lg border border-input bg-card/60 px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-white">
+          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-foreground">
             {t.auth.passwordLabel}
           </label>
           <input
@@ -138,17 +146,17 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={t.auth.passwordPlaceholder}
-            className="h-11 w-full rounded-lg border border-zinc-600 bg-zinc-50 px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30"
+            className="h-11 w-full rounded-lg border border-input bg-card/60 px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
           />
         </div>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        {info && <p className="text-sm text-green-400">{info}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {info && <p className="text-sm text-success">{info}</p>}
 
         <button
           type="submit"
           disabled={loading}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-orange-500 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-50"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-[0.98] disabled:opacity-50"
         >
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           {loading ? t.auth.processing : isSignUp ? t.auth.submitSignUp : t.auth.submitSignIn}

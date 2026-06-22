@@ -103,7 +103,7 @@ export function WaterTracker({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
       className={cn(
-        'relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm',
+        'glass glass-highlight relative flex flex-col overflow-hidden rounded-2xl p-5',
         className
       )}
     >

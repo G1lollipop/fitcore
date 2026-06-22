@@ -25,7 +25,7 @@ export function ChatLauncher({ onClick }: ChatLauncherProps) {
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-      className="group fixed bottom-20 right-4 z-50 flex h-12 items-center gap-2 rounded-2xl border border-border bg-card pl-3 pr-4 shadow-md transition-shadow hover:border-primary/40 hover:shadow-lg md:bottom-6 md:right-6"
+      className="glass group fixed bottom-20 right-4 z-50 flex h-12 items-center gap-2 rounded-2xl pl-3 pr-4 transition-shadow hover:shadow-lg md:bottom-6 md:right-6"
       aria-label={t.aiChat.openCoach}
     >
       <span

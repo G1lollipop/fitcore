@@ -26,7 +26,7 @@ export function MobileTabBar({ activeNav, onNavChange }: MobileTabBarProps) {
       aria-label={t.sidebar.mainNav}
       className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40"
     >
-      <div className="flex items-center gap-1 rounded-full border border-border bg-card/85 backdrop-blur-xl shadow-lg shadow-black/5 dark:shadow-black/40 px-1.5 py-1.5">
+      <div className="glass flex items-center gap-1 rounded-full px-1.5 py-1.5">
         {NAV_ITEMS.map((item) => (
           <TabItem
             key={item.id}

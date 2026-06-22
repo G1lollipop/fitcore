@@ -44,7 +44,7 @@ export function ChatHeader({
     <div
       className={cn(
         'flex items-center gap-3 border-b border-border shrink-0',
-        compact ? 'px-4 py-3 rounded-t-xl bg-muted/50' : 'px-4 py-4 bg-card'
+        compact ? 'px-4 py-3 rounded-t-xl bg-muted/50' : 'px-4 py-4 bg-card/30'
       )}
     >
       <div

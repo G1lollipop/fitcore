@@ -54,7 +54,7 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <QuickLogProvider userId={userId} onLogged={onQuickLogged}>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen">
         <SidebarNav activeNav={activeNav} onNavChange={onNavChange} userName={userName} />
 
         <main className="flex-1 flex flex-col min-w-0">

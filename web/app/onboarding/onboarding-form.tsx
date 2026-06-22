@@ -152,14 +152,14 @@ export default function OnboardingForm({ userName }: { userName: string }) {
 
   if (isLoadingSettings) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4 md:p-8">
         <div className="w-full max-w-lg">
           <div className="text-center mb-8">
@@ -223,7 +223,7 @@ export default function OnboardingForm({ userName }: { userName: string }) {
             <Progress value={progress} className="h-1.5" />
           </div>
 
-          <div className="bg-card rounded-2xl border border-border p-6 md:p-8 shadow-lg">
+          <div className="glass-strong glass-highlight rounded-2xl p-6 md:p-8">
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div className="text-center mb-6">

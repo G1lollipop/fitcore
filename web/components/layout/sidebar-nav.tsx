@@ -49,7 +49,7 @@ export function SidebarNav({ activeNav, onNavChange, userName }: SidebarNavProps
       <aside
         data-collapsed={collapsed}
         className={cn(
-          'hidden md:flex flex-col shrink-0 bg-sidebar border-r border-sidebar-border h-screen sticky top-0 transition-[width] duration-300 ease-out',
+          'hidden md:flex flex-col shrink-0 bg-sidebar backdrop-blur-xl border-r border-sidebar-border h-screen sticky top-0 transition-[width] duration-300 ease-out',
           collapsed ? 'w-16' : 'w-60'
         )}
       >

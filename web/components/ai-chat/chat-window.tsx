@@ -94,7 +94,7 @@ function MobileSheet({
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ duration: 0.32, ease: PANEL_EASE }}
-      className="fixed inset-0 z-50 flex flex-col bg-background md:hidden"
+      className="glass-strong fixed inset-0 z-50 flex flex-col md:hidden"
     >
       <ChatHeader
         compact={false}
@@ -164,7 +164,7 @@ function DesktopDock({
       exit={{ x: '100%', opacity: 0 }}
       transition={{ duration: 0.32, ease: PANEL_EASE }}
       className={cn(
-        'fixed inset-y-0 right-0 z-50 hidden w-full max-w-[420px] flex-col border-l border-border bg-card/95 shadow-2xl backdrop-blur',
+        'glass-strong fixed inset-y-0 right-0 z-50 hidden w-full max-w-[420px] flex-col shadow-2xl',
         'md:flex'
       )}
     >

@@ -23,7 +23,7 @@ export function AdvancedLogDisclosure({ children, defaultOpen = false }: Advance
   const t = useT()
 
   return (
-    <section className="rounded-2xl border border-border bg-card/60 shadow-sm">
+    <section className="glass rounded-2xl">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

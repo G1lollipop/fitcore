@@ -200,7 +200,7 @@ function TabPanel({
 function KnowledgeBase() {
   const t = useT()
   return (
-    <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+    <div className="glass glass-highlight rounded-2xl p-6">
       <h2 className="font-display text-base font-semibold text-foreground mb-2">
         {t.knowledge.title}
       </h2>

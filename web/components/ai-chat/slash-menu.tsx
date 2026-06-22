@@ -45,7 +45,7 @@ export function SlashMenu({
 
   if (filtered.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card/95 px-3 py-2 text-[11px] text-muted-foreground shadow-lg backdrop-blur">
+      <div className="glass-strong rounded-2xl px-3 py-2 text-[11px] text-muted-foreground">
         {t.aiChat.noMatchCommands}
       </div>
     )
@@ -59,7 +59,7 @@ export function SlashMenu({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 6 }}
       transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-      className="overflow-hidden rounded-2xl border border-border bg-card/95 shadow-lg backdrop-blur"
+      className="glass-strong overflow-hidden rounded-2xl"
     >
       <div className="border-b border-border/70 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
         {t.aiChat.slashTitle}

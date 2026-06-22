@@ -340,7 +340,7 @@ function planToCardData(plan: PlanWithDays): PlanCardData {
 function PlansSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="glass rounded-2xl p-6">
         <Skeleton className="mb-3 h-4 w-24" />
         <Skeleton className="h-6 w-1/2" />
         <div className="mt-4 space-y-2">

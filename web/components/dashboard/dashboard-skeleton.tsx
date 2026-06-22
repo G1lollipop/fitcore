@@ -10,7 +10,7 @@ export function DashboardSkeleton() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* Today hero */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:col-span-8">
+        <div className="glass rounded-2xl p-6 lg:col-span-8">
           <div className="flex items-start justify-between">
             <div>
               <Skeleton className="h-3 w-12" />
@@ -29,7 +29,7 @@ export function DashboardSkeleton() {
         </div>
 
         {/* Water tracker */}
-        <div className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm lg:col-span-4">
+        <div className="glass flex flex-col rounded-2xl p-5 lg:col-span-4">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-24" />
             <Skeleton className="h-7 w-7 rounded-lg" />
@@ -40,7 +40,7 @@ export function DashboardSkeleton() {
       </div>
 
       {/* Weekly trend */}
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="glass rounded-2xl p-5">
         <div className="mb-5 flex items-end justify-between">
           <div>
             <Skeleton className="h-3 w-20" />

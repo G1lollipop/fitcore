@@ -87,7 +87,7 @@ export function StreakCalendar({
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-2xl border border-border bg-card shadow-sm',
+        'glass glass-highlight overflow-hidden rounded-2xl',
         className
       )}
     >

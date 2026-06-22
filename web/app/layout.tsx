@@ -24,8 +24,8 @@ const spaceGrotesk = Space_Grotesk({
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f4f1ea' },
-    { media: '(prefers-color-scheme: dark)', color: '#171a18' },
+    { media: '(prefers-color-scheme: light)', color: '#eaf3f0' },
+    { media: '(prefers-color-scheme: dark)', color: '#13201e' },
   ],
 }
 
@@ -45,7 +45,7 @@ export default function RootLayout({
     // which would otherwise mismatch the server-rendered `<html>`.
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${spaceGrotesk.variable} font-sans antialiased bg-background text-foreground`}
+        className={`${inter.variable} ${spaceGrotesk.variable} font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"

@@ -102,7 +102,7 @@ export function QuickLogBar() {
                 transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                 className={cn(
                   'fixed left-1/2 top-[18vh] z-50 w-[min(92vw,640px)] -translate-x-1/2',
-                  'overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-foreground/20'
+                  'glass-strong glass-highlight overflow-hidden rounded-2xl shadow-2xl shadow-foreground/20'
                 )}
               >
                 <DialogPrimitive.Title className="sr-only">{t.logForm.quick.srTitle}</DialogPrimitive.Title>

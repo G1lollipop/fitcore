@@ -20,20 +20,20 @@ export function AuthTabs({ active }: { active: 'sign-in' | 'sign-up' }) {
         onClick={toggleLanguage}
         aria-label={t.language.switchTo}
         title={t.language.switchTo}
-        className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 text-sm font-medium text-zinc-400 transition-colors hover:text-white hover:bg-zinc-700/50"
+        className="glass inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <Languages size={16} />
         <span className="min-w-[1.6rem] text-center" aria-hidden>
           {mounted ? (language === 'zh' ? 'EN' : '中') : ''}
         </span>
       </button>
-      <div className="flex items-center gap-2 px-1 py-1 rounded-lg bg-zinc-800/50 border border-zinc-700">
+      <div className="glass flex items-center gap-1 rounded-lg p-1">
         <Link
           href="/sign-in"
           className={
             active === 'sign-in'
-              ? 'px-4 py-2 rounded-md text-sm font-medium bg-orange-500 text-white transition-colors'
-              : 'px-4 py-2 rounded-md text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-700/50 transition-colors'
+              ? 'px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground transition-colors'
+              : 'px-4 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors'
           }
         >
           {t.auth.signIn}
@@ -42,8 +42,8 @@ export function AuthTabs({ active }: { active: 'sign-in' | 'sign-up' }) {
           href="/sign-up"
           className={
             active === 'sign-up'
-              ? 'px-4 py-2 rounded-md text-sm font-medium bg-orange-500 text-white transition-colors'
-              : 'px-4 py-2 rounded-md text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-700/50 transition-colors'
+              ? 'px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground transition-colors'
+              : 'px-4 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors'
           }
         >
           {t.auth.signUp}

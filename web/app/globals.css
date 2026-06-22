@@ -4,111 +4,147 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ──────────────────────────────────────────────────────────────────────────
-   "Calm Athletic" palette
+   "Aurora Glass" palette
    ──────────────────────────────────────────────────────────────────────────
-   Light: warm off-white background + sand neutrals + deep forest green
-          (used as an accent rather than the hero color) + lime yellow for
-          streaks/achievements.
-   Dark:  deep slate-green background, brighter primary for contrast,
-          same lime accent.
+   A premium, airy system built on three visual layers:
 
+     1. Aurora     — a soft, low-saturation gradient mesh painted on <body>.
+                     Mint → teal → lavender → cream (light); deep teal →
+                     emerald → indigo (dark).
+     2. Glass      — translucent, blurred container surfaces (sidebar, top-bar,
+                     hero/summary cards, overlays). Used for *containers*, never
+                     for data-dense lists/forms, to protect legibility + perf.
+     3. Content    — solid, high-contrast text / numbers / charts on opaque
+                     `--card` surfaces where reading speed matters.
+
+   Brand hue is a brighter emerald/teal than the previous forest green.
    All colors are oklch so we can interpolate / tint them at runtime.
    ────────────────────────────────────────────────────────────────────── */
 
 :root {
   /* Surfaces */
-  --background: oklch(0.975 0.008 95);          /* warm off-white */
-  --foreground: oklch(0.18 0.015 145);          /* near-black with a hint of green */
+  --background: oklch(0.98 0.01 185);           /* cool near-white (aurora shows through) */
+  --foreground: oklch(0.18 0.02 175);           /* near-black with a hint of teal */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.015 145);
+  --card-foreground: oklch(0.18 0.02 175);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.015 145);
+  --popover-foreground: oklch(0.18 0.02 175);
 
-  /* Brand */
-  --primary: oklch(0.52 0.14 145);              /* deep forest green */
+  /* Brand — brighter emerald/teal */
+  --primary: oklch(0.64 0.14 168);
   --primary-foreground: oklch(0.99 0 0);
 
-  /* Neutrals — warm sand instead of cool gray */
-  --secondary: oklch(0.94 0.012 85);
-  --secondary-foreground: oklch(0.3 0.015 85);
-  --muted: oklch(0.96 0.008 85);
-  --muted-foreground: oklch(0.48 0.012 85);
+  /* Neutrals — cool, faintly teal-tinted gray */
+  --secondary: oklch(0.95 0.012 195);
+  --secondary-foreground: oklch(0.3 0.02 185);
+  --muted: oklch(0.96 0.008 195);
+  --muted-foreground: oklch(0.5 0.015 195);
 
-  /* Accent — lime yellow, reserved for streaks / "you did it" moments */
-  --accent: oklch(0.82 0.16 100);
-  --accent-foreground: oklch(0.22 0.05 100);
+  /* Accent — soft lavender, used for secondary data + "highlight" moments */
+  --accent: oklch(0.72 0.11 300);
+  --accent-foreground: oklch(0.99 0 0);
 
   /* States */
   --destructive: oklch(0.58 0.21 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.62 0.15 145);
+  --success: oklch(0.66 0.15 162);
 
   /* Lines + inputs */
-  --border: oklch(0.9 0.01 85);
-  --input: oklch(0.93 0.01 85);
-  --ring: oklch(0.52 0.14 145);
+  --border: oklch(0.9 0.012 195);
+  --input: oklch(0.93 0.012 195);
+  --ring: oklch(0.64 0.14 168);
 
-  /* Charts */
-  --chart-1: oklch(0.52 0.14 145);
-  --chart-2: oklch(0.6 0.12 200);
-  --chart-3: oklch(0.62 0.12 250);
-  --chart-4: oklch(0.82 0.16 100);
-  --chart-5: oklch(0.58 0.18 25);
+  /* Charts — emerald, teal, lavender, amber, coral */
+  --chart-1: oklch(0.64 0.14 168);
+  --chart-2: oklch(0.66 0.12 210);
+  --chart-3: oklch(0.66 0.13 300);
+  --chart-4: oklch(0.82 0.15 95);
+  --chart-5: oklch(0.62 0.18 25);
 
-  /* Sidebar surface — slightly cooler than card so the rail reads as "chrome" */
-  --sidebar: oklch(0.98 0.005 95);
-  --sidebar-foreground: oklch(0.25 0.012 145);
-  --sidebar-primary: oklch(0.52 0.14 145);
+  /* ── Aurora mesh stops (painted on <body>) ── */
+  --aurora-1: oklch(0.9 0.09 168);              /* mint */
+  --aurora-2: oklch(0.89 0.08 205);             /* teal */
+  --aurora-3: oklch(0.9 0.07 300);              /* lavender */
+  --aurora-4: oklch(0.95 0.05 95);              /* warm cream */
+  --aurora-opacity: 0.55;
+
+  /* ── Glass surface tokens ── */
+  --glass-bg: oklch(1 0 0 / 0.6);
+  --glass-bg-strong: oklch(1 0 0 / 0.82);
+  --glass-border: oklch(1 0 0 / 0.55);
+  --glass-highlight: oklch(1 0 0 / 0.7);
+  --glass-blur: 18px;
+  --glass-shadow: 0 8px 32px -8px oklch(0.5 0.05 195 / 0.18), 0 2px 8px -4px oklch(0.5 0.05 195 / 0.12);
+
+  /* Sidebar surface — glass over aurora */
+  --sidebar: oklch(1 0 0 / 0.55);
+  --sidebar-foreground: oklch(0.25 0.018 175);
+  --sidebar-primary: oklch(0.64 0.14 168);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.94 0.012 85);
-  --sidebar-accent-foreground: oklch(0.25 0.012 145);
-  --sidebar-border: oklch(0.9 0.01 85);
-  --sidebar-ring: oklch(0.52 0.14 145);
+  --sidebar-accent: oklch(0.95 0.012 195);
+  --sidebar-accent-foreground: oklch(0.25 0.018 175);
+  --sidebar-border: oklch(1 0 0 / 0.5);
+  --sidebar-ring: oklch(0.64 0.14 168);
 
-  --radius: 0.75rem;                            /* slightly chunkier than before */
+  --radius: 1.1rem;                             /* large, soft corners — key to the look */
 }
 
 .dark {
-  --background: oklch(0.16 0.012 145);
-  --foreground: oklch(0.95 0.005 95);
-  --card: oklch(0.2 0.014 145);
-  --card-foreground: oklch(0.95 0.005 95);
-  --popover: oklch(0.2 0.014 145);
-  --popover-foreground: oklch(0.95 0.005 95);
+  --background: oklch(0.16 0.018 200);
+  --foreground: oklch(0.95 0.006 185);
+  --card: oklch(0.21 0.02 195);
+  --card-foreground: oklch(0.95 0.006 185);
+  --popover: oklch(0.21 0.02 195);
+  --popover-foreground: oklch(0.95 0.006 185);
 
-  --primary: oklch(0.7 0.16 145);               /* brighter for contrast */
-  --primary-foreground: oklch(0.12 0.015 145);
+  --primary: oklch(0.74 0.15 168);              /* brighter for contrast on dark */
+  --primary-foreground: oklch(0.14 0.02 195);
 
-  --secondary: oklch(0.26 0.018 85);
-  --secondary-foreground: oklch(0.92 0.008 85);
-  --muted: oklch(0.23 0.014 85);
-  --muted-foreground: oklch(0.68 0.012 85);
+  --secondary: oklch(0.27 0.02 195);
+  --secondary-foreground: oklch(0.92 0.01 185);
+  --muted: oklch(0.24 0.016 195);
+  --muted-foreground: oklch(0.7 0.014 195);
 
-  --accent: oklch(0.78 0.16 100);
-  --accent-foreground: oklch(0.18 0.05 100);
+  --accent: oklch(0.74 0.12 300);
+  --accent-foreground: oklch(0.14 0.02 300);
 
   --destructive: oklch(0.62 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --success: oklch(0.68 0.16 145);
+  --success: oklch(0.72 0.15 162);
 
-  --border: oklch(0.3 0.014 85);
-  --input: oklch(0.26 0.014 85);
-  --ring: oklch(0.7 0.16 145);
+  --border: oklch(0.32 0.016 195);
+  --input: oklch(0.28 0.016 195);
+  --ring: oklch(0.74 0.15 168);
 
-  --chart-1: oklch(0.7 0.16 145);
-  --chart-2: oklch(0.68 0.13 200);
-  --chart-3: oklch(0.7 0.13 250);
-  --chart-4: oklch(0.78 0.16 100);
-  --chart-5: oklch(0.66 0.2 25);
+  --chart-1: oklch(0.74 0.15 168);
+  --chart-2: oklch(0.72 0.13 210);
+  --chart-3: oklch(0.72 0.14 300);
+  --chart-4: oklch(0.82 0.15 95);
+  --chart-5: oklch(0.68 0.2 25);
 
-  --sidebar: oklch(0.18 0.014 145);
-  --sidebar-foreground: oklch(0.85 0.008 95);
-  --sidebar-primary: oklch(0.7 0.16 145);
-  --sidebar-primary-foreground: oklch(0.12 0.015 145);
-  --sidebar-accent: oklch(0.26 0.018 85);
-  --sidebar-accent-foreground: oklch(0.92 0.008 85);
-  --sidebar-border: oklch(0.3 0.014 85);
-  --sidebar-ring: oklch(0.7 0.16 145);
+  /* ── Aurora mesh (dark) ── */
+  --aurora-1: oklch(0.5 0.12 172);              /* deep emerald */
+  --aurora-2: oklch(0.46 0.11 220);             /* deep teal */
+  --aurora-3: oklch(0.45 0.12 300);             /* indigo */
+  --aurora-4: oklch(0.4 0.07 165);              /* dark green */
+  --aurora-opacity: 0.5;
+
+  /* ── Glass (dark) ── */
+  --glass-bg: oklch(0.24 0.02 195 / 0.55);
+  --glass-bg-strong: oklch(0.23 0.02 195 / 0.8);
+  --glass-border: oklch(1 0 0 / 0.1);
+  --glass-highlight: oklch(1 0 0 / 0.14);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px -8px oklch(0 0 0 / 0.5), 0 2px 8px -4px oklch(0 0 0 / 0.4);
+
+  --sidebar: oklch(0.2 0.02 195 / 0.55);
+  --sidebar-foreground: oklch(0.85 0.01 185);
+  --sidebar-primary: oklch(0.74 0.15 168);
+  --sidebar-primary-foreground: oklch(0.14 0.02 195);
+  --sidebar-accent: oklch(0.27 0.02 195);
+  --sidebar-accent-foreground: oklch(0.92 0.01 185);
+  --sidebar-border: oklch(1 0 0 / 0.08);
+  --sidebar-ring: oklch(0.74 0.15 168);
 }
 
 @theme inline {
@@ -149,8 +185,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
@@ -167,9 +203,22 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
     font-feature-settings: 'cv11', 'ss01';        /* Inter stylistic alternates */
     text-rendering: optimizeLegibility;
+
+    /* ── Aurora mesh ──
+       A fixed, layered set of soft radial blobs. `background-color` is the
+       solid fallback; the gradients sit on top at `--aurora-opacity`. */
+    background-color: var(--background);
+    background-image:
+      radial-gradient(at 12% 12%, color-mix(in oklch, var(--aurora-1) calc(var(--aurora-opacity) * 100%), transparent) 0px, transparent 45%),
+      radial-gradient(at 88% 8%, color-mix(in oklch, var(--aurora-2) calc(var(--aurora-opacity) * 100%), transparent) 0px, transparent 45%),
+      radial-gradient(at 78% 92%, color-mix(in oklch, var(--aurora-3) calc(var(--aurora-opacity) * 100%), transparent) 0px, transparent 50%),
+      radial-gradient(at 18% 85%, color-mix(in oklch, var(--aurora-4) calc(var(--aurora-opacity) * 100%), transparent) 0px, transparent 50%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    min-height: 100vh;
   }
 
   /* Editorial numerals via Space Grotesk + tabular figures */
@@ -207,11 +256,67 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Skeleton shimmer
+   Glass surfaces
    ──────────────────────────────────────────────────────────────────────────
-   A slow horizontal sweep used by `<Skeleton>` placeholders. The gradient
-   reads as a soft sand → sand-with-highlight → sand cycle, which matches
-   the Calm Athletic palette better than a binary pulse.
+   `.glass` is the standard translucent container; `.glass-strong` is a less
+   transparent variant for surfaces that sit over busier backgrounds (overlays,
+   the auth card). A faint top highlight border sells the "pane of glass" read.
+
+   IMPORTANT: reserve glass for *containers*. Data-dense lists, tables, and
+   forms should keep solid `bg-card` so text stays at full contrast and we
+   avoid stacking many blurred layers (GPU cost).
+   ────────────────────────────────────────────────────────────────────── */
+
+@layer components {
+  .glass {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-strong {
+    background-color: var(--glass-bg-strong);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* Subtle inner top-edge highlight, like light catching glass. */
+  .glass-highlight {
+    position: relative;
+  }
+  .glass-highlight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding-top: 1px;
+    background: linear-gradient(
+      to bottom,
+      var(--glass-highlight),
+      transparent 40%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Fallback for browsers / devices without backdrop-filter: drop to an
+     opaque surface so text never loses contrast. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass,
+    .glass-strong {
+      background-color: var(--card);
+    }
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Skeleton shimmer
    ────────────────────────────────────────────────────────────────────── */
 
 @keyframes skeleton-shimmer {

@@ -85,7 +85,7 @@ export function TodayHero({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm',
+        'glass glass-highlight relative overflow-hidden rounded-2xl p-6',
         'flex flex-col gap-6',
         className
       )}
@@ -243,7 +243,7 @@ function Stat({ tone, icon, label, value, unit, sub }: StatProps) {
         : 'bg-secondary text-muted-foreground'
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 p-3">
+    <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-card/50 p-3">
       <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg', toneClass)}>
         {icon}
       </div>
