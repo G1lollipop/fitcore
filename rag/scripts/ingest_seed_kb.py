@@ -35,7 +35,25 @@ def main() -> int:
         action="store_true",
         help="忽略 md5.text 去重，强制写入（首次灌入 Supabase 或更新正文时用）",
     )
+    parser.add_argument(
+        "--keep-list",
+        default=None,
+        help="只灌入清单内的文件（每行一个文件名，如 data/cloud_keep.txt）；"
+        "用于云端精选子集灌库。不传则灌全部 data/{kb,auto}_*.txt。",
+    )
     args = parser.parse_args()
+
+    keep: set[str] | None = None
+    if args.keep_list:
+        kp = Path(args.keep_list)
+        if not kp.is_absolute():
+            kp = RAG_ROOT / kp
+        keep = {
+            ln.strip()
+            for ln in kp.read_text(encoding="utf-8").splitlines()
+            if ln.strip() and not ln.startswith("#")
+        }
+        print(f"[ingest] keep-list: 仅灌入 {len(keep)} 个文件（来自 {kp.name}）")
 
     from app.core.settings import get_settings  # noqa: WPS433
 
@@ -72,6 +90,9 @@ def main() -> int:
     files: list[Path] = []
     for pattern in patterns:
         files.extend(Path(p) for p in sorted(glob(pattern)))
+
+    if keep is not None:
+        files = [f for f in files if f.name in keep]
 
     if not files:
         print("[ingest] No matching files found.")

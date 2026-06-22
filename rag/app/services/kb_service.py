@@ -107,8 +107,8 @@ def _build_text_splitter(embedding: Embeddings):
             )
 
     return RecursiveCharacterTextSplitter(
-        chunk_size=config.chunk_size,
-        chunk_overlap=config.chunk_overlap,
+        chunk_size=settings.chunk_size,
+        chunk_overlap=settings.chunk_overlap,
         separators=config.separators,
         length_function=len,
     )

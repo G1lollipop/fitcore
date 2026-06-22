@@ -4,7 +4,7 @@
 
 | 脚本 | 评估对象 | 指标 | 是否需 LLM |
 |------|----------|------|-----------|
-| `eval_retrieval.py` | **检索层**（向量+BM25+可选重排） | Recall@k / Precision@k / MRR@k / nDCG@k / hit_rate@k + abstention | 否（只需 embedding） |
+| `eval_retrieval.py` | **检索层**（向量+BM25+可选重排） | **锚点**：anchor_recall@k / anchor_hit@k / anchor_mrr@k（确定性，CI 门禁）；**质量**：context_precision@k / context_hit@k（LLM 裁判，`--judge`）+ abstention | 默认否；`--judge` 才需 |
 | `evaluate.py` | **端到端答案**（/v1/chat 生成结果） | relevance / completeness / accuracy（LLM-as-Judge）+ latency | 是 |
 | `eval_faithfulness.py` | **生成层接地**（/v1/chat） | faithfulness / answer_relevancy（RAGAS-style LLM-judge） | 是 |
 | `eval_abstention.py` | **生成层弃答**（/v1/chat） | abstention precision / recall / F1 | 是（chat） |
@@ -16,36 +16,37 @@ Agent 评估（`web/lib/ai/eval/`）：
 | `eval-agent.ts` | Agent Step-1 工具选择 | tool-selection accuracy / per-tool P/R/F1 / k 命中率 / 闲聊误触发率 |
 
 数据集：
-- **`golden_dataset_en.json`（主集 / 默认 / CI 门禁）** — 英文 query 对英文 KB，同语种检索，
-  代表产品真实形态（KB 全为英文文献、产品走全英文）。脚本默认就读它，新主题只往这里加题。
-- `golden_dataset.json`（**已冻结**，可选） — 中文 query 对英文 KB 的**跨语种**难例基准。
-  不再随新主题扩充，仅用于回归观察跨语种检索鲁棒性（见下方「已知发现」）。
+- **`golden_dataset_en.json`（唯一评测集 / 默认 / CI 门禁）** — 英文 query 对英文 KB，
+  同语种检索。扩库后已扩到 **73 题**（67 in-scope + 6 abstention），覆盖训练编排/动作技术/
+  受伤康复/恢复/各类补剂/营养/特殊人群/心肺/健康结局。所有脚本默认读它，新主题往这里加题。
 
-默认即英文主集；要跑跨语种基准用 `--dataset golden_dataset.json`。
+（旧的中文跨语种集 `golden_dataset.json` 已移除：产品/KB 走全英文，不再维护双语集。）
 
 ---
 
-## golden_dataset.json 字段
+## golden_dataset_en.json 字段
 
 ```jsonc
 {
   "id": "eval_009",
-  "question": "每周每个肌群练多少组...",
-  "in_scope": true,                       // 是否能从 KB 找到答案
-  "relevant_sources": [                   // 文档级 qrels（source = 灌库文件名）
+  "question": "How many sets per muscle group per week are best for hypertrophy?",
+  "in_scope": true,                        // 是否能从 KB 找到答案
+  "relevant_sources": [                    // 锚点：必中的代表性文档（source = 灌库文件名）
     { "source": "auto_rt_hypertrophy_umbrella.txt", "grade": 3 }
   ],
-  "expected_keywords": ["组数", "每周"],   // 供 evaluate.py 的 LLM-judge 用
+  "expected_keywords": ["sets", "per week", "volume"],  // 供 LLM-judge 用
   "topic": "training_volume",
   "difficulty": "medium"
 }
 ```
 
-- **qrels 用 document/source 级**（`source` = 灌库时的文件名），抗 re-chunk，稳健。
-- `grade ∈ {1,2,3}`：3=直接命中，2=部分支撑，1=弱相关。二元指标按 `grade>=1`，nDCG 用分级。
-- `in_scope: false` 的题是 **abstention 负样本**：KB 无授权干净来源，用于评估「无相关文档时是否误召回 / 能否弃答」。
+- `relevant_sources` 现在是**锚点（anchors）**：该题「必中的代表性文档」（document/source 级，`source` = 灌库文件名），抗 re-chunk。
+- `grade ∈ {1,2,3}`：3=直接命中，2=部分支撑。锚点指标按 `grade>=1` 计 recall/hit/mrr。
+- `in_scope: false` 的题是 **abstention 负样本**：KB 不该答（动作进阶无授权来源、医疗诊断、类固醇用法、品牌推荐、实时天气等），用于评估「能否弃答 / 不误召回」。
 
-> KB 仅收录 CC-BY / 公共领域 / 官方指南（见 `../data/sources.yaml`）。动作技术/姿势、过度训练、引体进阶等没有授权干净来源的题，被刻意标为 `in_scope:false`。
+> **为什么不再用 nDCG/precision 对 qrels？** KB 已扩到 1000+ 篇，无法对每题穷举标注所有相关文档；旧的精确-qrels 下，大量「未标注但其实相关」的文档会被当成不相关，使 nDCG/precision 系统性低估、失去意义。因此改为两套口径：
+> 1. **锚点指标（确定性）**：只问「标注的必中文档是否仍在 top-k」——回归哨兵，与语料规模无关，进 CI 门禁。
+> 2. **context 相关性（LLM 裁判，`--judge`）**：直接判每个检索到的 chunk 对该 query 是否相关 → context_precision@k / context_hit@k，衡量大语料下的绝对检索质量（RAGAS context precision 思路），按需手动/nightly 跑。
 
 ---
 
@@ -62,10 +63,15 @@ python scripts/fetch_sources.py              # 生成 data/auto_*.txt
 python scripts/ingest_seed_kb.py --force
 
 # 3) 跑检索评估（进程内，默认 k=3 5 10）
-python eval/eval_retrieval.py --tag ensemble_baseline
+python eval/eval_retrieval.py --tag ensemble_baseline          # 仅锚点指标（快、无需 LLM）
+python eval/eval_retrieval.py --judge --judge-k 5 --tag judged # 加 LLM 裁判 context 相关性
+python eval/eval_retrieval.py --judge --limit 20               # 控成本：只评前 20 条 in-scope
 ```
 
 输出：控制台对比表 +  `eval/retrieval_report_<tag>_<ts>.json`。
+
+> **首次扩库后必做**：用 `--variant ensemble` 实测一次，把 `retrieval_baseline.json` 的
+> `anchor_*` 地板按实测值回填（建议地板设在实测值下方约 0.1），否则门禁阈值只是占位。
 
 > **抓取/灌库管线加固**（`scripts/fetch_sources.py` + `app/services/kb_service.py`）：
 > - HTML/PDF 抓取统一用浏览器 UA；trafilatura 默认下载器抽空时回退到 requests —— 解锁 Springer/BMC/PMC/Frontiers（默认爬虫 UA 被挡）。仍挡死的（MDPI Cloudflare 403、Taylor & Francis）在 `sources.yaml` 注释留痕。
@@ -122,15 +128,16 @@ python eval/eval_retrieval.py --dataset golden_dataset_en.json --variant ensembl
 # PASS → exit 0；任一 recall@k / ndcg@10 / mrr@10 / frr 低于地板 → exit 1
 ```
 
-基线（`retrieval_baseline.json`）是**保守地板**（明显低于当前观测，抓真实回归而非噪声）：
+基线（`retrieval_baseline.json`）用**锚点指标**做确定性门禁（context 相关性是 `--judge`
+质量口径，不进门禁以省 API）。当前为**占位地板**，需用扩库灌库后第一次 `--variant ensemble`
+实测值回填校准：
 
-| 指标 | 地板 | 当前观测（扩库后，ensemble@0.8 / supabase） |
+| 指标 | 占位地板 | 说明 |
 |------|------|------|
-| recall@3 | ≥ 0.90 | 1.000 |
-| recall@10 | ≥ 0.95 | 1.000 |
-| ndcg@10 | ≥ 0.90 | 0.964 |
-| mrr@10 | ≥ 0.88 | 0.967 |
-| false_retrieval_rate | ≤ 0.34 | 0.000 |
+| anchor_hit@10 | ≥ 0.80 | top-10 至少命中 1 个锚点文档的题比例 |
+| anchor_recall@10 | ≥ 0.65 | 锚点文档被检索到的比例 |
+| anchor_mrr@10 | ≥ 0.55 | 第一个锚点命中名次的倒数均值 |
+| false_retrieval_rate | ≤ 0.34 | out-of-scope top-1 误高分召回率 |
 
 ### CI 接线（仓库根 `.github/workflows/`）
 

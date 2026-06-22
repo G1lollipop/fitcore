@@ -93,6 +93,16 @@ def test_compute_all_keys():
     assert out["hit_rate@5"] == 1.0
 
 
+def test_context_precision_and_hit():
+    j = [True, False, True, False, False]
+    assert rm.context_precision_at_k(j, 3) == pytest_approx(2 / 3)
+    assert rm.context_precision_at_k(j, 5) == pytest_approx(2 / 5)
+    assert rm.context_precision_at_k(j, 0) == 0.0
+    assert rm.context_hit_at_k(j, 2) == 1.0
+    assert rm.context_hit_at_k([False, False], 2) == 0.0
+    assert rm.context_hit_at_k([], 3) == 0.0
+
+
 def test_false_retrieval_rate():
     # 阈值 0.8：3 个分数里 2 个 >= 0.8 → 2/3
     assert rm.false_retrieval_rate([0.9, 0.85, 0.1], threshold=0.8) == pytest_approx(

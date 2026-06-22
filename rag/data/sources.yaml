@@ -12,51 +12,48 @@
 # guidelines). Do NOT add paywalled/copyrighted content (Examine, MASS, etc.).
 
 sources:
-  # ── Curated ISSN position stands (summaries committed in data/) ──────────
+  # ── ISSN position stands (full text fetched from JISSN/BMC, CC BY) ───────
+  # 之前是手写精编摘要（kb_01~05）；已替换为 BMC 全文抓取，id 与 data/auto_<id>.txt
+  # 对应。BMC HTML 镜像可被 fetch_sources.py 的浏览器 UA 正常抽取（PMC/Springer 镜像挡爬虫）。
   - id: issn_protein
-    title: "ISSN Position Stand: Protein and Exercise"
-    url: https://pmc.ncbi.nlm.nih.gov/articles/PMC5477153/
+    title: "ISSN Position Stand: Protein and Exercise (Jäger et al., 2017)"
+    url: https://jissn.biomedcentral.com/articles/10.1186/s12970-017-0177-8
     type: html
     license: CC BY 4.0
-    tags: [protein, hypertrophy, fat loss, recovery]
-    curated: true
-    curated_file: kb_01_protein_and_exercise.txt
+    tags: [protein, hypertrophy, fat loss, recovery, muscle protein synthesis]
+    fetch: true
 
   - id: issn_creatine
-    title: "ISSN Position Stand: Creatine Supplementation and Exercise"
-    url: https://pmc.ncbi.nlm.nih.gov/articles/PMC2048496/
-    type: html
-    license: CC BY
-    tags: [creatine, supplements, strength, lean mass]
-    curated: true
-    curated_file: kb_02_creatine_supplementation.txt
-
-  - id: issn_nutrient_timing
-    title: "ISSN Position Stand: Nutrient Timing"
-    url: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5596471/
+    title: "ISSN Position Stand: Safety and Efficacy of Creatine Supplementation (Kreider et al., 2017)"
+    url: https://jissn.biomedcentral.com/articles/10.1186/s12970-017-0173-z
     type: html
     license: CC BY 4.0
-    tags: [nutrient timing, carbohydrate, protein, glycogen]
-    curated: true
-    curated_file: kb_03_nutrient_timing.txt
+    tags: [creatine, supplements, strength, power, lean mass, loading, safety]
+    fetch: true
+
+  - id: issn_nutrient_timing
+    title: "ISSN Position Stand: Nutrient Timing (Kerksick et al., 2017)"
+    url: https://jissn.biomedcentral.com/articles/10.1186/s12970-017-0189-4
+    type: html
+    license: CC BY 4.0
+    tags: [nutrient timing, carbohydrate, protein, glycogen, recovery]
+    fetch: true
 
   - id: issn_caffeine
-    title: "ISSN Position Stand: Caffeine and Exercise Performance"
+    title: "ISSN Position Stand: Caffeine and Exercise Performance (Guest et al., 2021)"
     url: https://jissn.biomedcentral.com/articles/10.1186/s12970-020-00383-4
     type: html
     license: CC BY 4.0
-    tags: [caffeine, ergogenic aid, endurance, strength]
-    curated: true
-    curated_file: kb_04_caffeine_and_performance.txt
+    tags: [caffeine, ergogenic aid, endurance, strength, dosing]
+    fetch: true
 
-  - id: issn_diets_body_composition
-    title: "ISSN Position Stand: Diets and Body Composition"
-    url: https://link.springer.com/article/10.1186/s12970-017-0174-y
+  - id: issn_diets
+    title: "ISSN Position Stand: Diets and Body Composition (Aragon et al., 2017)"
+    url: https://jissn.biomedcentral.com/articles/10.1186/s12970-017-0174-y
     type: html
     license: CC BY 4.0
-    tags: [fat loss, muscle gain, calorie balance, adherence]
-    curated: true
-    curated_file: kb_05_diets_and_body_composition.txt
+    tags: [fat loss, muscle gain, calorie balance, diet types, adherence]
+    fetch: true
 
   # ── Auto-fetched sources (fetch_sources.py downloads + extracts) ─────────
   # Toggle `fetch: true` and run scripts/fetch_sources.py to pull these.
@@ -181,8 +178,42 @@ sources:
     tags: [rest interval, recovery, hypertrophy, volume load, resistance training]
     fetch: true
 
+  # ── Manually fetched via mirror / WebFetch (script scraper blocked) ──────
+  # 这两篇的发布站点会拦截 fetch_sources.py 的抓取（PMC/MDPI 反爬），但内容是
+  # CC BY，已通过镜像/WebFetch 取得并写入 data/<curated_file>。fetch: false 让
+  # 脚本跳过（避免必然失败），ingest_seed_kb.py 仍按 auto_*.txt 正常灌入。
+  - id: issn_energy_drinks
+    title: "ISSN Position Stand: Energy Drinks and Energy Shots (Jagim et al., 2023)"
+    url: https://pmc.ncbi.nlm.nih.gov/articles/PMC9987737/
+    type: html
+    license: CC BY 4.0
+    tags: [energy drinks, energy shots, caffeine, taurine, ergogenic aid, performance]
+    fetch: false
+    curated_file: auto_issn_energy_drinks.txt
+
+  - id: hydration_beverages
+    title: "Compositional Aspects of Beverages Designed to Promote Hydration Before/During/After Exercise (Nutrients, 2024)"
+    url: https://www.mdpi.com/2072-6643/16/1/17
+    type: html
+    license: CC BY 4.0
+    tags: [hydration, fluid, electrolytes, sodium, carbohydrate-electrolyte, rehydration, sweat]
+    fetch: false
+    curated_file: auto_hydration_beverages.txt
+
   # Wanted but excluded — host blocks automated fetch (Cloudflare / publisher
   # anti-scraping) despite the articles being CC-BY:
   #   - The Sleep and Recovery Practices of Athletes (MDPI Nutrients) → 403
   #   - ISSN Nutritional Concerns of the Female Athlete (Taylor & Francis) → blocked
   # Revisit if a license-clean institutional-repository mirror is found.
+
+  # ── Bulk-harvested CC-BY open-access set (auto_epmc_*.txt) ───────────────
+  # ~1050 篇 CC-BY 开放获取全文，由 scripts/harvest_kb.py 经 Europe PMC 发现、
+  # 经 PMC BioC 全文 API 取正文（绕开 MDPI/PMC 反爬，覆盖整个 PMC 开放获取子集），
+  # 覆盖训练编排·动作技术/生物力学·受伤康复·恢复·补剂·营养·心肺·特殊人群·肌肉生理·
+  # 健康结局等 170+ 主题，把 KB 扩到 1000+ 篇。逐篇 provenance（标题/URL/许可/标签）见
+  # data/harvested_sources.json，每个文件头部也带同样信息。
+  # 注意：auto_epmc_*.txt 体量大，已在根 .gitignore 忽略，不入版本库（可由脚本复现）。
+  # 复跑（幂等，按磁盘已存在的 PMCID 去重，只补齐到 --target）：
+  #   ./.venv/Scripts/python scripts/harvest_kb.py --target 90
+  # 这些文件不在本清单里逐条列出（会让 sources.yaml 过长）；ingest_seed_kb.py
+  # 按 data/auto_*.txt 通配照常灌入。

@@ -137,6 +137,26 @@ def compute_all(
     return out
 
 
+def context_precision_at_k(judgments: Sequence[bool], k: int) -> float:
+    """LLM-judged context precision@k = relevant chunks / k (over top-k judged).
+
+    `judgments[i]` = whether the i-th retrieved chunk (rank order) was judged
+    relevant to the query. Corpus-size agnostic: needs no exhaustive qrels, so
+    it stays meaningful as the KB grows to thousands of documents.
+    """
+    if k <= 0:
+        return 0.0
+    topk = list(judgments)[:k]
+    if not topk:
+        return 0.0
+    return sum(1 for j in topk if j) / k
+
+
+def context_hit_at_k(judgments: Sequence[bool], k: int) -> float:
+    """1.0 if at least one of the top-k chunks was judged relevant, else 0.0."""
+    return 1.0 if any(list(judgments)[:k]) else 0.0
+
+
 def false_retrieval_rate(
     top1_scores: Sequence[float | None], threshold: float
 ) -> float:

@@ -52,7 +52,7 @@ _settings = get_settings()
 RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://127.0.0.1:8000")
 # 评判模型默认与主后端一致；EVAL_JUDGE_MODEL 仍可单独覆盖。
 JUDGE_MODEL = os.getenv("EVAL_JUDGE_MODEL") or _settings.rag_chat_model
-DATASET_PATH = Path(__file__).parent / "golden_dataset.json"
+DATASET_PATH = Path(__file__).parent / "golden_dataset_en.json"
 
 
 def _build_judge_llm() -> ChatOpenAI:

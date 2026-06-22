@@ -19,7 +19,6 @@ import threading
 from typing import Optional
 
 from langchain_core.embeddings import Embeddings
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from app.core.settings import get_settings
 from app.infra.cache import CacheManager
@@ -27,6 +26,71 @@ from app.infra.cache import CacheManager
 
 _raw_embedding: Optional[Embeddings] = None
 _embedding_lock = threading.Lock()
+
+# BGE retrieval models expect this instruction ONLY on the query side; documents
+# are embedded as-is. (bge-m3 / e5 use their own scheme — handled below.)
+_BGE_QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
+
+
+class _QueryInstructionEmbeddings(Embeddings):
+    """Wrap an Embeddings to prepend a query-side instruction (asymmetric).
+
+    embed_documents passes through unchanged; embed_query prefixes the
+    instruction. Needed for BGE-style models to keep query/doc spaces aligned.
+    """
+
+    def __init__(self, inner: Embeddings, instruction: str):
+        self._inner = inner
+        self._instr = instruction
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self._inner.embed_documents(texts)
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._inner.embed_query(self._instr + text)
+
+
+def _resolve_device(pref: str) -> str:
+    if pref and pref != "auto":
+        return pref
+    try:
+        import torch  # noqa: WPS433
+
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:  # noqa: BLE001
+        return "cpu"
+
+
+def _build_local_embedding(settings) -> Embeddings:
+    """Local sentence-transformers embedding (no API quota). Used for the
+    full-corpus local learning track (pair with VECTOR_BACKEND=chroma)."""
+    from langchain_huggingface import HuggingFaceEmbeddings  # noqa: WPS433
+
+    model = settings.local_embedding_model
+    device = _resolve_device(settings.embedding_device)
+    base = HuggingFaceEmbeddings(
+        model_name=model,
+        model_kwargs={"device": device},
+        encode_kwargs={"normalize_embeddings": True},
+    )
+    print(f"[embeddings] provider=local model={model} device={device}")
+    # bge-*-en-v1.5 (not m3) benefit from a query-side instruction.
+    low = model.lower()
+    if "bge" in low and "m3" not in low:
+        return _QueryInstructionEmbeddings(base, _BGE_QUERY_INSTRUCTION)
+    return base
+
+
+def _build_gemini_embedding(settings) -> Embeddings:
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings  # noqa: WPS433
+
+    return GoogleGenerativeAIEmbeddings(
+        model=settings.embedding_model,
+        google_api_key=settings.llm_api_key or None,
+        # Matryoshka truncation so the vector length matches the store's
+        # configured dimension (Supabase migration's vector(N)).
+        output_dimensionality=settings.embedding_dim,
+    )
 
 
 def _get_raw_embedding() -> Embeddings:
@@ -36,13 +100,10 @@ def _get_raw_embedding() -> Embeddings:
     with _embedding_lock:
         if _raw_embedding is None:
             settings = get_settings()
-            _raw_embedding = GoogleGenerativeAIEmbeddings(
-                model=settings.embedding_model,
-                google_api_key=settings.llm_api_key or None,
-                # Matryoshka truncation so the vector length matches the store's
-                # configured dimension (Supabase migration's vector(N)).
-                output_dimensionality=settings.embedding_dim,
-            )
+            if (settings.embedding_provider or "gemini").strip().lower() == "local":
+                _raw_embedding = _build_local_embedding(settings)
+            else:
+                _raw_embedding = _build_gemini_embedding(settings)
     return _raw_embedding
 
 

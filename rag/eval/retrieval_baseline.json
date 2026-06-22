@@ -1,15 +1,19 @@
 {
-  "_comment": "检索回归门禁基线。eval_retrieval.py --gate 读取这里的阈值，低于下限即判回归（CI fail）。阈值是保守地板（明显低于当前观测值），用于抓真实回归而非噪声波动。产品转全英文，门禁以 golden_dataset_en.json 为准。观测（2026-06，扩库后 18 in-scope，新增 probiotics/meal_frequency/rest_interval，ensemble@0.8/supabase）：recall@3=1.0 recall@10=1.0 ndcg@10=0.922 mrr@10=0.907 frr=0.0。",
+  "_comment": "检索回归门禁基线。eval_retrieval.py --gate 读取这里的阈值，低于下限即判回归（CI fail）。KB 扩到 1000+ 篇后改用『锚点指标』做确定性门禁：anchor_* = golden 的 relevant_sources(必中的代表性文档)是否仍被检索到，抗 re-chunk、与语料规模无关。LLM 裁判的 context_precision/hit 是质量口径（--judge），不进 CI 门禁（省 API）。下方阈值为保守地板占位，需用扩库灌库后第一次 `--variant ensemble` 实测值回填校准（建议地板设在实测值下方 ~0.1）。",
   "dataset": "golden_dataset_en.json",
   "variant": "ensemble",
   "vector_weight": 0.8,
   "thresholds": {
-    "recall@3": 0.90,
-    "recall@10": 0.95,
-    "ndcg@10": 0.88,
-    "mrr@10": 0.86
+    "anchor_hit@10": 0.80,
+    "anchor_recall@10": 0.65,
+    "anchor_mrr@10": 0.55
   },
   "abstention": {
     "max_false_retrieval_rate": 0.34
+  },
+  "_quality_reference_only": {
+    "_comment": "以下为 --judge 质量口径，仅供观测，不参与门禁；首次实测后回填。",
+    "context_precision@5": null,
+    "context_hit@5": null
   }
 }

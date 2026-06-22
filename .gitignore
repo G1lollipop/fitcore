@@ -51,8 +51,12 @@ gha-creds-*.json
 **/chroma/
 **/chat_history/
 **/md5.text
-**/eval/eval_report_*.json
-**/eval/retrieval_report_*.json
+# 评测运行产物（retrieval / faithfulness / abstention / agent 等报告，均不入库）
+**/eval/*_report_*.json
+
+# ---- 批量抓取的开放获取全文：体量大、可由 rag/scripts/harvest_kb.py 复现，
+#      不纳入版本管理（来源清单 data/harvested_sources.json 仍提交以保可追溯）----
+rag/data/auto_epmc_*.txt
 
 # ---- 日志 / 杂项本地文件 ----
 *.local

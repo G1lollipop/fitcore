@@ -70,14 +70,26 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("LLM_BASE_URL", "DASHSCOPE_BASE_URL"),
     )
 
-    # ── Embeddings (Gemini) ───────────────────────────────────────────────
-    # embedding_dim MUST equal the Supabase migration's vector(N). Gemini's
-    # gemini-embedding-001 supports Matryoshka truncation; 768 is a recommended
-    # output size and keeps the pgvector index small.
+    # ── Embeddings ────────────────────────────────────────────────────────
+    # Provider switch (dual-track):
+    #   "gemini" (DEFAULT) → GoogleGenerativeAIEmbeddings (cloud, API-quota'd,
+    #       768-dim, matches Supabase vector(768)). Used for the deployed track.
+    #   "local"           → local sentence-transformers model (no API quota),
+    #       e.g. BAAI/bge-large-en-v1.5 (1024-dim). Pair with VECTOR_BACKEND=chroma
+    #       for the full-corpus local learning track. Query & ingest MUST use the
+    #       same provider/model (shared embedding space).
+    embedding_provider: str = Field(default="gemini", alias="EMBEDDING_PROVIDER")
+    # embedding_dim MUST equal the Supabase migration's vector(N) (Gemini track).
+    # gemini-embedding-001 supports Matryoshka truncation; 768 keeps the index small.
     embedding_model: str = Field(
         default="models/gemini-embedding-001", alias="EMBEDDING_MODEL"
     )
     embedding_dim: int = Field(default=768, alias="EMBEDDING_DIM", gt=0)
+    # Local-track model + device (only used when embedding_provider == "local").
+    local_embedding_model: str = Field(
+        default="BAAI/bge-large-en-v1.5", alias="LOCAL_EMBEDDING_MODEL"
+    )
+    embedding_device: str = Field(default="auto", alias="EMBEDDING_DEVICE")
 
     # ── Chunking (ingest-time text splitting) ─────────────────────────────
     # "recursive" = RecursiveCharacterTextSplitter (fast, char-based) — DEFAULT.
@@ -87,6 +99,11 @@ class Settings(BaseSettings):
     #   tier or for a tiny corpus. Falls back to recursive if langchain-
     #   experimental isn't installed.
     chunking_strategy: str = Field(default="recursive", alias="CHUNKING_STRATEGY")
+    # Char-based splitter knobs (env-tunable so the cloud track can use bigger
+    # chunks to fit Gemini's daily embed quota + Supabase 500MB; defaults match
+    # app.core.constants for backward compatibility).
+    chunk_size: int = Field(default=1000, alias="CHUNK_SIZE", gt=0)
+    chunk_overlap: int = Field(default=100, alias="CHUNK_OVERLAP", ge=0)
     # Breakpoint detection for SemanticChunker: percentile | standard_deviation
     # | interquartile | gradient.
     semantic_breakpoint_type: str = Field(
