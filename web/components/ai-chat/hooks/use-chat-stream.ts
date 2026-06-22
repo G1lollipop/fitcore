@@ -12,6 +12,8 @@ interface UseChatStreamArgs {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
   /** Called once the stream completes successfully (used to refresh sidebar summaries). */
   onAssistantDone?: () => void
+  /** Called when the agent logged food/workout/water this turn (refresh dashboard). */
+  onLoggedActivity?: () => void
 }
 
 export interface UseChatStreamResult {
@@ -45,7 +47,8 @@ function applyEvent(
   aiMsgId: string,
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
   t: Dictionary,
-  onAssistantDone?: () => void
+  onAssistantDone?: () => void,
+  onLoggedActivity?: () => void
 ) {
   if (event.type === 'token') {
     setMessages((prev) =>
@@ -71,6 +74,7 @@ function applyEvent(
       )
     )
     onAssistantDone?.()
+    if (event.meta?.loggedActivity) onLoggedActivity?.()
     return
   }
 
@@ -98,6 +102,7 @@ export function useChatStream({
   conversationId,
   setMessages,
   onAssistantDone,
+  onLoggedActivity,
 }: UseChatStreamArgs): UseChatStreamResult {
   const { t, language } = useLanguage()
   const [isTyping, setIsTyping] = useState(false)
@@ -162,7 +167,7 @@ export function useChatStream({
 
           for (const block of blocks) {
             const event = parseSSEBlock(block)
-            if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone)
+            if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone, onLoggedActivity)
           }
         }
 
@@ -171,7 +176,7 @@ export function useChatStream({
         const tail = buffer.trim()
         if (tail) {
           const event = parseSSEBlock(tail)
-          if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone)
+          if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone, onLoggedActivity)
         }
       } catch (error) {
         setMessages((prev) =>
@@ -193,7 +198,7 @@ export function useChatStream({
         setIsTyping(false)
       }
     },
-    [conversationId, isTyping, setMessages, onAssistantDone, t, language]
+    [conversationId, isTyping, setMessages, onAssistantDone, onLoggedActivity, t, language]
   )
 
   return { isTyping, sendMessage }

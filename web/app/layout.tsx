@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/toaster'
 import { ThemeProvider } from '@/components/theme-provider'
 import { LanguageProvider } from '@/lib/i18n/provider'
+import { QueryProvider } from '@/components/providers/query-provider'
 import './globals.css'
 
 // Trim font weights to what we actually render — meaningful TTFB win.
@@ -54,8 +55,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <LanguageProvider>
-            {children}
-            <Toaster />
+            <QueryProvider>
+              {children}
+              <Toaster />
+            </QueryProvider>
           </LanguageProvider>
           <Analytics />
         </ThemeProvider>

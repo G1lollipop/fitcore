@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Calendar, Check, Clock, Sparkles, Trash2 } from 'lucide-react'
+import { Calendar, Check, Clock, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { useT } from '@/lib/i18n/provider'
 import { tLabel } from '@/lib/i18n'
@@ -29,6 +29,7 @@ interface PlanCardProps {
   isPending?: boolean
   onSetCurrent: () => void
   onDelete: () => void
+  onEdit?: () => void
   className?: string
 }
 
@@ -43,6 +44,7 @@ export function PlanCard({
   isPending = false,
   onSetCurrent,
   onDelete,
+  onEdit,
   className,
 }: PlanCardProps) {
   const t = useT()
@@ -92,15 +94,28 @@ export function PlanCard({
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={isPending}
-          aria-label={t.plans.card.deleteAria(plan.name)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/70 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Trash2 size={14} />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              disabled={isPending}
+              aria-label={t.plans.edit.editAria(plan.name)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/70 opacity-0 transition-all hover:bg-secondary hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={isPending}
+            aria-label={t.plans.card.deleteAria(plan.name)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/70 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </header>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">

@@ -9,10 +9,10 @@ import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
+import { recomputeDailyStats } from '@/lib/stats/recompute-daily-stats';
 import type { WorkoutLogItem, DailyWorkoutStatsData } from './types';
 
-type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
-type DailyStatsInsert = Database['public']['Tables']['daily_stats']['Insert'];
+type WorkoutLogInsert = Database['public']['Tables']['workout_logs']['Insert'];
 
 async function parseWorkoutWithAI(userInput: string): Promise<WorkoutLogItem | null> {
   try {
@@ -97,77 +97,28 @@ export async function logWorkout(
 
   const today = getTodayDate();
 
-  const queryResult = await supabase
-    .from('daily_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .single();
+  const { error: insertError } = await supabase.from('workout_logs').insert({
+    id: workoutData.id,
+    user_id: userId,
+    date: today,
+    workout_name: workoutData.workout_name,
+    sets: workoutData.sets,
+    duration_minutes: workoutData.duration_minutes,
+    calories_burned: workoutData.calories_burned,
+    plan_id: workoutData.plan_id ?? null,
+    day_id: workoutData.day_id ?? null,
+    logged_at: workoutData.logged_at,
+  });
 
-  const existingRecord = queryResult.data as DailyStatsRow | null;
-  const queryError = queryResult.error;
-
-  if (queryError && queryError.code !== 'PGRST116') {
-    console.error('[logWorkout] Query error:', queryError.message);
-    return { success: false, error: ActionError.DB_QUERY_FAILED };
-  }
-
-  if (existingRecord) {
-    const currentWorkoutLogs = (existingRecord.workout_logs as WorkoutLogItem[]) || [];
-    const updatedWorkoutLogs = [...currentWorkoutLogs, workoutData];
-
-    const newCaloriesBurned = (existingRecord.calories_burned ?? 0) + workoutData.calories_burned;
-    const newWorkoutDuration = (existingRecord.workout_duration ?? 0) + workoutData.duration_minutes;
-
-    const updateData = {
-      calories_burned: newCaloriesBurned,
-      workout_duration: newWorkoutDuration,
-      workout_logs: updatedWorkoutLogs,
-    };
-
-    const updateResult = await supabase
-      .from('daily_stats')
-      .update(updateData)
-      .eq('id', existingRecord.id);
-
-    const updateError = updateResult.error;
-
-    if (updateError) {
-    console.error('[logWorkout] Update error:', updateError.message);
-    return { success: false, error: ActionError.DB_UPDATE_FAILED };
-    }
-
-    revalidatePath('/');
-    return { success: true, data: workoutData };
-  } else {
-    const insertData: Omit<DailyStatsInsert, 'id'> = {
-      user_id: userId,
-      date: today,
-      total_calories: 0,
-      total_protein: 0,
-      total_carbs: 0,
-      total_fat: 0,
-      calories_burned: workoutData.calories_burned,
-      workout_duration: workoutData.duration_minutes,
-      diet_logs: [],
-      workout_logs: [workoutData],
-    };
-
-    const insertResult = await supabase
-      .from('daily_stats')
-      .insert(insertData)
-      .select();
-
-    const insertError = insertResult.error;
-
-    if (insertError) {
+  if (insertError) {
     console.error('[logWorkout] Insert error:', insertError.message);
     return { success: false, error: ActionError.DB_INSERT_FAILED };
-    }
-
-    revalidatePath('/');
-    return { success: true, data: workoutData };
   }
+
+  await recomputeDailyStats(userId, today);
+
+  revalidatePath('/');
+  return { success: true, data: workoutData };
 }
 
 export async function getDailyWorkoutStats(): Promise<DailyWorkoutStatsData | null> {
@@ -176,28 +127,38 @@ export async function getDailyWorkoutStats(): Promise<DailyWorkoutStatsData | nu
 
   const today = getTodayDate();
 
-  const { data, error } = await supabase
-    .from('daily_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .single();
+  const [statsRes, logsRes] = await Promise.all([
+    supabase
+      .from('daily_stats')
+      .select('calories_burned, workout_duration, water_intake')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .maybeSingle(),
+    supabase
+      .from('workout_logs')
+      .select('id, workout_name, sets, duration_minutes, calories_burned, plan_id, day_id, logged_at')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .order('logged_at', { ascending: true }),
+  ]);
 
-  if (error && error.code !== 'PGRST116') {
-    console.error('[getDailyWorkoutStats] Query error:', error.message);
+  if (statsRes.error && statsRes.error.code !== 'PGRST116') {
+    console.error('[getDailyWorkoutStats] Query error:', statsRes.error.message);
     return null;
   }
 
-  const row = data as DailyStatsRow | null;
-  if (!row) {
+  const row = statsRes.data;
+  const workoutLogs = (logsRes.data as WorkoutLogItem[] | null) ?? [];
+
+  if (!row && workoutLogs.length === 0) {
     return null;
   }
 
   return {
-    calories_burned: row.calories_burned || 0,
-    workout_duration: row.workout_duration || 0,
-    water_intake: row.water_intake || 0,
-    workout_logs: (row.workout_logs as WorkoutLogItem[]) || [],
+    calories_burned: row?.calories_burned || 0,
+    workout_duration: row?.workout_duration || 0,
+    water_intake: row?.water_intake || 0,
+    workout_logs: workoutLogs,
   };
 }
 
@@ -211,49 +172,23 @@ export async function deleteWorkoutLog(
     return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
-  const today = getTodayDate();
-
-  const queryResult = await supabase
-    .from('daily_stats')
-    .select('*')
+  const { data: deleted, error: deleteError } = await supabase
+    .from('workout_logs')
+    .delete()
+    .eq('id', logId)
     .eq('user_id', userId)
-    .eq('date', today)
-    .single();
+    .select('id, date');
 
-  const existingRecord = queryResult.data as DailyStatsRow | null;
-  const queryError = queryResult.error;
-
-  if (queryError || !existingRecord) {
-    return { success: false, error: ActionError.TODAY_RECORD_NOT_FOUND };
+  if (deleteError) {
+    console.error('[deleteWorkoutLog] Delete error:', deleteError.message);
+    return { success: false, error: ActionError.DB_DELETE_FAILED };
   }
 
-  const currentWorkoutLogs = (existingRecord.workout_logs as WorkoutLogItem[]) || [];
-  const targetLog = currentWorkoutLogs.find((log) => log.id === logId);
-
-  if (!targetLog) {
+  if (!deleted || deleted.length === 0) {
     return { success: false, error: ActionError.RECORD_NOT_FOUND };
   }
 
-  const updatedWorkoutLogs = currentWorkoutLogs.filter((log) => log.id !== logId);
-
-  const newCaloriesBurned = Math.max(0, (existingRecord.calories_burned ?? 0) - (targetLog.calories_burned || 0));
-  const newWorkoutDuration = Math.max(0, (existingRecord.workout_duration ?? 0) - (targetLog.duration_minutes || 0));
-
-  const updateData = {
-    calories_burned: newCaloriesBurned,
-    workout_duration: newWorkoutDuration,
-    workout_logs: updatedWorkoutLogs,
-  };
-
-  const updateResult = await supabase
-    .from('daily_stats')
-    .update(updateData)
-    .eq('id', existingRecord.id);
-
-  if (updateResult.error) {
-    console.error('[deleteWorkoutLog] Update error:', updateResult.error);
-    return { success: false, error: ActionError.DB_DELETE_FAILED };
-  }
+  await recomputeDailyStats(userId, deleted[0].date);
 
   revalidatePath('/');
   return { success: true };
@@ -270,89 +205,28 @@ export async function batchLogWorkouts(
   }
 
   const today = getTodayDate();
-
-  const queryResult = await supabase
-    .from('daily_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .single();
-
-  const existingRecord = queryResult.data as DailyStatsRow | null;
-  const queryError = queryResult.error;
-
-  if (queryError && queryError.code !== 'PGRST116') {
-    console.error('[batchLogWorkouts] Query error:', JSON.stringify(queryError, null, 2));
-    return { success: false, error: ActionError.DB_QUERY_FAILED };
-  }
-
   const now = new Date().toISOString();
-  const newWorkoutLogs: WorkoutLogItem[] = workouts.map(w => ({
+
+  const rows: WorkoutLogInsert[] = workouts.map((w) => ({
     id: randomUUID(),
+    user_id: userId,
+    date: today,
     workout_name: w.name,
-    sets: w.sets || null,
+    sets: w.sets ?? null,
     duration_minutes: w.duration_minutes || 0,
     calories_burned: w.calories_burned || 0,
     logged_at: now,
   }));
 
-  let totalCalories = 0;
-  let totalDuration = 0;
-  newWorkoutLogs.forEach(w => {
-    totalCalories += w.calories_burned;
-    totalDuration += w.duration_minutes;
-  });
+  const { error: insertError } = await supabase.from('workout_logs').insert(rows);
 
-  if (existingRecord) {
-    const currentWorkoutLogs = (existingRecord.workout_logs as WorkoutLogItem[]) || [];
-    const updatedWorkoutLogs = [...currentWorkoutLogs, ...newWorkoutLogs];
-
-    const newCaloriesBurned = (existingRecord.calories_burned ?? 0) + totalCalories;
-    const newWorkoutDuration = (existingRecord.workout_duration ?? 0) + totalDuration;
-
-    const updateData = {
-      calories_burned: newCaloriesBurned,
-      workout_duration: newWorkoutDuration,
-      workout_logs: updatedWorkoutLogs,
-    };
-
-    const updateResult = await supabase
-      .from('daily_stats')
-      .update(updateData)
-      .eq('id', existingRecord.id);
-
-    if (updateResult.error) {
-    console.error('[batchLogWorkouts] Update error:', JSON.stringify(updateResult.error, null, 2));
-    return { success: false, error: ActionError.DB_UPDATE_FAILED };
-    }
-
-    revalidatePath('/');
-    return { success: true, count: newWorkoutLogs.length };
-  } else {
-    const insertData: Omit<DailyStatsInsert, 'id'> = {
-      user_id: userId,
-      date: today,
-      total_calories: 0,
-      total_protein: 0,
-      total_carbs: 0,
-      total_fat: 0,
-      calories_burned: totalCalories,
-      workout_duration: totalDuration,
-      diet_logs: [],
-      workout_logs: newWorkoutLogs,
-    };
-
-    const insertResult = await supabase
-      .from('daily_stats')
-      .insert(insertData)
-      .select();
-
-    if (insertResult.error) {
-    console.error('[batchLogWorkouts] Insert error:', JSON.stringify(insertResult.error, null, 2));
+  if (insertError) {
+    console.error('[batchLogWorkouts] Insert error:', insertError.message);
     return { success: false, error: ActionError.DB_INSERT_FAILED };
-    }
-
-    revalidatePath('/');
-    return { success: true, count: newWorkoutLogs.length };
   }
+
+  await recomputeDailyStats(userId, today);
+
+  revalidatePath('/');
+  return { success: true, count: rows.length };
 }

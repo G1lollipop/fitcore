@@ -9,6 +9,7 @@ import { useQuickLog } from '@/hooks/use-quick-log'
 import { useT } from '@/lib/i18n/provider'
 import { tError, type Dictionary } from '@/lib/i18n'
 import { quickLog, type QuickLogResult } from '@/app/actions/quickLog'
+import { useDashboardActions } from '@/lib/queries/dashboard'
 import { cn } from '@/lib/utils'
 
 /**
@@ -23,6 +24,7 @@ export function QuickLogBar() {
   const { open, setOpen, userId, onLogged } = useQuickLog()
   const { toast } = useToast()
   const t = useT()
+  const { applyQuickLogItems } = useDashboardActions()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [text, setText] = useState('')
@@ -59,6 +61,9 @@ export function QuickLogBar() {
           toast({ variant: 'destructive', title: t.logForm.quick.logFailed, description: tError(t, res.error) })
           return
         }
+        // Patch the dashboard cache with the parsed items so the rings/totals
+        // update instantly; `onLogged` then runs a background reconcile.
+        applyQuickLogItems(res.items)
         onLogged?.()
         toast({ title: t.logForm.quick.logged, description: summarizeResults(res.items, t) })
       } catch (err) {
@@ -70,7 +75,7 @@ export function QuickLogBar() {
         })
       }
     })()
-  }, [text, userId, toast, onLogged, setOpen, t])
+  }, [text, userId, toast, onLogged, setOpen, t, applyQuickLogItems])
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

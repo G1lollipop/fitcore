@@ -199,8 +199,6 @@ export async function logWater(
       calories_burned: 0,
       workout_duration: 0,
       water_intake: amountMl,
-      diet_logs: [],
-      workout_logs: [],
     };
 
     const insertResult = await supabase
@@ -450,19 +448,18 @@ export async function getYesterdayWorkout(): Promise<YesterdayWorkoutLog> {
   const yesterdayStr = yesterday.toISOString().split('T')[0];
 
   const { data, error } = await supabase
-    .from('daily_stats')
-    .select('workout_logs')
+    .from('workout_logs')
+    .select('workout_name')
     .eq('user_id', userId)
     .eq('date', yesterdayStr)
-    .single();
+    .order('logged_at', { ascending: true });
 
-  if (error || !data?.workout_logs) {
+  if (error || !data) {
     return [];
   }
 
-  const logs = data.workout_logs as Array<{ workout_name?: string; text?: string }>;
-  return logs.map((log) => ({
-    text: log.workout_name || log.text || '',
+  return data.map((log) => ({
+    text: log.workout_name || '',
   }));
 }
 
@@ -472,14 +469,35 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
   const today = getTodayDate();
 
-  const [goals, dailyStatsResult, weeklyTrend, weeklyWorkoutStats, yesterdayWorkout, todayWorkout] = await Promise.all([
+  const [
+    goals,
+    dailyStatsResult,
+    dietLogsResult,
+    workoutLogsResult,
+    weeklyTrend,
+    weeklyWorkoutStats,
+    yesterdayWorkout,
+    todayWorkout,
+  ] = await Promise.all([
     getUserGoals(),
     supabase
       .from('daily_stats')
       .select('*')
       .eq('user_id', userId)
       .eq('date', today)
-      .single(),
+      .maybeSingle(),
+    supabase
+      .from('food_logs')
+      .select('id, food_name, calories, protein, carbs, fat, logged_at')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .order('logged_at', { ascending: true }),
+    supabase
+      .from('workout_logs')
+      .select('id, workout_name, sets, duration_minutes, calories_burned, plan_id, day_id, logged_at')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .order('logged_at', { ascending: true }),
     getWeeklyTrend(),
     getWeeklyWorkoutStats(),
     getYesterdayWorkout(),
@@ -510,11 +528,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       calories_burned: dailyStats?.calories_burned || 0,
       workout_duration: dailyStats?.workout_duration || 0,
       water_intake: dailyStats?.water_intake || 0,
-      // Supabase JSONB columns are typed as `Json` (a recursive union); we
-      // control what gets written into these columns from logFood/logWorkout,
-      // so it's safe to assert the documented shape here.
-      diet_logs: (dailyStats?.diet_logs as DietLogItem[] | null) ?? [],
-      workout_logs: (dailyStats?.workout_logs as WorkoutLogItem[] | null) ?? [],
+      diet_logs: (dietLogsResult.data as DietLogItem[] | null) ?? [],
+      workout_logs: (workoutLogsResult.data as WorkoutLogItem[] | null) ?? [],
     },
     weeklyTrend,
     weeklyWorkoutStats,

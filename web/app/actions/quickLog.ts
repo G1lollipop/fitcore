@@ -9,10 +9,11 @@ import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
+import { recomputeDailyStats } from '@/lib/stats/recompute-daily-stats';
 import type { DietLogItem, WorkoutLogItem } from './types';
 
-type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
-type DailyStatsInsert = Database['public']['Tables']['daily_stats']['Insert'];
+type FoodLogInsert = Database['public']['Tables']['food_logs']['Insert'];
+type WorkoutLogInsert = Database['public']['Tables']['workout_logs']['Insert'];
 
 export type QuickLogFoodResult = {
   kind: 'food';
@@ -140,6 +141,7 @@ export async function quickLog(userInput: string): Promise<QuickLogResponse> {
     return { success: false, error: ActionError.AI_PARSE_EMPTY };
   }
 
+  const today = getTodayDate();
   const dietLogs: DietLogItem[] = [];
   const workoutLogs: WorkoutLogItem[] = [];
   const results: QuickLogResult[] = [];
@@ -181,92 +183,46 @@ export async function quickLog(userInput: string): Promise<QuickLogResponse> {
     }
   }
 
-  const today = getTodayDate();
-  const queryResult = await supabase
-    .from('daily_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .single();
-
-  const existing = queryResult.data as DailyStatsRow | null;
-  const queryError = queryResult.error;
-
-  if (queryError && queryError.code !== 'PGRST116') {
-    console.error('[quickLog] Query error:', queryError.message);
-    return { success: false, error: ActionError.DB_QUERY_FAILED };
-  }
-
-  const sumDiet = dietLogs.reduce(
-    (acc, d) => {
-      acc.cal += d.calories;
-      acc.protein += d.protein;
-      acc.carbs += d.carbs;
-      acc.fat += d.fat;
-      return acc;
-    },
-    { cal: 0, protein: 0, carbs: 0, fat: 0 }
-  );
-  const sumWorkout = workoutLogs.reduce(
-    (acc, w) => {
-      acc.cal += w.calories_burned;
-      acc.minutes += w.duration_minutes;
-      return acc;
-    },
-    { cal: 0, minutes: 0 }
-  );
-
-  if (existing) {
-    const mergedDiet = [...((existing.diet_logs as DietLogItem[]) ?? []), ...dietLogs];
-    const mergedWorkout = [
-      ...((existing.workout_logs as WorkoutLogItem[]) ?? []),
-      ...workoutLogs,
-    ];
-
-    const updateData = {
-      total_calories: (existing.total_calories ?? 0) + sumDiet.cal,
-      total_protein: (existing.total_protein ?? 0) + sumDiet.protein,
-      total_carbs: (existing.total_carbs ?? 0) + sumDiet.carbs,
-      total_fat: (existing.total_fat ?? 0) + sumDiet.fat,
-      calories_burned: (existing.calories_burned ?? 0) + sumWorkout.cal,
-      workout_duration: (existing.workout_duration ?? 0) + sumWorkout.minutes,
-      diet_logs: mergedDiet,
-      workout_logs: mergedWorkout,
-    };
-
-    const updateResult = await supabase
-      .from('daily_stats')
-      .update(updateData)
-      .eq('id', existing.id);
-
-    if (updateResult.error) {
-      console.error('[quickLog] Update error:', updateResult.error.message);
-      return { success: false, error: ActionError.DB_UPDATE_FAILED };
-    }
-  } else {
-    const insertData: Omit<DailyStatsInsert, 'id'> = {
+  // Insert the parsed items into their normalized tables, then recompute the
+  // daily_stats aggregate cache once.
+  if (dietLogs.length > 0) {
+    const foodRows: FoodLogInsert[] = dietLogs.map((d) => ({
+      id: d.id,
       user_id: userId,
       date: today,
-      total_calories: sumDiet.cal,
-      total_protein: sumDiet.protein,
-      total_carbs: sumDiet.carbs,
-      total_fat: sumDiet.fat,
-      calories_burned: sumWorkout.cal,
-      workout_duration: sumWorkout.minutes,
-      water_intake: 0,
-      diet_logs: dietLogs,
-      workout_logs: workoutLogs,
-    };
-
-    const insertResult = await supabase
-      .from('daily_stats')
-      .insert(insertData);
-
-    if (insertResult.error) {
-      console.error('[quickLog] Insert error:', insertResult.error.message);
+      food_name: d.food_name,
+      calories: d.calories,
+      protein: d.protein,
+      carbs: d.carbs,
+      fat: d.fat,
+      logged_at: d.logged_at,
+    }));
+    const { error } = await supabase.from('food_logs').insert(foodRows);
+    if (error) {
+      console.error('[quickLog] food insert error:', error.message);
       return { success: false, error: ActionError.DB_INSERT_FAILED };
     }
   }
+
+  if (workoutLogs.length > 0) {
+    const workoutRows: WorkoutLogInsert[] = workoutLogs.map((w) => ({
+      id: w.id,
+      user_id: userId,
+      date: today,
+      workout_name: w.workout_name,
+      sets: w.sets,
+      duration_minutes: w.duration_minutes,
+      calories_burned: w.calories_burned,
+      logged_at: w.logged_at,
+    }));
+    const { error } = await supabase.from('workout_logs').insert(workoutRows);
+    if (error) {
+      console.error('[quickLog] workout insert error:', error.message);
+      return { success: false, error: ActionError.DB_INSERT_FAILED };
+    }
+  }
+
+  await recomputeDailyStats(userId, today);
 
   revalidatePath('/');
   return { success: true, items: results };

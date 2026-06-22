@@ -1,5 +1,4 @@
 import {
-  BookOpen,
   Calendar,
   Dumbbell,
   LayoutDashboard,
@@ -32,7 +31,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'nutrition', labelKey: 'nutrition', shortLabelKey: 'shortNutrition', icon: UtensilsCrossed },
   { id: 'training', labelKey: 'training', shortLabelKey: 'shortTraining', icon: Dumbbell },
   { id: 'plans', labelKey: 'plans', shortLabelKey: 'shortPlans', icon: Calendar },
-  { id: 'knowledge', labelKey: 'knowledge', shortLabelKey: 'shortKnowledge', icon: BookOpen },
 ] as const
 
 /** Lookup helper. Returns `undefined` for unknown ids. */

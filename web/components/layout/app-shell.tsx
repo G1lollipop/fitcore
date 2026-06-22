@@ -4,7 +4,10 @@ import type { ReactNode } from 'react'
 import { SidebarNav } from './sidebar-nav'
 import { TopBar } from './top-bar'
 import { MobileTabBar } from './mobile-tab-bar'
+import { ActionDock } from './action-dock'
 import { QuickLogProvider } from '@/components/log-form/quick-log-provider'
+import { CoachProvider } from '@/components/ai-chat/coach-context'
+import { MealPhotoProvider } from '@/components/log-form/meal-photo-context'
 
 interface AppShellProps {
   activeNav: string
@@ -54,21 +57,26 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <QuickLogProvider userId={userId} onLogged={onQuickLogged}>
-      <div className="flex min-h-screen">
-        <SidebarNav activeNav={activeNav} onNavChange={onNavChange} userName={userName} />
+      <CoachProvider>
+        <MealPhotoProvider>
+          <div className="flex min-h-screen">
+            <SidebarNav activeNav={activeNav} onNavChange={onNavChange} userName={userName} />
 
-        <main className="flex-1 flex flex-col min-w-0">
-          <TopBar pageTitle={pageTitle} greeting={greeting} userName={userName} />
+            <main className="flex-1 flex flex-col min-w-0">
+              <TopBar pageTitle={pageTitle} greeting={greeting} userName={userName} />
 
-          {/* `pb-28` reserves room for the floating mobile tab pill (h ≈ 56px + 12px gap). */}
-          <div className="flex-1 px-5 md:px-8 py-6 space-y-6 pb-28 md:pb-10">
-            {children}
+              {/* `pb-28` reserves room for the floating mobile tab pill (h ≈ 56px + 12px gap). */}
+              <div className="flex-1 px-5 md:px-8 py-6 space-y-6 pb-28 md:pb-10">
+                {children}
+              </div>
+            </main>
+
+            <MobileTabBar activeNav={activeNav} onNavChange={onNavChange} />
+            {overlay}
+            <ActionDock />
           </div>
-        </main>
-
-        <MobileTabBar activeNav={activeNav} onNavChange={onNavChange} />
-        {overlay}
-      </div>
+        </MealPhotoProvider>
+      </CoachProvider>
     </QuickLogProvider>
   )
 }

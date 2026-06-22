@@ -2,18 +2,16 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabaseClient';
-import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId } from '@/lib/auth/require-user';
 import { dietLogInputSchema, firstZodError } from '@/lib/validation/schemas';
 import { ActionError } from '@/lib/errors';
+import { recomputeDailyStats } from '@/lib/stats/recompute-daily-stats';
 import type { DietLogItem } from './types';
 
-type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
-type DailyStatsInsert = Database['public']['Tables']['daily_stats']['Insert'];
-
 /**
- * Persists a pre-parsed DietLogItem to today's daily_stats row.
+ * Persists a pre-parsed DietLogItem as a `food_logs` row, then recomputes the
+ * daily_stats aggregate cache.
  *
  * Extracted from logFood.ts so multiple parsing paths (text input, photo
  * vision, future voice) can share a single write path. The "parse first,
@@ -36,65 +34,24 @@ export async function saveDietLog(
 
   const today = getTodayDate();
 
-  const queryResult = await supabase
-    .from('daily_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .single();
-
-  const existingRecord = queryResult.data as DailyStatsRow | null;
-  const queryError = queryResult.error;
-
-  if (queryError && queryError.code !== 'PGRST116') {
-    return { success: false, error: ActionError.DB_QUERY_FAILED };
-  }
-
-  if (existingRecord) {
-    const currentDietLogs = (existingRecord.diet_logs as DietLogItem[]) || [];
-    const updatedDietLogs = [...currentDietLogs, item];
-
-    const updateData = {
-      total_calories: (existingRecord.total_calories ?? 0) + item.calories,
-      total_protein: (existingRecord.total_protein ?? 0) + item.protein,
-      total_carbs: (existingRecord.total_carbs ?? 0) + item.carbs,
-      total_fat: (existingRecord.total_fat ?? 0) + item.fat,
-      diet_logs: updatedDietLogs,
-    };
-
-    const updateResult = await supabase
-      .from('daily_stats')
-      .update(updateData)
-      .eq('id', existingRecord.id);
-
-    if (updateResult.error) {
-      return { success: false, error: ActionError.DB_UPDATE_FAILED };
-    }
-
-    revalidatePath('/');
-    return { success: true, data: item };
-  }
-
-  const insertData: Omit<DailyStatsInsert, 'id'> = {
+  const { error: insertError } = await supabase.from('food_logs').insert({
+    id: item.id,
     user_id: userId,
     date: today,
-    total_calories: item.calories,
-    total_protein: item.protein,
-    total_carbs: item.carbs,
-    total_fat: item.fat,
-    calories_burned: 0,
-    diet_logs: [item],
-    workout_logs: [],
-  };
+    food_name: item.food_name,
+    calories: item.calories,
+    protein: item.protein,
+    carbs: item.carbs,
+    fat: item.fat,
+    logged_at: item.logged_at,
+  });
 
-  const insertResult = await supabase
-    .from('daily_stats')
-    .insert(insertData)
-    .select();
-
-  if (insertResult.error) {
-      return { success: false, error: ActionError.DB_INSERT_FAILED };
+  if (insertError) {
+    console.error('[saveDietLog] Insert error:', insertError.message);
+    return { success: false, error: ActionError.DB_INSERT_FAILED };
   }
+
+  await recomputeDailyStats(userId, today);
 
   revalidatePath('/');
   return { success: true, data: item };

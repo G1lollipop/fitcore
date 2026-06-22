@@ -11,6 +11,10 @@ import { AI_CHAT_MODEL } from "@/lib/ai/model"
 import { createAgentPlan } from "@/lib/ai/plan-step"
 import type { Citation, AgentMode, UserContextPayload, CoachChatMessage } from "@/lib/ai/types"
 import { chatWithRagRetrieve } from "@/lib/ai/rag-client"
+import { logFood } from "@/app/actions/logFood"
+import { logWorkout } from "@/app/actions/logWorkout"
+import { logWater } from "@/app/actions/dashboard"
+import { adjustWorkoutPlan } from "@/app/actions/generatePlan"
 import type { Language } from "@/lib/i18n"
 
 export { AGENT_TOOLS, buildAgentSystemPrompt } from "@/lib/ai/agent-tools"
@@ -57,7 +61,11 @@ export interface AgentResult {
   toolsUsed: string[]
   retrievalK?: number
   retrievalKReason?: string
+  /** True if a log_* tool wrote to the DB — signals the client to refresh. */
+  loggedActivity?: boolean
 }
+
+const LOG_TOOLS = new Set(["log_food", "log_workout", "log_water", "adjust_plan"])
 
 export async function runAgent(params: {
   message: string
@@ -78,8 +86,9 @@ export async function runAgent(params: {
 
   const toolsUsed: string[] = []
   let citations: Citation[] = []
-  let retrievalK = parsed.retrievalK
-  let retrievalKReason = parsed.retrievalKReason
+  const retrievalK = parsed.retrievalK
+  const retrievalKReason = parsed.retrievalKReason
+  let loggedActivity = false
 
   if (planChoice.finish_reason === "tool_calls" && planChoice.message.tool_calls?.length) {
     messages.push(planChoice.message)
@@ -128,6 +137,71 @@ export async function runAgent(params: {
         } else if (toolName === "get_user_stats") {
           content = formatUserContext(userContext)
 
+        } else if (toolName === "log_food") {
+          const description = String(args.description ?? "").trim()
+          if (!description) {
+            content = "未提供食物描述，无法记录。"
+          } else {
+            const res = await logFood(description)
+            if (res.success && res.data) {
+              loggedActivity = true
+              const d = res.data
+              content = `已记录饮食：${d.food_name} ≈ ${d.calories}kcal（蛋白${d.protein}g/碳水${d.carbs}g/脂肪${d.fat}g）。`
+            } else {
+              content = "记录饮食失败，请让用户稍后再试或换个说法。"
+            }
+          }
+
+        } else if (toolName === "log_workout") {
+          const description = String(args.description ?? "").trim()
+          if (!description) {
+            content = "未提供运动描述，无法记录。"
+          } else {
+            const res = await logWorkout(description)
+            if (res.success && res.data) {
+              loggedActivity = true
+              const w = res.data
+              const setsPart = w.sets ? `${w.sets}组 · ` : ""
+              content = `已记录训练：${w.workout_name}（${setsPart}${w.duration_minutes}分钟 · 消耗约${w.calories_burned}kcal）。`
+            } else {
+              content = "记录训练失败，请让用户稍后再试或换个说法。"
+            }
+          }
+
+        } else if (toolName === "log_water") {
+          const amountMl = Math.round(Number(args.amount_ml) || 0)
+          if (amountMl <= 0) {
+            content = "饮水量无效，无法记录。"
+          } else {
+            const res = await logWater(amountMl)
+            if (res.success) {
+              loggedActivity = true
+              content = `已记录饮水：+${amountMl}ml，今日累计 ${res.newAmount ?? amountMl}ml。`
+            } else {
+              content = "记录饮水失败，请让用户稍后再试。"
+            }
+          }
+
+        } else if (toolName === "adjust_plan") {
+          const instruction = String(args.instruction ?? "").trim()
+          if (!instruction) {
+            content = "未提供调整要求，无法修改计划。"
+          } else {
+            const res = await adjustWorkoutPlan({ instruction })
+            if (res.success && 'data' in res && res.data) {
+              loggedActivity = true
+              const p = res.data as { name?: string; frequency_per_week?: number }
+              const freq = p.frequency_per_week ? `，每周 ${p.frequency_per_week} 天` : ""
+              content = `已根据"${instruction}"调整计划：${p.name ?? "新计划"}${freq}，已设为当前计划。请向用户简述本次调整。`
+            } else {
+              const err = (res as { error?: unknown }).error
+              content =
+                err === "PLAN_NOT_FOUND"
+                  ? "用户当前没有进行中的计划，建议先生成一份计划再调整。"
+                  : "调整计划失败，请让用户稍后再试或换个说法。"
+            }
+          }
+
         } else {
           content = `未知工具: ${toolName}`
         }
@@ -161,9 +235,9 @@ export async function runAgent(params: {
   }
 
   const hasKnowledge = toolsUsed.includes("query_knowledge_base")
-  const hasPersonal = toolsUsed.includes("get_user_stats")
+  const hasPersonal = toolsUsed.includes("get_user_stats") || toolsUsed.some((tn) => LOG_TOOLS.has(tn))
   const mode: AgentMode =
     hasKnowledge && hasPersonal ? "hybrid" : hasKnowledge ? "knowledge" : hasPersonal ? "personal" : "direct"
 
-  return { answer: fullAnswer, citations, mode, toolsUsed, retrievalK, retrievalKReason }
+  return { answer: fullAnswer, citations, mode, toolsUsed, retrievalK, retrievalKReason, loggedActivity }
 }

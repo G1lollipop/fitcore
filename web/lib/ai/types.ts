@@ -24,6 +24,7 @@ export interface AIChatMeta {
   retrievalK?: number        // LLM 选择的召回数量
   retrievalKReason?: string  // LLM 给出的理由
   persisted?: boolean        // 消息是否成功写入历史库
+  loggedActivity?: boolean   // 本轮是否通过 log_* 工具写入了饮食/训练/饮水
 }
 
 export interface Citation {

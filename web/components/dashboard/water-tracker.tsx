@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
+import { useTabActive } from '@/components/dashboard/tab-active-context'
 
 interface WaterTrackerProps {
   userId?: string
@@ -174,6 +175,7 @@ interface WaterGlassProps {
  */
 function WaterGlass({ pct, reachedGoal }: WaterGlassProps) {
   const id = useId()
+  const active = useTabActive()
   const gradId = `${id}-grad`
   const wave1Id = `${id}-wave1`
   const wave2Id = `${id}-wave2`
@@ -210,27 +212,43 @@ function WaterGlass({ pct, reachedGoal }: WaterGlassProps) {
             <motion.path
               id={wave1Id}
               fill={`url(#${gradId})`}
-              animate={{
-                d: [
-                  'M0 9 Q 25 0 50 9 T 100 9 T 150 9 T 200 9 V18 H0 Z',
-                  'M0 9 Q 25 18 50 9 T 100 9 T 150 9 T 200 9 V18 H0 Z',
-                  'M0 9 Q 25 0 50 9 T 100 9 T 150 9 T 200 9 V18 H0 Z',
-                ],
-              }}
-              transition={{ duration: 4, ease: 'easeInOut', repeat: Infinity }}
+              animate={
+                active
+                  ? {
+                      d: [
+                        'M0 9 Q 25 0 50 9 T 100 9 T 150 9 T 200 9 V18 H0 Z',
+                        'M0 9 Q 25 18 50 9 T 100 9 T 150 9 T 200 9 V18 H0 Z',
+                        'M0 9 Q 25 0 50 9 T 100 9 T 150 9 T 200 9 V18 H0 Z',
+                      ],
+                    }
+                  : { d: 'M0 9 Q 25 0 50 9 T 100 9 T 150 9 T 200 9 V18 H0 Z' }
+              }
+              transition={
+                active
+                  ? { duration: 4, ease: 'easeInOut', repeat: Infinity }
+                  : { duration: 0 }
+              }
             />
             <motion.path
               id={wave2Id}
               fill={reachedGoal ? 'var(--color-accent)' : 'var(--color-primary)'}
               fillOpacity={0.35}
-              animate={{
-                d: [
-                  'M0 11 Q 25 4 50 11 T 100 11 T 150 11 T 200 11 V18 H0 Z',
-                  'M0 11 Q 25 18 50 11 T 100 11 T 150 11 T 200 11 V18 H0 Z',
-                  'M0 11 Q 25 4 50 11 T 100 11 T 150 11 T 200 11 V18 H0 Z',
-                ],
-              }}
-              transition={{ duration: 5.5, ease: 'easeInOut', repeat: Infinity, delay: 0.3 }}
+              animate={
+                active
+                  ? {
+                      d: [
+                        'M0 11 Q 25 4 50 11 T 100 11 T 150 11 T 200 11 V18 H0 Z',
+                        'M0 11 Q 25 18 50 11 T 100 11 T 150 11 T 200 11 V18 H0 Z',
+                        'M0 11 Q 25 4 50 11 T 100 11 T 150 11 T 200 11 V18 H0 Z',
+                      ],
+                    }
+                  : { d: 'M0 11 Q 25 4 50 11 T 100 11 T 150 11 T 200 11 V18 H0 Z' }
+              }
+              transition={
+                active
+                  ? { duration: 5.5, ease: 'easeInOut', repeat: Infinity, delay: 0.3 }
+                  : { duration: 0 }
+              }
             />
           </svg>
 

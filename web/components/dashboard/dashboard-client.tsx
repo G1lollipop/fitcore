@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { AppShell } from '@/components/layout/app-shell'
 import { findNavItem } from '@/components/layout/nav-items'
@@ -8,10 +8,12 @@ import { DailyLogForm } from '@/components/log-form/daily-log-form'
 import { AdvancedLogDisclosure } from '@/components/log-form/advanced-log-disclosure'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { WeeklyActivity } from '@/components/dashboard/weekly-activity'
+import { CoachHomeCard } from '@/components/dashboard/coach-home-card'
+import { TabActiveProvider } from '@/components/dashboard/tab-active-context'
 import { MyPlans } from '@/components/plans/my-plans'
 import { NutritionCenter } from '@/components/nutrition/nutrition-center'
 import { TrainingHistory } from '@/components/training/training-history'
-import { getDashboardData } from '@/app/actions/dashboard'
+import { useDashboardData, useDashboardActions } from '@/lib/queries/dashboard'
 import type { DashboardData } from '@/app/actions/types'
 import { useT } from '@/lib/i18n/provider'
 import type { Dictionary } from '@/lib/i18n'
@@ -68,10 +70,11 @@ export function DashboardClient({
 }: DashboardClientProps) {
   const t = useT()
   const [activeNav, setActiveNav] = useState('dashboard')
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
-    initialDashboardData
-  )
-  const [, startTransition] = useTransition()
+  // Dashboard payload now lives in the React Query cache (seeded with the
+  // server-fetched data). Logging surfaces patch this cache optimistically,
+  // so the rings/totals update instantly without a blocking full refetch.
+  const { data: dashboardData } = useDashboardData(initialDashboardData)
+  const { invalidate } = useDashboardActions()
 
   // Greeting is computed once per render; that's fine — it's pure and cheap.
   const greeting = getGreeting(t)
@@ -85,20 +88,12 @@ export function DashboardClient({
 
   const displayName = userName || t.greeting.defaultUserName
 
-  const refreshDashboardData = useCallback(() => {
-    startTransition(async () => {
-      try {
-        const data = await getDashboardData()
-        setDashboardData(data)
-      } catch (error) {
-        console.error('Failed to refresh dashboard data:', error)
-      }
-    })
-  }, [])
-
+  // Generic "something changed" hook: kick a non-blocking background refetch
+  // to reconcile the cache. Surfaces that already know the delta (quick-log,
+  // water) patch the cache directly and this just confirms against the server.
   const handleLogSuccess = useCallback(() => {
-    refreshDashboardData()
-  }, [refreshDashboardData])
+    invalidate()
+  }, [invalidate])
 
   return (
     <AppShell
@@ -117,6 +112,8 @@ export function DashboardClient({
       }
     >
       <TabPanel active={activeNav === 'dashboard'} className="space-y-6">
+        <CoachHomeCard />
+
         <StatsCards
           userId={userId}
           kcalIntake={dashboardData?.today.total_calories}
@@ -154,10 +151,6 @@ export function DashboardClient({
       <TabPanel active={activeNav === 'plans'}>
         <MyPlans userId={userId} />
       </TabPanel>
-
-      <TabPanel active={activeNav === 'knowledge'}>
-        <KnowledgeBase />
-      </TabPanel>
     </AppShell>
   )
 }
@@ -184,27 +177,19 @@ function TabPanel({
   className?: string
   children: ReactNode
 }) {
-  // Latches to true on first activation and stays mounted thereafter.
-  const everActive = useRef(active)
-  if (active) everActive.current = true
-  if (!everActive.current) return null
+  // Latches to true on first activation and stays mounted thereafter, so
+  // re-visiting a tab is instant (no remount / refetch / skeleton flash).
+  const [everActive, setEverActive] = useState(active)
+  useEffect(() => {
+    if (active && !everActive) setEverActive(true)
+  }, [active, everActive])
+
+  if (!everActive) return null
 
   return (
     <div hidden={!active} className={active ? className : undefined}>
-      {children}
-    </div>
-  )
-}
-
-/** Tiny placeholder — replaced by a real KB view in a later phase step. */
-function KnowledgeBase() {
-  const t = useT()
-  return (
-    <div className="glass glass-highlight rounded-2xl p-6">
-      <h2 className="font-display text-base font-semibold text-foreground mb-2">
-        {t.knowledge.title}
-      </h2>
-      <p className="text-sm text-muted-foreground">{t.knowledge.comingSoon}</p>
+      {/* Lets infinite-animation children freeze while the tab is hidden. */}
+      <TabActiveProvider value={active}>{children}</TabActiveProvider>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import { Camera, Loader2, Save } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Loader2, Save } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import type { Dictionary } from '@/lib/i18n';
 import { parseFoodFromPhoto, type ParsedMealPhoto } from '@/app/actions/parseFoodFromPhoto';
 import { saveDietLog } from '@/app/actions/saveDietLog';
 import { updateDietLog } from '@/app/actions/updateDietLog';
+import { useMealPhoto } from './meal-photo-context';
 import type { DietLogItem } from '@/app/actions/types';
 
 /**
@@ -117,6 +118,7 @@ function ConfidenceBadge({ value, t }: { value: number; t: Dictionary }) {
  */
 export function MealPhotoUpload({ userId, onSuccess }: Props) {
   const t = useT();
+  const { registerOpener } = useMealPhoto();
   const [editing, setEditing] = useState<EditState | null>(null);
   const [edited, setEdited] = useState<
     Pick<ParsedMealPhoto, 'food_name' | 'calories' | 'protein' | 'carbs' | 'fat'> | null
@@ -262,6 +264,12 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
     [processPhoto]
   );
 
+  // Expose the picker to the unified action dock instead of a standalone FAB.
+  useEffect(() => {
+    registerOpener(() => fileInputRef.current?.click());
+    return () => registerOpener(null);
+  }, [registerOpener]);
+
   const onSave = useCallback(async () => {
     if (!editing || !edited) return;
     setSaving(true);
@@ -308,16 +316,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
 
   return (
     <>
-      {/* FAB — clicking directly opens the file picker, no intermediate dialog. */}
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        aria-label={t.logForm.photo.captureAria}
-        className="fixed bottom-24 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-2 ring-background transition-transform hover:scale-105 active:scale-95"
-      >
-        <Camera className="h-6 w-6" />
-      </button>
-
+      {/* Picker is triggered by the unified action dock via MealPhotoProvider. */}
       <input
         ref={fileInputRef}
         type="file"

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { QuickLogContext } from '@/hooks/use-quick-log'
 import { QuickLogBar } from './quick-log-bar'
-import { QuickLogFab } from './quick-log-trigger'
 
 interface QuickLogProviderProps {
   userId?: string
@@ -49,7 +48,6 @@ export function QuickLogProvider({ userId, onLogged, children }: QuickLogProvide
     <QuickLogContext.Provider value={value}>
       {children}
       <QuickLogBar />
-      <QuickLogFab />
     </QuickLogContext.Provider>
   )
 }

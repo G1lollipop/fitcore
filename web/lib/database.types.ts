@@ -70,7 +70,6 @@ export type Database = {
         Row: {
           calories_burned: number | null
           date: string
-          diet_logs: Json | null
           id: string
           total_calories: number | null
           total_carbs: number | null
@@ -79,13 +78,10 @@ export type Database = {
           user_id: string
           water_intake: number | null
           workout_duration: number | null
-          workout_logs: Json | null
-          workout_session_id: string | null
         }
         Insert: {
           calories_burned?: number | null
           date?: string
-          diet_logs?: Json | null
           id?: string
           total_calories?: number | null
           total_carbs?: number | null
@@ -94,13 +90,10 @@ export type Database = {
           user_id: string
           water_intake?: number | null
           workout_duration?: number | null
-          workout_logs?: Json | null
-          workout_session_id?: string | null
         }
         Update: {
           calories_burned?: number | null
           date?: string
-          diet_logs?: Json | null
           id?: string
           total_calories?: number | null
           total_carbs?: number | null
@@ -109,15 +102,101 @@ export type Database = {
           user_id?: string
           water_intake?: number | null
           workout_duration?: number | null
-          workout_logs?: Json | null
-          workout_session_id?: string | null
+        }
+        Relationships: []
+      }
+      food_logs: {
+        Row: {
+          calories: number
+          carbs: number
+          created_at: string
+          date: string
+          fat: number
+          food_name: string
+          id: string
+          logged_at: string
+          protein: number
+          user_id: string
+        }
+        Insert: {
+          calories?: number
+          carbs?: number
+          created_at?: string
+          date: string
+          fat?: number
+          food_name: string
+          id?: string
+          logged_at?: string
+          protein?: number
+          user_id: string
+        }
+        Update: {
+          calories?: number
+          carbs?: number
+          created_at?: string
+          date?: string
+          fat?: number
+          food_name?: string
+          id?: string
+          logged_at?: string
+          protein?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      workout_logs: {
+        Row: {
+          calories_burned: number
+          created_at: string
+          date: string
+          day_id: string | null
+          duration_minutes: number
+          id: string
+          logged_at: string
+          plan_id: string | null
+          sets: number | null
+          user_id: string
+          workout_name: string
+        }
+        Insert: {
+          calories_burned?: number
+          created_at?: string
+          date: string
+          day_id?: string | null
+          duration_minutes?: number
+          id?: string
+          logged_at?: string
+          plan_id?: string | null
+          sets?: number | null
+          user_id: string
+          workout_name: string
+        }
+        Update: {
+          calories_burned?: number
+          created_at?: string
+          date?: string
+          day_id?: string | null
+          duration_minutes?: number
+          id?: string
+          logged_at?: string
+          plan_id?: string | null
+          sets?: number | null
+          user_id?: string
+          workout_name?: string
         }
         Relationships: [
           {
-            foreignKeyName: "daily_stats_workout_session_id_fkey"
-            columns: ["workout_session_id"]
+            foreignKeyName: "workout_logs_day_id_fkey"
+            columns: ["day_id"]
             isOneToOne: false
-            referencedRelation: "workout_sessions"
+            referencedRelation: "workout_days"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_logs_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "workout_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -298,76 +377,6 @@ export type Database = {
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      set_logs: {
-        Row: {
-          completed_at: string
-          duration_seconds: number | null
-          exercise_id: string
-          id: string
-          is_dropset: boolean
-          is_failure: boolean
-          is_warmup: boolean
-          plan_exercise_id: string | null
-          reps_completed: number
-          rpe: number | null
-          session_id: string
-          set_number: number
-          weight_kg: number | null
-        }
-        Insert: {
-          completed_at?: string
-          duration_seconds?: number | null
-          exercise_id: string
-          id?: string
-          is_dropset?: boolean
-          is_failure?: boolean
-          is_warmup?: boolean
-          plan_exercise_id?: string | null
-          reps_completed: number
-          rpe?: number | null
-          session_id: string
-          set_number: number
-          weight_kg?: number | null
-        }
-        Update: {
-          completed_at?: string
-          duration_seconds?: number | null
-          exercise_id?: string
-          id?: string
-          is_dropset?: boolean
-          is_failure?: boolean
-          is_warmup?: boolean
-          plan_exercise_id?: string | null
-          reps_completed?: number
-          rpe?: number | null
-          session_id?: string
-          set_number?: number
-          weight_kg?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "set_logs_exercise_id_fkey"
-            columns: ["exercise_id"]
-            isOneToOne: false
-            referencedRelation: "exercises"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "set_logs_plan_exercise_id_fkey"
-            columns: ["plan_exercise_id"]
-            isOneToOne: false
-            referencedRelation: "plan_exercises"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "set_logs_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "workout_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -555,69 +564,6 @@ export type Database = {
           {
             foreignKeyName: "workout_plans_source_template_id_fkey"
             columns: ["source_template_id"]
-            isOneToOne: false
-            referencedRelation: "workout_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      workout_sessions: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          day_id: string | null
-          feeling_rating: number | null
-          id: string
-          notes: string | null
-          plan_id: string | null
-          session_name: string
-          started_at: string
-          status: string
-          total_duration_minutes: number | null
-          total_volume_kg: number | null
-          user_id: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          day_id?: string | null
-          feeling_rating?: number | null
-          id?: string
-          notes?: string | null
-          plan_id?: string | null
-          session_name: string
-          started_at?: string
-          status?: string
-          total_duration_minutes?: number | null
-          total_volume_kg?: number | null
-          user_id: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          day_id?: string | null
-          feeling_rating?: number | null
-          id?: string
-          notes?: string | null
-          plan_id?: string | null
-          session_name?: string
-          started_at?: string
-          status?: string
-          total_duration_minutes?: number | null
-          total_volume_kg?: number | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "workout_sessions_day_id_fkey"
-            columns: ["day_id"]
-            isOneToOne: false
-            referencedRelation: "workout_days"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workout_sessions_plan_id_fkey"
-            columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "workout_plans"
             referencedColumns: ["id"]

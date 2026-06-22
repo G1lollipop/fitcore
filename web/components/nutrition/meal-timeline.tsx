@@ -216,7 +216,7 @@ function MealRow({ log, userId, onChange, accent }: MealRowProps) {
   const [isRemoving, setIsRemoving] = useState(false)
 
   const handleDelete = () => {
-    if (!userId || isPending) return
+    if (!userId || isPending || log.pending) return
     setIsRemoving(true)
     startTransition(async () => {
       const result = await deleteDietLog(log.id)
@@ -250,15 +250,22 @@ function MealRow({ log, userId, onChange, accent }: MealRowProps) {
       />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">{log.food_name}</p>
-        <p className="text-[11px] text-muted-foreground tabular-nums">
-          {formatTime(log.logged_at, t.common.locale)} · {log.calories} kcal ·{' '}
-          {t.nutrition.macroLine(log.protein, log.carbs, log.fat)}
-        </p>
+        {log.pending ? (
+          <p className="flex items-center gap-1.5 text-[11px] text-primary">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+            {t.nutrition.addInput.parsing}
+          </p>
+        ) : (
+          <p className="text-[11px] text-muted-foreground tabular-nums">
+            {formatTime(log.logged_at, t.common.locale)} · {log.calories} kcal ·{' '}
+            {t.nutrition.macroLine(log.protein, log.carbs, log.fat)}
+          </p>
+        )}
       </div>
       <button
         type="button"
         onClick={handleDelete}
-        disabled={!userId || isPending}
+        disabled={!userId || isPending || log.pending}
         aria-label={t.nutrition.deleteAria(log.food_name)}
         className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
       >

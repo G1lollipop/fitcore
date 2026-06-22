@@ -20,7 +20,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { Database } from '@/lib/database.types'
 import { ExerciseSelector, type SelectedExercise } from './exercise-selector'
 import { PlanCard, type PlanCardData } from './plan-card'
+import { PlanEditDialog, type EditablePlan } from './plan-edit-dialog'
 import { PlanWizard, type OpenPickerFn } from './plan-wizard'
+import { PlanGeneratorCard } from './plan-generator-card'
 import { TemplateGrid } from './template-grid'
 import { TodayBanner } from './today-banner'
 
@@ -47,6 +49,7 @@ export function MyPlans({ userId }: { userId?: string }) {
   const [todayResult, setTodayResult] = useState<TodayWorkoutResult | null>(null)
   const [isLogging, startLogging] = useTransition()
   const [wizardOpen, setWizardOpen] = useState(false)
+  const [editingPlan, setEditingPlan] = useState<EditablePlan | null>(null)
 
   /**
    * Picker hoisted out of `PlanWizard` so we never have two Radix Dialog
@@ -226,6 +229,8 @@ export function MyPlans({ userId }: { userId?: string }) {
         />
       )}
 
+      <PlanGeneratorCard onGenerated={loadData} onManual={() => setWizardOpen(true)} />
+
       <section className="space-y-4">
         <header className="flex items-center justify-between">
           <div>
@@ -237,7 +242,7 @@ export function MyPlans({ userId }: { userId?: string }) {
           <button
             type="button"
             onClick={() => setWizardOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
           >
             <Plus size={12} />
             {t.plans.list.create}
@@ -277,6 +282,17 @@ export function MyPlans({ userId }: { userId?: string }) {
                     isPending={pendingPlanId === plan.id}
                     onSetCurrent={() => handleSetCurrent(plan.id)}
                     onDelete={() => handleDelete(plan.id)}
+                    onEdit={() =>
+                      setEditingPlan({
+                        id: plan.id,
+                        name: plan.name,
+                        description: plan.description,
+                        goal: plan.goal,
+                        experience_level: plan.experience_level,
+                        frequency_per_week: plan.frequency_per_week,
+                        duration_weeks: plan.duration_weeks,
+                      })
+                    }
                   />
                 </motion.div>
               ))}
@@ -314,6 +330,14 @@ export function MyPlans({ userId }: { userId?: string }) {
           onConfirm={pickerRequest.onConfirm}
         />
       )}
+
+      <PlanEditDialog
+        plan={editingPlan}
+        onOpenChange={(open) => {
+          if (!open) setEditingPlan(null)
+        }}
+        onSaved={loadData}
+      />
     </div>
   )
 }

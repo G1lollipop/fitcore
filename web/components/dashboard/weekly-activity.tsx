@@ -5,6 +5,7 @@ import { Flame, UtensilsCrossed } from 'lucide-react'
 import type { WeeklyTrendData, WeeklyTrendDay } from '@/app/actions/types'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n/provider'
+import { useTabActive } from '@/components/dashboard/tab-active-context'
 
 interface WeeklyActivityProps {
   data?: WeeklyTrendData
@@ -44,6 +45,7 @@ const cellVariants = {
  */
 export function WeeklyActivity({ data }: WeeklyActivityProps) {
   const t = useT()
+  const active = useTabActive()
   const days: WeeklyTrendDay[] =
     data?.days ??
     t.dashboard.weekdays.map((label, i) => ({
@@ -170,8 +172,12 @@ export function WeeklyActivity({ data }: WeeklyActivityProps) {
                   <motion.span
                     aria-hidden
                     className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-primary"
-                    animate={{ scale: [1, 1.25, 1] }}
-                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                    animate={active ? { scale: [1, 1.25, 1] } : { scale: 1 }}
+                    transition={
+                      active
+                        ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
+                        : { duration: 0 }
+                    }
                   />
                 )}
               </div>

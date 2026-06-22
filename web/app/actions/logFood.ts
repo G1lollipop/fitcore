@@ -5,14 +5,11 @@ import { randomUUID } from 'crypto';
 import { openai } from '@/lib/openaiClient';
 import { supabase } from '@/lib/supabaseClient';
 import { AI_FAST_MODEL } from '@/lib/ai/model';
-import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
+import { recomputeDailyStats } from '@/lib/stats/recompute-daily-stats';
 import type { DietLogItem, DailyStatsData } from './types';
-
-type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
-type DailyStatsInsert = Database['public']['Tables']['daily_stats']['Insert'];
 
 async function parseFoodWithAI(userInput: string): Promise<DietLogItem | null> {
   try {
@@ -86,80 +83,27 @@ export async function logFood(
 
   const today = getTodayDate();
 
-  const queryResult = await supabase
-    .from('daily_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .single();
+  const { error: insertError } = await supabase.from('food_logs').insert({
+    id: foodData.id,
+    user_id: userId,
+    date: today,
+    food_name: foodData.food_name,
+    calories: foodData.calories,
+    protein: foodData.protein,
+    carbs: foodData.carbs,
+    fat: foodData.fat,
+    logged_at: foodData.logged_at,
+  });
 
-  const existingRecord = queryResult.data as DailyStatsRow | null;
-  const queryError = queryResult.error;
-
-  if (queryError && queryError.code !== 'PGRST116') {
-    console.error('[logFood] Query error:', queryError.message);
-    return { success: false, error: ActionError.DB_QUERY_FAILED };
+  if (insertError) {
+    console.error('[logFood] Insert error:', insertError.message);
+    return { success: false, error: ActionError.DB_INSERT_FAILED };
   }
 
-  if (existingRecord) {
-    const currentDietLogs = (existingRecord.diet_logs as DietLogItem[]) || [];
-    const updatedDietLogs = [...currentDietLogs, foodData];
+  await recomputeDailyStats(userId, today);
 
-    const newTotalCalories = (existingRecord.total_calories ?? 0) + foodData.calories;
-    const newTotalProtein = (existingRecord.total_protein ?? 0) + foodData.protein;
-    const newTotalCarbs = (existingRecord.total_carbs ?? 0) + foodData.carbs;
-    const newTotalFat = (existingRecord.total_fat ?? 0) + foodData.fat;
-
-    const updateData = {
-      total_calories: newTotalCalories,
-      total_protein: newTotalProtein,
-      total_carbs: newTotalCarbs,
-      total_fat: newTotalFat,
-      diet_logs: updatedDietLogs,
-    };
-
-    const updateResult = await supabase
-      .from('daily_stats')
-      .update(updateData)
-      .eq('id', existingRecord.id);
-
-    const updateError = updateResult.error;
-
-    if (updateError) {
-      console.error('[logFood] Update error:', updateError.message);
-      return { success: false, error: ActionError.DB_UPDATE_FAILED };
-    }
-
-    revalidatePath('/');
-    return { success: true, data: foodData };
-  } else {
-    const insertData: Omit<DailyStatsInsert, 'id'> = {
-      user_id: userId,
-      date: today,
-      total_calories: foodData.calories,
-      total_protein: foodData.protein,
-      total_carbs: foodData.carbs,
-      total_fat: foodData.fat,
-      calories_burned: 0,
-      diet_logs: [foodData],
-      workout_logs: [],
-    };
-
-    const insertResult = await supabase
-      .from('daily_stats')
-      .insert(insertData)
-      .select();
-
-    const insertError = insertResult.error;
-
-    if (insertError) {
-      console.error('[logFood] Insert error:', insertError.message);
-      return { success: false, error: ActionError.DB_INSERT_FAILED };
-    }
-
-    revalidatePath('/');
-    return { success: true, data: foodData };
-  }
+  revalidatePath('/');
+  return { success: true, data: foodData };
 }
 
 export async function getDailyStats(): Promise<DailyStatsData | null> {
@@ -168,29 +112,39 @@ export async function getDailyStats(): Promise<DailyStatsData | null> {
 
   const today = getTodayDate();
 
-  const { data, error } = await supabase
-    .from('daily_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .single();
+  const [statsRes, logsRes] = await Promise.all([
+    supabase
+      .from('daily_stats')
+      .select('total_calories, total_protein, total_carbs, total_fat')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .maybeSingle(),
+    supabase
+      .from('food_logs')
+      .select('id, food_name, calories, protein, carbs, fat, logged_at')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .order('logged_at', { ascending: true }),
+  ]);
 
-  if (error && error.code !== 'PGRST116') {
-    console.error('[getDailyStats] Query error:', error.message);
+  if (statsRes.error && statsRes.error.code !== 'PGRST116') {
+    console.error('[getDailyStats] Query error:', statsRes.error.message);
     return null;
   }
 
-  const row = data as DailyStatsRow | null;
-  if (!row) {
+  const row = statsRes.data;
+  const dietLogs = (logsRes.data as DietLogItem[] | null) ?? [];
+
+  if (!row && dietLogs.length === 0) {
     return null;
   }
 
   return {
-    total_calories: row.total_calories || 0,
-    total_protein: row.total_protein || 0,
-    total_carbs: row.total_carbs || 0,
-    total_fat: row.total_fat || 0,
-    diet_logs: (row.diet_logs as DietLogItem[]) || [],
+    total_calories: row?.total_calories || 0,
+    total_protein: row?.total_protein || 0,
+    total_carbs: row?.total_carbs || 0,
+    total_fat: row?.total_fat || 0,
+    diet_logs: dietLogs,
   };
 }
 
@@ -204,53 +158,23 @@ export async function deleteDietLog(
     return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
-  const today = getTodayDate();
-
-  const queryResult = await supabase
-    .from('daily_stats')
-    .select('*')
+  const { data: deleted, error: deleteError } = await supabase
+    .from('food_logs')
+    .delete()
+    .eq('id', logId)
     .eq('user_id', userId)
-    .eq('date', today)
-    .single();
+    .select('id, date');
 
-  const existingRecord = queryResult.data as DailyStatsRow | null;
-  const queryError = queryResult.error;
-
-  if (queryError || !existingRecord) {
-    return { success: false, error: ActionError.TODAY_RECORD_NOT_FOUND };
+  if (deleteError) {
+    console.error('[deleteDietLog] Delete error:', deleteError.message);
+    return { success: false, error: ActionError.DB_DELETE_FAILED };
   }
 
-  const currentDietLogs = (existingRecord.diet_logs as DietLogItem[]) || [];
-  const targetLog = currentDietLogs.find((log) => log.id === logId);
-
-  if (!targetLog) {
+  if (!deleted || deleted.length === 0) {
     return { success: false, error: ActionError.RECORD_NOT_FOUND };
   }
 
-  const updatedDietLogs = currentDietLogs.filter((log) => log.id !== logId);
-
-  const newTotalCalories = Math.max(0, (existingRecord.total_calories ?? 0) - (targetLog.calories || 0));
-  const newTotalProtein = Math.max(0, (existingRecord.total_protein ?? 0) - (targetLog.protein || 0));
-  const newTotalCarbs = Math.max(0, (existingRecord.total_carbs ?? 0) - (targetLog.carbs || 0));
-  const newTotalFat = Math.max(0, (existingRecord.total_fat ?? 0) - (targetLog.fat || 0));
-
-  const updateData = {
-    total_calories: newTotalCalories,
-    total_protein: newTotalProtein,
-    total_carbs: newTotalCarbs,
-    total_fat: newTotalFat,
-    diet_logs: updatedDietLogs,
-  };
-
-  const updateResult = await supabase
-    .from('daily_stats')
-    .update(updateData)
-    .eq('id', existingRecord.id);
-
-  if (updateResult.error) {
-    console.error('[deleteDietLog] Update error:', updateResult.error);
-    return { success: false, error: ActionError.DB_DELETE_FAILED };
-  }
+  await recomputeDailyStats(userId, deleted[0].date);
 
   revalidatePath('/');
   return { success: true };

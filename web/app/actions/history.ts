@@ -26,18 +26,18 @@ export async function getNutritionByDate(dateStr: string): Promise<NutritionDayD
     return { goals: { ...DEFAULT_GOALS }, dietLogs: [] };
   }
 
-  const [settingsRes, statsRes] = await Promise.all([
+  const [settingsRes, logsRes] = await Promise.all([
     supabase
       .from('user_settings')
       .select('target_calories, target_protein, target_carbs, target_fat')
       .eq('user_id', userId)
       .maybeSingle(),
     supabase
-      .from('daily_stats')
-      .select('diet_logs')
+      .from('food_logs')
+      .select('id, food_name, calories, protein, carbs, fat, logged_at')
       .eq('user_id', userId)
       .eq('date', dateStr)
-      .maybeSingle(),
+      .order('logged_at', { ascending: true }),
   ]);
 
   const settings = settingsRes.data;
@@ -48,7 +48,7 @@ export async function getNutritionByDate(dateStr: string): Promise<NutritionDayD
     fat: settings?.target_fat || DEFAULT_GOALS.fat,
   };
 
-  const dietLogs = (statsRes.data?.diet_logs as DietLogItem[] | null) ?? [];
+  const dietLogs = (logsRes.data as DietLogItem[] | null) ?? [];
 
   return { goals, dietLogs };
 }
@@ -68,12 +68,12 @@ export async function getWorkoutHistory(
   }
 
   const { data, error } = await supabase
-    .from('daily_stats')
-    .select('date, workout_logs, workout_duration')
+    .from('workout_logs')
+    .select('id, date, workout_name, sets, duration_minutes, calories_burned, plan_id, day_id, logged_at')
     .eq('user_id', userId)
     .gte('date', startStr)
     .lte('date', endStr)
-    .gt('workout_duration', 0);
+    .order('logged_at', { ascending: true });
 
   if (error) {
     console.error('[getWorkoutHistory] 查询失败:', error.message);
@@ -82,10 +82,9 @@ export async function getWorkoutHistory(
 
   const grouped: Record<string, WorkoutLogItem[]> = {};
   for (const row of data ?? []) {
-    const logs = (row.workout_logs as WorkoutLogItem[] | null) ?? [];
-    if (logs.length > 0 && row.date) {
-      grouped[row.date] = logs;
-    }
+    const { date, ...log } = row;
+    if (!date) continue;
+    (grouped[date] ??= []).push(log as WorkoutLogItem);
   }
 
   return grouped;

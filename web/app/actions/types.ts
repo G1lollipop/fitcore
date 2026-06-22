@@ -6,6 +6,8 @@ export type DietLogItem = {
   carbs: number;
   fat: number;
   logged_at: string;
+  /** Client-only: row is an optimistic placeholder while AI parsing runs. */
+  pending?: boolean;
 };
 
 export type WorkoutLogItem = {
@@ -17,6 +19,8 @@ export type WorkoutLogItem = {
   logged_at: string;
   plan_id?: string | null;
   day_id?: string | null;
+  /** Client-only: row is an optimistic placeholder while AI parsing runs. */
+  pending?: boolean;
 };
 
 export type DailyStatsData = {

@@ -14,7 +14,7 @@ function getTodayDate(): string {
 export async function buildUserContext(userId: string): Promise<UserContextPayload> {
   const today = getTodayDate()
 
-  const [settingsResult, dailyStatsResult] = await Promise.all([
+  const [settingsResult, dailyStatsResult, foodLogsResult, workoutLogsResult] = await Promise.all([
     supabase
       .from("user_settings")
       .select("*")
@@ -26,6 +26,18 @@ export async function buildUserContext(userId: string): Promise<UserContextPaylo
       .eq("user_id", userId)
       .eq("date", today)
       .maybeSingle(),
+    supabase
+      .from("food_logs")
+      .select("id, food_name, calories, protein, carbs, fat, logged_at")
+      .eq("user_id", userId)
+      .eq("date", today)
+      .order("logged_at", { ascending: true }),
+    supabase
+      .from("workout_logs")
+      .select("id, workout_name, sets, duration_minutes, calories_burned, plan_id, day_id, logged_at")
+      .eq("user_id", userId)
+      .eq("date", today)
+      .order("logged_at", { ascending: true }),
   ])
 
   const settings = settingsResult.data as UserSettingsRow | null
@@ -59,8 +71,8 @@ export async function buildUserContext(userId: string): Promise<UserContextPaylo
       currentPlanId: settings?.current_plan_id ?? null,
     },
     logs: {
-      dietLogs: (dailyStats?.diet_logs as unknown as DietLogItem[]) ?? [],
-      workoutLogs: (dailyStats?.workout_logs as unknown as WorkoutLogItem[]) ?? [],
+      dietLogs: (foodLogsResult.data as DietLogItem[] | null) ?? [],
+      workoutLogs: (workoutLogsResult.data as WorkoutLogItem[] | null) ?? [],
     },
   }
 }

@@ -13,6 +13,7 @@ import { tError, type Dictionary } from "@/lib/i18n"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MealTimeline } from "./meal-timeline"
 import { RadialMacroChart } from "./radial-macro-chart"
+import { useDashboardActions } from "@/lib/queries/dashboard"
 import type { DietLogItem } from "@/app/actions/types"
 
 interface NutritionCenterProps {
@@ -30,6 +31,7 @@ const DEFAULT_GOALS: { calories: number; protein: number; carbs: number; fat: nu
 export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) {
   const { toast } = useToast()
   const t = useT()
+  const { applyDietLog } = useDashboardActions()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [dietData, setDietData] = useState<DietLogItem[]>([])
   const [goals, setGoals] = useState({ ...DEFAULT_GOALS })
@@ -72,20 +74,42 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
   }
 
   const handleAddFood = async () => {
-    if (!inputText.trim() || !userId) return
+    const text = inputText.trim()
+    if (!text || !userId) return
+
+    // Optimistic: drop a "parsing…" placeholder into the timeline immediately
+    // and clear the input, so the UI responds instantly while the LLM runs.
+    const tempId = `pending-${Date.now()}`
+    const placeholder: DietLogItem = {
+      id: tempId,
+      food_name: text,
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      logged_at: new Date().toISOString(),
+      pending: true,
+    }
+    setDietData((prev) => [...prev, placeholder])
+    setInputText("")
     setIsSubmitting(true)
+
     try {
-      const result = await logFood(inputText)
-      if (result.success) {
-        await loadDietData()
-        setInputText("")
-        toast({ title: t.nutrition.logSuccess, description: t.nutrition.added(result.data?.food_name ?? "") })
-        onLogSuccess?.()
+      const result = await logFood(text)
+      if (result.success && result.data) {
+        const saved = result.data
+        // Swap the placeholder for the parsed row in-place (no full reload).
+        setDietData((prev) => prev.map((d) => (d.id === tempId ? saved : d)))
+        applyDietLog(saved)
+        toast({ title: t.nutrition.logSuccess, description: t.nutrition.added(saved.food_name) })
       } else {
+        setDietData((prev) => prev.filter((d) => d.id !== tempId))
         toast({ variant: "destructive", title: t.nutrition.logFailed, description: tError(t, result.error) })
       }
     } catch (error) {
       console.error('Failed to add food:', error)
+      setDietData((prev) => prev.filter((d) => d.id !== tempId))
+      toast({ variant: "destructive", title: t.nutrition.logFailed, description: t.nutrition.addInput.parsing })
     } finally {
       setIsSubmitting(false)
     }
