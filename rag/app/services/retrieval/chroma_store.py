@@ -24,15 +24,39 @@ class VectorStoreService(object):
             persist_directory=config.persist_directory,
         )
 
+    def _fetch_all_chunks(self) -> dict:
+        """Page through the whole collection.
+
+        A single Chroma `.get()` binds every row at once and trips SQLite's
+        max-variables limit once the corpus is large (~10k+ chunks → "too many
+        SQL variables"). Paginating with limit/offset keeps each query small so
+        BM25 index building scales to the full local corpus.
+        """
+        documents: list[str] = []
+        metadatas: list[dict] = []
+        page = 1000
+        offset = 0
+        while True:
+            batch = self.vector_store.get(limit=page, offset=offset)
+            docs = batch.get("documents") or []
+            metas = batch.get("metadatas") or []
+            if not docs:
+                break
+            documents.extend(docs)
+            metadatas.extend(metas)
+            if len(docs) < page:
+                break
+            offset += page
+        return {"documents": documents, "metadatas": metadatas}
+
     def get_retriever(self):
         # 1. 向量检索器 (Vector Search)
         # 我们把候选数量(k)放大到 10，给后面的重排序留出筛选空间
         chroma_retriever = self.vector_store.as_retriever(search_kwargs={"k": 10})
 
         # 2. 关键词检索器 (BM25)
-        # 注意：这需要从 Chroma 中加载现有文档来构建索引。
-        # 对于简历级别的项目（数据量 < 10万条），这种全量加载是完全可行的。
-        all_docs_data = self.vector_store.get()
+        # 从 Chroma 分页加载全部文档构建索引（全量加载，分页避开 SQLite 变量上限）。
+        all_docs_data = self._fetch_all_chunks()
         docs_list = all_docs_data.get("documents", [])
         metadatas_list = all_docs_data.get("metadatas", [])
 

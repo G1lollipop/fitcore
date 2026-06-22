@@ -111,7 +111,9 @@ class ProcessInRetriever:
             from app.services.retrieval.supabase_store import fetch_all_chunk_documents  # noqa: WPS433
 
             return fetch_all_chunk_documents(vs.client)
-        data = vs.vector_store.get()
+        # Paginated fetch (a single Chroma .get() trips SQLite's max-variables
+        # limit on a large corpus). Reuse the store's paginated helper.
+        data = vs._fetch_all_chunks()
         return [
             Document(page_content=t, metadata=m or {})
             for t, m in zip(data.get("documents", []), data.get("metadatas", []))
