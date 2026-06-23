@@ -57,6 +57,8 @@ gha-creds-*.json
 # ---- 批量抓取的开放获取全文：体量大、可由 rag/scripts/harvest_kb.py 复现，
 #      不纳入版本管理（来源清单 data/harvested_sources.json 仍提交以保可追溯）----
 rag/data/auto_epmc_*.txt
+# 云端续灌的临时"剩余名单"（由脚本按 Supabase 现状重算，不入库）
+rag/data/cloud_remaining.txt
 
 # ---- 日志 / 杂项本地文件 ----
 *.local

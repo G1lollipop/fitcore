@@ -239,6 +239,12 @@ def _get_judge():
     return _JUDGE
 
 
+# Inter-call spacing for the LLM judge (free Gemini flash ≈ 10 RPM / 250 RPD).
+# Raise EVAL_JUDGE_SLEEP (e.g. 5–6) to stay under the rate limit on small samples.
+_JUDGE_SLEEP = float(os.getenv("EVAL_JUDGE_SLEEP", "0.2"))
+_JUDGE_MAX_RETRIES = 4
+
+
 def judge_chunk_relevant(question: str, text: str) -> bool:
     if not text.strip():
         return False
@@ -249,13 +255,22 @@ def judge_chunk_relevant(question: str, text: str) -> bool:
         f'Passage:\n"""\n{text[:3000]}\n"""\n\n'
         'Answer ONLY "yes" or "no".'
     )
-    try:
-        resp = _get_judge().invoke(prompt)
-        t = (resp.content or "").strip().lower()
-        return t.startswith("y")
-    except Exception as exc:  # noqa: BLE001
-        print(f"  [judge error] {exc}")
-        return False
+    for attempt in range(_JUDGE_MAX_RETRIES):
+        try:
+            resp = _get_judge().invoke(prompt)
+            t = (resp.content or "").strip().lower()
+            return t.startswith("y")
+        except Exception as exc:  # noqa: BLE001
+            msg = str(exc)
+            is_quota = "RESOURCE_EXHAUSTED" in msg or "429" in msg or "quota" in msg.lower()
+            if is_quota and attempt < _JUDGE_MAX_RETRIES - 1:
+                wait = 20 * (attempt + 1)
+                print(f"  [judge] rate-limited; waiting {wait}s then retry ({attempt + 1})...")
+                time.sleep(wait)
+                continue
+            print(f"  [judge error] {exc}")
+            return False
+    return False
 
 
 # ─── 主流程 ─────────────────────────────────────────────────────────────────
@@ -297,8 +312,7 @@ def _eval_one_variant(
         if use_judge:
             for c in chunks[:judge_k]:
                 judgments.append(judge_chunk_relevant(item["question"], c["text"]))
-                if not use_http:
-                    time.sleep(0.2)
+                time.sleep(_JUDGE_SLEEP)
             for k in ks:
                 if k <= judge_k:
                     metrics[f"context_precision@{k}"] = rm.context_precision_at_k(judgments, k)
