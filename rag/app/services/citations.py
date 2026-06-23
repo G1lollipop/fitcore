@@ -15,7 +15,7 @@ def build_citations(docs: list[Document]) -> list[dict[str, Any]]:
             metadata.get("title")
             or metadata.get("file_name")
             or metadata.get("source")
-            or f"资料{index + 1}"
+            or f"Reference {index + 1}"
         )
         source = (
             metadata.get("source")

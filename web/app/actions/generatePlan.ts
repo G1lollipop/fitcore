@@ -46,44 +46,46 @@ interface GeneratedPlan {
 }
 
 export interface GeneratePlanInput {
-  /** Free-text goal, e.g. "增肌，每周练 4 天，有哑铃和杠铃". */
+  /** Free-text goal, e.g. "Build muscle, train 4 days/week, have dumbbells and a barbell". */
   goalText: string;
 }
 
-const SYSTEM_PROMPT = `你是 FitCore 的专业私人教练。根据用户的目标和可用动作清单，设计一份结构化的每周训练计划。
+const SYSTEM_PROMPT = `You are FitCore's professional personal trainer. Based on the user's goal and the list of available exercises, design a structured weekly workout plan.
 
-严格返回 JSON：
+Return JSON strictly:
 {
-  "name": string,                  // 计划名（简洁，如"上下肢分化增肌计划"）
-  "description": string,           // 一句话描述
+  "name": string,                  // plan name (concise, e.g. "Upper/Lower Hypertrophy Split")
+  "description": string,           // one-line description
   "goal": "general" | "strength" | "muscle_gain" | "fat_loss" | "endurance",
   "experience_level": "beginner" | "intermediate" | "advanced",
   "duration_weeks": number,        // 4-12
-  "days": [                        // 必须正好 7 个元素，按周一→周日
+  "days": [                        // must be exactly 7 elements, Monday → Sunday
     {
-      "name": string,              // 训练日名称（如"胸/三头"），休息日填"休息"
+      "name": string,              // training-day name (e.g. "Chest/Triceps"); use "Rest" for rest days
       "rest_day": boolean,
-      "focus_muscles": string[],   // 该日目标肌群（中文，如 ["胸","三头"]）；休息日为 []
-      "exercises": [               // 休息日为 []；训练日 4-6 个
+      "focus_muscles": string[],   // target muscle groups for the day (English, e.g. ["Chest","Triceps"]); [] on rest days
+      "exercises": [               // [] on rest days; 4-6 on training days
         { "idx": number, "target_sets": number, "target_reps_min": number, "target_reps_max": number }
       ]
     }
   ]
 }
 
-规则：
-1) exercises[].idx 必须是下方"可用动作清单"中的编号，不要编造编号或动作。
-2) 根据目标安排合理的训练频率与休息日（一般每周练 3-5 天）。
-3) target_sets 3-5；增肌 reps 8-12，力量 4-6，耐力 12-20。
-4) 同一训练日不要重复同一动作；优先覆盖该日 focus_muscles。
-5) 只输出 JSON，不要额外文字。`;
+Rules:
+1) exercises[].idx must be a number from the "available exercises" list below — never invent indices or exercises.
+2) Set a sensible training frequency and rest days for the goal (typically 3-5 days/week).
+3) target_sets 3-5; hypertrophy reps 8-12, strength 4-6, endurance 12-20.
+4) Don't repeat the same exercise within a day; prioritize that day's focus_muscles.
+5) Output JSON only — no extra text.`;
 
 function buildCatalogText(catalog: CatalogExercise[]): string {
   return catalog
     .map((e, i) => {
+      const name = e.name_en?.trim() || e.name;
       const muscles = (e.muscle_groups ?? []).join('/');
       const cat = e.category ?? '';
-      return `${i + 1}. ${e.name}${muscles ? `（${muscles}` : ''}${cat ? `${muscles ? ' · ' : '（'}${cat}` : ''}${muscles || cat ? '）' : ''}`;
+      const meta = [muscles, cat].filter(Boolean).join(' · ');
+      return `${i + 1}. ${name}${meta ? ` (${meta})` : ''}`;
     })
     .join('\n');
 }
@@ -142,7 +144,7 @@ async function buildPlanStructureFromGoal(goalText: string): Promise<BuildResult
         { role: 'system', content: SYSTEM_PROMPT },
         {
           role: 'user',
-          content: `用户目标：${goalText}\n\n可用动作清单（用编号引用）：\n${catalogText}`,
+          content: `User goal: ${goalText}\n\nAvailable exercises (reference by index):\n${catalogText}`,
         },
       ],
       response_format: { type: 'json_object' },
@@ -182,7 +184,7 @@ async function buildPlanStructureFromGoal(goalText: string): Promise<BuildResult
       .filter((e): e is NonNullable<typeof e> => e !== null);
 
     return {
-      name: day.name?.trim() || (isRest ? '休息' : `训练日 ${i + 1}`),
+      name: day.name?.trim() || (isRest ? 'Rest' : `Training day ${i + 1}`),
       focus_muscles: Array.isArray(day.focus_muscles) ? day.focus_muscles : [],
       rest_day: isRest || exercises.length === 0,
       exercises,
@@ -191,7 +193,7 @@ async function buildPlanStructureFromGoal(goalText: string): Promise<BuildResult
 
   // Pad to 7 days so the weekly (Mon–Sun) mapping downstream stays consistent.
   while (days.length < 7) {
-    days.push({ name: '休息', focus_muscles: [], rest_day: true, exercises: [] });
+    days.push({ name: 'Rest', focus_muscles: [], rest_day: true, exercises: [] });
   }
 
   const trainingDays = days.filter((d) => !d.rest_day).length;
@@ -202,7 +204,7 @@ async function buildPlanStructureFromGoal(goalText: string): Promise<BuildResult
   return {
     ok: true,
     planData: {
-      name: generated.name?.trim() || 'AI 训练计划',
+      name: generated.name?.trim() || 'AI workout plan',
       description: generated.description?.trim() || undefined,
       goal: generated.goal || 'general',
       experience_level: generated.experience_level || 'beginner',
@@ -242,7 +244,7 @@ export async function generateWorkoutPlan(input: GeneratePlanInput) {
 }
 
 export interface AdjustPlanInput {
-  /** Natural-language tweak, e.g. "把腿日换成上肢" / "强度调低" / "这周只练3天". */
+  /** Natural-language tweak, e.g. "swap leg day for upper body" / "lower the intensity" / "only 3 days this week". */
   instruction: string;
 }
 
@@ -275,12 +277,12 @@ export async function adjustWorkoutPlan(input: AdjustPlanInput) {
   };
 
   const goalText = [
-    `现有计划：「${current.name ?? '训练计划'}」`,
-    `目标：${current.goal ?? 'general'}`,
-    `每周训练：${current.frequency_per_week ?? '未知'} 天`,
-    current.ai_prompt ? `最初需求：${current.ai_prompt}` : null,
-    `调整要求：${instruction}`,
-    '请在保留合理结构的前提下，按调整要求重新输出完整的一周计划。',
+    `Current plan: "${current.name ?? 'Workout plan'}"`,
+    `Goal: ${current.goal ?? 'general'}`,
+    `Training per week: ${current.frequency_per_week ?? 'unknown'} days`,
+    current.ai_prompt ? `Original request: ${current.ai_prompt}` : null,
+    `Adjustment request: ${instruction}`,
+    'Keeping a sensible structure, re-output a complete weekly plan following the adjustment request.',
   ]
     .filter(Boolean)
     .join('\n');

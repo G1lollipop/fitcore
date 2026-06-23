@@ -50,12 +50,13 @@ class VectorStoreService(object):
         return {"documents": documents, "metadatas": metadatas}
 
     def get_retriever(self):
-        # 1. 向量检索器 (Vector Search)
-        # 我们把候选数量(k)放大到 10，给后面的重排序留出筛选空间
+        # 1. Vector retriever (Vector Search)
+        # Widen the candidate count (k) to 10 to leave room for later reranking.
         chroma_retriever = self.vector_store.as_retriever(search_kwargs={"k": 10})
 
-        # 2. 关键词检索器 (BM25)
-        # 从 Chroma 分页加载全部文档构建索引（全量加载，分页避开 SQLite 变量上限）。
+        # 2. Keyword retriever (BM25)
+        # Load all documents from Chroma in pages to build the index (full load;
+        # paging avoids the SQLite variable limit).
         all_docs_data = self._fetch_all_chunks()
         docs_list = all_docs_data.get("documents", [])
         metadatas_list = all_docs_data.get("metadatas", [])
@@ -78,7 +79,7 @@ class VectorStoreService(object):
         bm25_retriever = BM25Retriever.from_documents(documents)
         bm25_retriever.k = 10
 
-        # 3. 混合检索 (Ensemble)。权重由 RETRIEVAL_VECTOR_WEIGHT 控制（默认 0.5/0.5）。
+        # 3. Hybrid retrieval (Ensemble). Weights controlled by RETRIEVAL_VECTOR_WEIGHT (default 0.5/0.5).
         from app.core.settings import get_settings
 
         ensemble_retriever = EnsembleRetriever(

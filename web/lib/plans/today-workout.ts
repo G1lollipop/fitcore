@@ -65,17 +65,17 @@ function isoWeekdayIndex(date: Date): number {
 }
 
 function formatExerciseText(pe: PlanExerciseRow): string {
-  const name = pe.exercises?.name ?? '未知动作'
+  const name = pe.exercises?.name ?? 'Unknown exercise'
   const sets = pe.target_sets ?? 0
   if (sets <= 0) return name
 
-  let text = `${name} ${sets}组`
+  let text = `${name} ${sets} sets`
   const min = pe.target_reps_min
   const max = pe.target_reps_max
   if (min && max) {
-    text += ` ${min}-${max}次`
+    text += ` ${min}-${max} reps`
   } else if (min) {
-    text += ` ${min}次`
+    text += ` ${min} reps`
   }
   const weight = pe.target_weight_kg
   if (weight) {
@@ -120,7 +120,7 @@ export function calculateTodayWorkout(
 
   if (isRestDay) {
     const placeholder = sortedDays[0]
-      ? { ...sortedDays[0], name: '休息日', isRestDay: true }
+      ? { ...sortedDays[0], name: 'Rest day', isRestDay: true }
       : null
     return { todayDay: placeholder, isRestDay: true, exercises: [] }
   }

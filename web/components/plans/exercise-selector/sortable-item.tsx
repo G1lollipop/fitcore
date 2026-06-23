@@ -15,7 +15,7 @@ interface SortableItemProps {
 }
 
 /**
- * One row in the right-hand "已选动作" panel. Provides a drag handle, a
+ * One row in the right-hand "Selected exercises" panel. Provides a drag handle, a
  * remove button, and inline +/- controls for sets and a reps range.
  * Sortable via dnd-kit; visually dims while being dragged.
  */

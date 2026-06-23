@@ -1,4 +1,4 @@
-"""单测：eval/retrieval_metrics.py 的各指标边界与正确性。"""
+"""Unit tests: boundary and correctness of the metrics in eval/retrieval_metrics.py."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import math
 import sys
 from pathlib import Path
 
-# eval/ 不是常规包名（且 `eval` 是内置名），直接把 eval 目录加进 path 后按模块名导入。
+# eval/ is not a regular package name (and `eval` is a builtin), so add the eval directory to the path and import by module name.
 _EVAL_DIR = Path(__file__).resolve().parents[1] / "eval"
 if str(_EVAL_DIR) not in sys.path:
     sys.path.insert(0, str(_EVAL_DIR))
@@ -22,23 +22,23 @@ def test_hit_rate():
     qrels = {"a.txt": 3}
     assert rm.hit_rate_at_k(["x.txt", "a.txt"], qrels, k=5) == 1.0
     assert rm.hit_rate_at_k(["x.txt", "y.txt"], qrels, k=5) == 0.0
-    # 命中在第 2 位，但 k=1 截断后看不到
+    # Hit is at position 2, but invisible after k=1 truncation
     assert rm.hit_rate_at_k(["x.txt", "a.txt"], qrels, k=1) == 0.0
 
 
 def test_recall():
     qrels = {"a.txt": 3, "b.txt": 2}
-    # 召回 1/2
+    # Recall 1/2
     assert rm.recall_at_k(["a.txt", "x.txt"], qrels, k=5) == 0.5
-    # 召回 2/2
+    # Recall 2/2
     assert rm.recall_at_k(["a.txt", "b.txt"], qrels, k=5) == 1.0
-    # k 截断后只看到 a
+    # After k truncation only a is visible
     assert rm.recall_at_k(["a.txt", "b.txt"], qrels, k=1) == 0.5
 
 
 def test_precision():
     qrels = {"a.txt": 3, "b.txt": 1}
-    # top-4 里命中 2 个 → 2/4
+    # 2 hits within top-4 -> 2/4
     assert rm.precision_at_k(["a.txt", "x.txt", "b.txt", "y.txt"], qrels, k=4) == 0.5
     assert rm.precision_at_k([], qrels, k=0) == 0.0
 
@@ -66,7 +66,7 @@ def test_ndcg_worse_ranking_is_lower():
 
 
 def test_ndcg_manual_value():
-    # 单个相关文档 grade=3 排在第 2 位：
+    # A single relevant document with grade=3 ranked at position 2:
     # gain = 2^3-1 = 7, DCG = 7/log2(3); IDCG = 7/log2(2)=7 → nDCG = 1/log2(3)
     qrels = {"a.txt": 3}
     val = rm.ndcg_at_k(["x.txt", "a.txt"], qrels, k=5)
@@ -75,7 +75,7 @@ def test_ndcg_manual_value():
 
 def test_average_precision():
     qrels = {"a.txt": 1, "b.txt": 1}
-    # a 在 1，b 在 3：AP = (1/1 + 2/3)/2
+    # a at 1, b at 3: AP = (1/1 + 2/3)/2
     val = rm.average_precision_at_k(["a.txt", "x.txt", "b.txt"], qrels, k=5)
     assert val == pytest_approx((1.0 + 2 / 3) / 2)
 
@@ -93,6 +93,22 @@ def test_compute_all_keys():
     assert out["hit_rate@5"] == 1.0
 
 
+def test_keyword_coverage_at_k():
+    chunks = [
+        "Aim for 1.6 g/kg body weight per day of protein.",
+        "Spread intake across meals every 3-4 hours.",
+        "Leucine triggers muscle protein synthesis.",
+    ]
+    # all three keywords present across top-3
+    assert rm.keyword_coverage_at_k(chunks, ["g/kg", "leucine", "3-4 hours"], 3) == 1.0
+    # only the first chunk counts at k=1 → just "g/kg"
+    assert rm.keyword_coverage_at_k(chunks, ["g/kg", "leucine"], 1) == pytest_approx(0.5)
+    # case-insensitive; missing keyword lowers coverage
+    assert rm.keyword_coverage_at_k(chunks, ["LEUCINE", "creatine"], 3) == pytest_approx(0.5)
+    # empty keywords → vacuous 1.0
+    assert rm.keyword_coverage_at_k(chunks, [], 3) == 1.0
+
+
 def test_context_precision_and_hit():
     j = [True, False, True, False, False]
     assert rm.context_precision_at_k(j, 3) == pytest_approx(2 / 3)
@@ -104,11 +120,11 @@ def test_context_precision_and_hit():
 
 
 def test_false_retrieval_rate():
-    # 阈值 0.8：3 个分数里 2 个 >= 0.8 → 2/3
+    # Threshold 0.8: 2 of 3 scores are >= 0.8 -> 2/3
     assert rm.false_retrieval_rate([0.9, 0.85, 0.1], threshold=0.8) == pytest_approx(
         2 / 3
     )
-    # 全 None → -1.0（后端不提供可比分数）
+    # All None -> -1.0 (backend provides no comparable scores)
     assert rm.false_retrieval_rate([None, None], threshold=0.8) == -1.0
 
 

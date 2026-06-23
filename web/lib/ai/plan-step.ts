@@ -10,7 +10,6 @@ import {
   buildAgentPlanMessages,
 } from "@/lib/ai/agent-tools"
 import type { CoachChatMessage } from "@/lib/ai/types"
-import type { Language } from "@/lib/i18n"
 
 export interface ParsedToolCall {
   id: string
@@ -69,14 +68,11 @@ function parsePlanChoice(planChoice: {
 
 export async function planAgentStep(params: {
   message: string
-  language?: Language
   conversationHistory?: CoachChatMessage[]
   model?: string
 }): Promise<AgentPlanResult> {
-  const language: Language = params.language === "en" ? "en" : "zh"
   const messages = buildAgentPlanMessages({
     message: params.message,
-    language,
     conversationHistory: params.conversationHistory,
   })
 
@@ -95,14 +91,11 @@ export async function planAgentStep(params: {
 /** Full planner response — used by runAgent to avoid a second LLM call. */
 export async function createAgentPlan(params: {
   message: string
-  language?: Language
   conversationHistory?: CoachChatMessage[]
   model?: string
 }) {
-  const language: Language = params.language === "en" ? "en" : "zh"
   const messages = buildAgentPlanMessages({
     message: params.message,
-    language,
     conversationHistory: params.conversationHistory,
   })
 

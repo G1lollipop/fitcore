@@ -29,7 +29,7 @@ def is_probable_local_path(model_ref: str) -> bool:
 
 
 class CachedCompressionRetriever(ContextualCompressionRetriever):
-    """带缓存的压缩检索器"""
+    """Compression retriever with caching."""
 
     _cache_manager: CacheManager = PrivateAttr()
 
@@ -60,21 +60,22 @@ def build_compression_retriever(
     """
     settings = get_settings()
     if not settings.reranker_enabled:
-        print("[RagService] Reranker 已通过环境变量关闭，使用基础检索")
+        print("[RagService] Reranker disabled via environment variable; using base retrieval")
         return None
 
     model_ref = settings.reranker_model_ref
     if not model_ref:
-        print("[RagService] 未配置 Reranker 模型引用，已降级为基础检索")
+        print("[RagService] No Reranker model reference configured; falling back to base retrieval")
         return None
 
     if is_probable_local_path(model_ref) and not os.path.exists(model_ref):
-        print(f"[RagService] Reranker 本地路径不存在，已降级为基础检索: {model_ref}")
+        print(f"[RagService] Reranker local path does not exist; falling back to base retrieval: {model_ref}")
         return None
 
-    # 懒加载：torch / sentence-transformers 只在 RERANKER_ENABLED=true 且配置了
-    # 模型时才尝试导入。生产镜像 (requirements-prod.txt) 不安装这些包，所以
-    # 这里的 ImportError 是预期的「云端轻量模式」信号，不是错误。
+    # Lazy import: torch / sentence-transformers are only imported when
+    # RERANKER_ENABLED=true and a model is configured. The production image
+    # (requirements-prod.txt) does not install these packages, so an ImportError
+    # here is the expected "lightweight cloud mode" signal, not an error.
     try:
         from langchain_classic.retrievers.document_compressors import (
             CrossEncoderReranker,
@@ -82,19 +83,19 @@ def build_compression_retriever(
         from langchain_community.cross_encoders import HuggingFaceCrossEncoder
     except ImportError as exc:
         print(
-            "[RagService] Reranker 依赖未安装 (torch / sentence-transformers)，"
-            f"已降级为基础检索 (Vector + BM25)。安装 torch + sentence-transformers 可启用重排序。详情: {exc}"
+            "[RagService] Reranker dependencies not installed (torch / sentence-transformers); "
+            f"falling back to base retrieval (Vector + BM25). Install torch + sentence-transformers to enable reranking. Details: {exc}"
         )
         return None
 
     try:
         model_kwargs = settings.reranker_model_kwargs
         model = HuggingFaceCrossEncoder(model_name=model_ref, model_kwargs=model_kwargs)
-        # top_n=10：重排序后返回全部候选（动态裁剪在 chat() 里做）
+        # top_n=10: return all candidates after reranking (dynamic trimming happens in chat())
         compressor = CrossEncoderReranker(model=model, top_n=10)
-        print(f"[RagService] Reranker 已启用: {model_ref} model_kwargs={model_kwargs}")
+        print(f"[RagService] Reranker enabled: {model_ref} model_kwargs={model_kwargs}")
     except Exception as exc:  # noqa: BLE001 (startup path)
-        print(f"[RagService] Reranker 初始化失败，已降级为基础检索: {exc}")
+        print(f"[RagService] Reranker initialization failed; falling back to base retrieval: {exc}")
         return None
 
     return CachedCompressionRetriever(

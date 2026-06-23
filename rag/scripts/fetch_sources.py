@@ -119,18 +119,18 @@ def _extract_html(url: str) -> str | None:
             favor_recall=True,
         )
 
-    # 1) trafilatura 自带下载器（对多数站点足够）。
+    # 1) trafilatura's built-in downloader (sufficient for most sites).
     text = _extract(trafilatura.fetch_url(url))
     if text and len(text) >= MIN_BODY_CHARS:
         return _trim_reference_tail(text)
 
-    # 2) 回退：浏览器 UA 的 requests —— 绕过 Springer/BMC/PMC 对默认爬虫 UA 的拦截。
+    # 2) Fallback: requests with a browser UA — bypasses Springer/BMC/PMC blocking of default crawler UAs.
     import requests
 
     try:
         resp = requests.get(url, timeout=60, headers={"User-Agent": _BROWSER_UA})
         resp.raise_for_status()
-    except Exception:  # noqa: BLE001 (CLI 工具：失败则退回 trafilatura 结果)
+    except Exception:  # noqa: BLE001 (CLI tool: on failure, fall back to trafilatura result)
         return _trim_reference_tail(text)
     return _trim_reference_tail(_extract(resp.text) or text)
 

@@ -1,5 +1,5 @@
-# 仓库根级兜底忽略（适用于整个 monorepo）。
-# web/ 与 rag/ 子目录各自维护了更细的 .gitignore，二者叠加生效。
+# Repo-root fallback ignores (apply to the whole monorepo).
+# web/ and rag/ each maintain their own finer-grained .gitignore; both stack.
 
 # ---- OS ----
 .DS_Store
@@ -14,21 +14,21 @@ Thumbs.db
 
 # ---- Agent / local tooling ----
 .claude/
-# 注意：.cursor/ 下的 environment.json、rules 等是需要提交共享的，不整体忽略
+# Note: environment.json, rules, etc. under .cursor/ are meant to be committed and shared, so don't ignore the whole folder.
 
-# ---- 环境变量 / 密钥（切勿提交）----
+# ---- Environment variables / secrets (never commit) ----
 .env
 .env.*
 !.env.example
 !.env.local.example
 
-# OAuth / 服务账号密钥文件（Google 下载的 client_secret 等，切勿提交）
+# OAuth / service-account key files (Google-downloaded client_secret, etc. — never commit)
 client_secret*.json
 **/client_secret*.json
 *-service-account*.json
 gha-creds-*.json
 
-# ---- Node / 前端 ----
+# ---- Node / frontend ----
 **/node_modules/
 **/.next/
 **/out/
@@ -39,7 +39,7 @@ gha-creds-*.json
 **/next-env.d.ts
 .eslintcache
 
-# ---- Python / 后端 ----
+# ---- Python / backend ----
 **/.venv/
 **/venv/
 **/__pycache__/
@@ -47,25 +47,30 @@ gha-creds-*.json
 .pytest_cache/
 .ruff_cache/
 
-# ---- RAG 运行时产物 ----
+# ---- RAG runtime artifacts ----
 **/chroma/
 **/chat_history/
 **/md5.text
-# 评测运行产物（retrieval / faithfulness / abstention / agent 等报告，均不入库）
+# Eval run artifacts (retrieval / faithfulness / abstention / agent reports — never committed)
 **/eval/*_report_*.json
 
-# ---- 批量抓取的开放获取全文：体量大、可由 rag/scripts/harvest_kb.py 复现，
-#      不纳入版本管理（来源清单 data/harvested_sources.json 仍提交以保可追溯）----
+# ---- Bulk-harvested open-access full text: large, reproducible via
+#      rag/scripts/harvest_kb.py, so not version-controlled (the source
+#      manifest data/harvested_sources.json is still committed for traceability) ----
 rag/data/auto_epmc_*.txt
-# 云端续灌的临时"剩余名单"（由脚本按 Supabase 现状重算，不入库）
+# Temporary cloud "remaining list" for incremental ingest (recomputed from Supabase state — not committed)
 rag/data/cloud_remaining.txt
 
-# ---- 日志 / 杂项本地文件 ----
+# ---- Logs / misc local files ----
 *.local
 *.log
 logs/
 
-# ---- 包管理锁文件（当前不纳入版本管理）----
+# ---- Lockfiles (currently not version-controlled) ----
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+
+# ---- Personal learning / planning docs (kept locally, not published) ----
+docs/mle/
+rag/eval/P0_PLAN.md

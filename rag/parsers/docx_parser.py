@@ -1,5 +1,5 @@
 """
-Word (DOCX) 文件解析器
+Word (DOCX) file parser.
 """
 
 from typing import Dict, Any, Optional
@@ -7,10 +7,10 @@ from .base_parser import BaseFileParser
 
 
 class DocxParser(BaseFileParser):
-    """DOCX 文件解析器"""
+    """DOCX file parser."""
 
     def parse(self, file_content: bytes, filename: str, **kwargs) -> Dict[str, Any]:
-        """解析 DOCX 文件"""
+        """Parse a DOCX file."""
         try:
             from docx import Document
             from io import BytesIO
@@ -18,11 +18,11 @@ class DocxParser(BaseFileParser):
             docx_file = BytesIO(file_content)
             doc = Document(docx_file)
 
-            # 提取所有段落文本
+            # Extract text from all paragraphs.
             paragraphs = [para.text for para in doc.paragraphs if para.text.strip()]
             text = "\n\n".join(paragraphs)
 
-            # 提取表格文本
+            # Extract text from tables.
             table_texts = []
             for table in doc.tables:
                 for row in table.rows:
@@ -33,9 +33,9 @@ class DocxParser(BaseFileParser):
                         table_texts.append(" | ".join(row_texts))
 
             if table_texts:
-                text += "\n\n[表格内容]\n" + "\n".join(table_texts)
+                text += "\n\n[Table content]\n" + "\n".join(table_texts)
 
-            # 提取元数据
+            # Extract metadata.
             metadata = self._extract_basic_metadata(filename)
             metadata["file_type"] = (
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -44,7 +44,7 @@ class DocxParser(BaseFileParser):
             metadata["table_count"] = len(doc.tables)
             metadata["character_count"] = len(text)
 
-            # Word 文档属性
+            # Word document properties.
             core_props = doc.core_properties
             if core_props.title:
                 metadata["title"] = core_props.title
@@ -68,22 +68,23 @@ class DocxParser(BaseFileParser):
                 "text": "",
                 "metadata": self._extract_basic_metadata(filename),
                 "success": False,
-                "error": "python-docx 未安装，请运行: pip install python-docx",
+                "error": "python-docx is not installed; please run: pip install python-docx",
             }
         except Exception as e:
             return {
                 "text": "",
                 "metadata": self._extract_basic_metadata(filename),
                 "success": False,
-                "error": f"DOCX 解析失败: {str(e)}",
+                "error": f"DOCX parsing failed: {str(e)}",
             }
 
     def can_parse(self, filename: str, mime_type: Optional[str] = None) -> bool:
-        """判断是否为 DOCX 文件。
+        """Determine whether the file is a DOCX file.
 
-        注意：python-docx 只能读 OOXML 格式的 .docx，无法解析旧版二进制 .doc
-        （application/msword）。因此这里不再认领 .doc，避免把旧格式误路由到本
-        解析器后抛出令人困惑的失败。
+        Note: python-docx can only read OOXML-format .docx files; it cannot
+        parse the legacy binary .doc format (application/msword). For that
+        reason we no longer claim .doc here, to avoid mis-routing the old
+        format to this parser and raising a confusing failure.
         """
         if mime_type:
             return (

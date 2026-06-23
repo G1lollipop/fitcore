@@ -9,7 +9,6 @@ import { buildUserContext } from "@/lib/ai/user-context"
 const requestSchema = z.object({
   message: z.string().trim().min(1, "message is required"),
   conversationId: z.string().trim().optional(),
-  language: z.enum(["zh", "en"]).optional(),
 })
 
 async function saveMessage(
@@ -74,48 +73,48 @@ export async function POST(request: Request) {
     )
   }
 
-  const { message, conversationId: bodyConversationId, language } = parsed.data
+  const { message, conversationId: bodyConversationId } = parsed.data
   const startedAt = Date.now()
   const effectiveConversationId =
     bodyConversationId?.trim() || `fitcore-${userId}-${startedAt}`
 
   const encoder = new TextEncoder()
 
-  // 将 SSE 事件序列化并编码
+  // Serialize and encode an SSE event.
   const encodeEvent = (event: AgentSSEEvent): Uint8Array =>
     encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // 并行加载用户上下文和历史记录，减少首 token 延迟
+        // Load user context and history in parallel to cut first-token latency.
         const [userContext, conversationHistory] = await Promise.all([
           buildUserContext(userId),
           loadRecentMessages(userId, effectiveConversationId, 20),
         ])
 
-        // 运行 Agent：规划 → 工具调用 → 流式生成
-        // onToken 在每个 token 生成时立即推送到客户端
+        // Run the agent: plan → tool calls → streaming generation.
+        // onToken pushes each token to the client as it is generated.
         const result = await runAgent({
           message,
           sessionId: effectiveConversationId,
           userContext,
           conversationHistory,
-          language,
           onToken: (token) => {
             controller.enqueue(encodeEvent({ type: "token", content: token }))
           },
         })
 
-        // 持久化：await 完成后再发 done，避免流先于写库结束导致丢历史；
-        // 写库失败不影响本次回答，仅在 meta.persisted 中如实反馈。
+        // Persist before sending `done` so the stream doesn't finish ahead of
+        // the DB write and drop history; write failures don't affect this
+        // answer and are surfaced honestly via meta.persisted.
         const [userSaved, assistantSaved] = await Promise.all([
           saveMessage(userId, "user", message, effectiveConversationId),
           saveMessage(userId, "assistant", result.answer, effectiveConversationId),
         ])
         const persisted = userSaved && assistantSaved
 
-        // done 事件：引用来源、模式、工具列表、k 值（供调试）
+        // done event: citations, mode, tool list, k value (for debugging).
         controller.enqueue(
           encodeEvent({
             type: "done",

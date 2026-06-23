@@ -7,7 +7,6 @@ export type IntentMode = "knowledge" | "personal" | "hybrid" | "small_talk"
 export interface AgentGoldenCase {
   id: string
   message: string
-  language: "en" | "zh"
   intent_mode: IntentMode
   /** Expected tool names (set). Order-independent. Empty for small_talk. */
   expected_tools: string[]

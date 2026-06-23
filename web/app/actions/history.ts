@@ -76,7 +76,7 @@ export async function getWorkoutHistory(
     .order('logged_at', { ascending: true });
 
   if (error) {
-    console.error('[getWorkoutHistory] 查询失败:', error.message);
+    console.error('[getWorkoutHistory] Query failed:', error.message);
     return {};
   }
 

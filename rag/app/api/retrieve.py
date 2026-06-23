@@ -31,11 +31,11 @@ def _get_rag_service() -> RagService:
 )
 async def retrieve_v1(request: RetrieveRequest):
     """
-    纯检索端点：向量召回 + 重排序，不调 LLM，供 Agent 工具调用。
+    Pure retrieval endpoint: vector recall + reranking, no LLM call, for use by Agent tools.
 
-    topK 支持两种模式：
-      - topK 在 1-20 之间：显式指定返回 N 条
-      - 其它值：自适应模式，根据查询复杂度自动选 k∈{3,5,8}
+    topK supports two modes:
+      - topK between 1 and 20: explicitly return N results
+      - other values: adaptive mode, automatically choosing k in {3,5,8} based on query complexity
     """
     try:
         rag = _get_rag_service()

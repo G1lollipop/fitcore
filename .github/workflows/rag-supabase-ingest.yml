@@ -36,10 +36,10 @@ jobs:
           GOOGLE_AI_STUDIO_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_API_KEY }}
         run: |
           set -e
-          if [ -z "$SUPABASE_URL" ]; then echo "::error::缺少 Secret: SUPABASE_URL"; exit 1; fi
-          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "::error::缺少 Secret: SUPABASE_SERVICE_ROLE_KEY"; exit 1; fi
-          if [ -z "$GOOGLE_AI_STUDIO_API_KEY" ]; then echo "::error::缺少 Secret: GOOGLE_AI_STUDIO_API_KEY"; exit 1; fi
-          echo "Secrets 已配置（未打印具体值）。"
+          if [ -z "$SUPABASE_URL" ]; then echo "::error::Missing secret: SUPABASE_URL"; exit 1; fi
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "::error::Missing secret: SUPABASE_SERVICE_ROLE_KEY"; exit 1; fi
+          if [ -z "$GOOGLE_AI_STUDIO_API_KEY" ]; then echo "::error::Missing secret: GOOGLE_AI_STUDIO_API_KEY"; exit 1; fi
+          echo "Secrets are configured (values not printed)."
 
       - name: Validate SUPABASE_URL (DNS)
         env:
@@ -55,14 +55,14 @@ jobs:
           host = p.hostname
           if not host or p.scheme not in ("https", "http"):
               raise SystemExit(
-                  f"SUPABASE_URL 无效：需为 https://xxx.supabase.co 形式（当前 scheme={p.scheme!r} hostname={host!r} 长度={len(u)}）"
+                  f"Invalid SUPABASE_URL: expected https://xxx.supabase.co (got scheme={p.scheme!r} hostname={host!r} length={len(u)})"
               )
-          print("解析到的 hostname:", host)
+          print("Parsed hostname:", host)
           try:
               socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
           except OSError as e:
-              raise SystemExit(f"DNS 解析失败 {host!r}: {e}。请检查 Secret 是否多空格/换行/错别字。") from e
-          print("DNS 解析成功")
+              raise SystemExit(f"DNS resolution failed for {host!r}: {e}. Check the secret for stray spaces/newlines/typos.") from e
+          print("DNS resolution succeeded")
           PY
 
       - name: Setup Python

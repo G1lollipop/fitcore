@@ -1,32 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { Languages } from 'lucide-react'
-import { useLanguage } from '@/lib/i18n/provider'
+import { useT } from '@/lib/i18n/provider'
 
 /**
  * Sign in / Sign up tab switcher shared by the auth pages. Pre-login pages are
- * server components, so this small client island reads the persisted language
- * preference to localize the two tab labels. It also carries the language
- * toggle, since the auth screens render no app chrome of their own — without it
- * a visitor landing here would have no way to switch the UI to English.
+ * server components, so this small client island renders the two tab links.
  */
 export function AuthTabs({ active }: { active: 'sign-in' | 'sign-up' }) {
-  const { language, mounted, toggleLanguage, t } = useLanguage()
+  const t = useT()
   return (
     <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
-      <button
-        type="button"
-        onClick={toggleLanguage}
-        aria-label={t.language.switchTo}
-        title={t.language.switchTo}
-        className="glass inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <Languages size={16} />
-        <span className="min-w-[1.6rem] text-center" aria-hidden>
-          {mounted ? (language === 'zh' ? 'EN' : '中') : ''}
-        </span>
-      </button>
       <div className="glass flex items-center gap-1 rounded-lg p-1">
         <Link
           href="/sign-in"

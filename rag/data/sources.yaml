@@ -13,8 +13,9 @@
 
 sources:
   # ── ISSN position stands (full text fetched from JISSN/BMC, CC BY) ───────
-  # 之前是手写精编摘要（kb_01~05）；已替换为 BMC 全文抓取，id 与 data/auto_<id>.txt
-  # 对应。BMC HTML 镜像可被 fetch_sources.py 的浏览器 UA 正常抽取（PMC/Springer 镜像挡爬虫）。
+  # Previously hand-written curated summaries (kb_01~05); replaced with full-text BMC
+  # fetches, with ids corresponding to data/auto_<id>.txt. The BMC HTML mirror can be
+  # extracted normally by fetch_sources.py's browser UA (PMC/Springer mirrors block crawlers).
   - id: issn_protein
     title: "ISSN Position Stand: Protein and Exercise (Jäger et al., 2017)"
     url: https://jissn.biomedcentral.com/articles/10.1186/s12970-017-0177-8
@@ -63,8 +64,9 @@ sources:
     type: html
     license: CC BY 4.0
     tags: [nutrition, supplements, macronutrients, hydration]
-    # 刻意不灌库：这是一篇覆盖蛋白/肌酸/咖啡因等的「大综述」，与各专题 KB
-    # 高度重叠，灌入会与具体立场声明抢命中、拉低 qrels 评测的 nDCG。
+    # Intentionally not ingested: this is a "big review" covering protein/creatine/caffeine
+    # etc., which overlaps heavily with the topic-specific KBs; ingesting it would compete
+    # for hits with the specific position stands and lower the nDCG of the qrels evaluation.
     fetch: false
 
   - id: who_physical_activity_2020
@@ -89,7 +91,7 @@ sources:
   # / warm-up questions. All verified CC-BY (no NonCommercial/NoDerivs).
   - id: rt_hypertrophy_umbrella
     title: "Resistance Training Variables for Optimization of Muscle Hypertrophy: An Umbrella Review"
-    # Frontiers 原始全文（PMC 镜像挡爬虫，trafilatura 抽不到正文）。
+    # Frontiers original full text (the PMC mirror blocks crawlers; trafilatura can't extract the body).
     url: https://www.frontiersin.org/journals/sports-and-active-living/articles/10.3389/fspor.2022.949021/full
     type: html
     license: CC BY 4.0
@@ -106,7 +108,7 @@ sources:
 
   - id: concurrent_training_review
     title: "Compatibility of Concurrent Aerobic and Strength Training for Skeletal Muscle Size and Function: An Updated Systematic Review and Meta-Analysis (Schumann et al., 2021)"
-    # MDPI 原文挡爬虫；改用机构库的真实直链 PDF（Sports Medicine, CC BY 4.0）。
+    # The MDPI original blocks crawlers; use a real direct-link PDF from an institutional repository (Sports Medicine, CC BY 4.0).
     url: https://researchonline.jcu.edu.au/71546/1/Schumann2021_Article_CompatibilityOfConcurrentAerob.pdf
     type: pdf
     license: CC BY 4.0
@@ -127,7 +129,7 @@ sources:
   # open-access ISSN position stands under CC BY 4.0.
   - id: issn_beta_alanine
     title: "ISSN Position Stand: Beta-Alanine"
-    # BMC 出版方全文 HTML（Springer 镜像挡爬虫，trafilatura 抽到 0 字）。
+    # BMC publisher full-text HTML (the Springer mirror blocks crawlers; trafilatura extracts 0 characters).
     url: https://jissn.biomedcentral.com/articles/10.1186/s12970-015-0090-y
     type: html
     license: CC BY 4.0
@@ -144,7 +146,7 @@ sources:
 
   - id: issn_hmb
     title: "ISSN Position Stand: beta-Hydroxy-beta-Methylbutyrate (HMB)"
-    # Taylor & Francis 原文挡爬虫；用 Lindenwood 机构库的 CC BY 全文 PDF。
+    # The Taylor & Francis original blocks crawlers; use the CC BY full-text PDF from the Lindenwood institutional repository.
     url: https://digitalcommons.lindenwood.edu/cgi/viewcontent.cgi?article=1713&context=faculty-research-papers
     type: pdf
     license: CC BY 4.0
@@ -179,9 +181,10 @@ sources:
     fetch: true
 
   # ── Manually fetched via mirror / WebFetch (script scraper blocked) ──────
-  # 这两篇的发布站点会拦截 fetch_sources.py 的抓取（PMC/MDPI 反爬），但内容是
-  # CC BY，已通过镜像/WebFetch 取得并写入 data/<curated_file>。fetch: false 让
-  # 脚本跳过（避免必然失败），ingest_seed_kb.py 仍按 auto_*.txt 正常灌入。
+  # These two articles' publishing sites block fetch_sources.py's scraping (PMC/MDPI
+  # anti-scraping), but the content is CC BY and has been obtained via mirror/WebFetch
+  # and written to data/<curated_file>. fetch: false makes the script skip them (to avoid
+  # a guaranteed failure); ingest_seed_kb.py still ingests them normally via auto_*.txt.
   - id: issn_energy_drinks
     title: "ISSN Position Stand: Energy Drinks and Energy Shots (Jagim et al., 2023)"
     url: https://pmc.ncbi.nlm.nih.gov/articles/PMC9987737/
@@ -207,13 +210,16 @@ sources:
   # Revisit if a license-clean institutional-repository mirror is found.
 
   # ── Bulk-harvested CC-BY open-access set (auto_epmc_*.txt) ───────────────
-  # ~1050 篇 CC-BY 开放获取全文，由 scripts/harvest_kb.py 经 Europe PMC 发现、
-  # 经 PMC BioC 全文 API 取正文（绕开 MDPI/PMC 反爬，覆盖整个 PMC 开放获取子集），
-  # 覆盖训练编排·动作技术/生物力学·受伤康复·恢复·补剂·营养·心肺·特殊人群·肌肉生理·
-  # 健康结局等 170+ 主题，把 KB 扩到 1000+ 篇。逐篇 provenance（标题/URL/许可/标签）见
-  # data/harvested_sources.json，每个文件头部也带同样信息。
-  # 注意：auto_epmc_*.txt 体量大，已在根 .gitignore 忽略，不入版本库（可由脚本复现）。
-  # 复跑（幂等，按磁盘已存在的 PMCID 去重，只补齐到 --target）：
+  # ~1050 CC-BY open-access full texts, discovered by scripts/harvest_kb.py via Europe PMC
+  # and with bodies fetched through the PMC BioC full-text API (bypassing MDPI/PMC
+  # anti-scraping, covering the entire PMC open-access subset), spanning 170+ topics such as
+  # training programming, technique/biomechanics, injury rehab, recovery, supplements,
+  # nutrition, cardio, special populations, muscle physiology, and health outcomes, expanding
+  # the KB to 1000+ documents. Per-document provenance (title/URL/license/tags) is in
+  # data/harvested_sources.json, and each file's header carries the same information.
+  # Note: auto_epmc_*.txt files are large, already ignored by the root .gitignore, and not
+  # committed to version control (they can be reproduced by the script).
+  # Re-run (idempotent, deduplicates by PMCIDs already on disk, only topping up to --target):
   #   ./.venv/Scripts/python scripts/harvest_kb.py --target 90
-  # 这些文件不在本清单里逐条列出（会让 sources.yaml 过长）；ingest_seed_kb.py
-  # 按 data/auto_*.txt 通配照常灌入。
+  # These files are not listed individually in this manifest (it would make sources.yaml too
+  # long); ingest_seed_kb.py ingests them as usual via the data/auto_*.txt glob.

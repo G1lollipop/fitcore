@@ -1,122 +1,122 @@
-# FitCore 开发文档
+# FitCore Development Guide
 
-面向开发者的完整指南，覆盖架构、本地启动、环境变量、接口契约、目录结构、常用命令、部署与排错。
-产品概览见 [`README.md`](./README.md)。
-
----
-
-## 目录
-
-- [1. 架构总览](#1-架构总览)
-- [2. 仓库结构](#2-仓库结构)
-- [3. 环境要求](#3-环境要求)
-- [4. 本地启动](#4-本地启动)
-- [5. 环境变量](#5-环境变量)
-- [6. 后端 `rag/`](#6-后端-rag)
-- [7. 前端 `web/`](#7-前端-web)
-- [8. 常用开发命令](#8-常用开发命令)
-- [9. 部署](#9-部署)
-- [10. 排错](#10-排错)
+A complete guide for developers covering architecture, local setup, environment variables, API contracts, directory structure, common commands, deployment, and troubleshooting.
+For a product overview see [`README.md`](./README.md).
 
 ---
 
-## 1. 架构总览
+## Table of contents
 
-FitCore 是 AI 驱动的健身教练应用，前后端分离、合并在一个 monorepo 中。
+- [1. Architecture overview](#1-architecture-overview)
+- [2. Repo structure](#2-repo-structure)
+- [3. Requirements](#3-requirements)
+- [4. Local setup](#4-local-setup)
+- [5. Environment variables](#5-environment-variables)
+- [6. Backend `rag/`](#6-backend-rag)
+- [7. Frontend `web/`](#7-frontend-web)
+- [8. Common dev commands](#8-common-dev-commands)
+- [9. Deployment](#9-deployment)
+- [10. Troubleshooting](#10-troubleshooting)
+
+---
+
+## 1. Architecture overview
+
+FitCore is an AI-powered fitness coaching app with a separated frontend/backend, combined in a single monorepo.
 
 ```
-浏览器
-  ├── Server Actions ─────────────► Supabase（日志 / 计划 / 统计等业务数据 CRUD）
-  └── fetch /api/ai/chat (SSE) ───► Next 服务端 Agent (web/lib/ai/agent.ts)
-                                      ├── Google Gemini（对话 + 工具调用）
-                                      ├── Gemini（拍照识别饭菜的视觉工具）
-                                      ├── Supabase（用户上下文、聊天记录）
-                                      └── RAG 服务 POST /v1/retrieve ──► FastAPI (rag/)
-                                                                          ├── 向量检索 + BM25 融合
-                                                                          ├── 可选 CrossEncoder 重排
-                                                                          └── Gemini 生成（/v1/chat 路径）
+Browser
+  ├── Server Actions ─────────────► Supabase (CRUD for logs / plans / stats and other business data)
+  └── fetch /api/ai/chat (SSE) ───► Next server-side Agent (web/lib/ai/agent.ts)
+                                      ├── Google Gemini (chat + tool calling)
+                                      ├── Gemini (vision tool for meal photo recognition)
+                                      ├── Supabase (user context, chat history)
+                                      └── RAG service POST /v1/retrieve ──► FastAPI (rag/)
+                                                                          ├── vector retrieval + BM25 fusion
+                                                                          ├── optional CrossEncoder rerank
+                                                                          └── Gemini generation (/v1/chat path)
 ```
 
-要点：
+Key points:
 
-- **业务数据**走 Next.js Server Actions 直连 Supabase，不经过自建 REST。
-- **AI 对话**走 `POST /api/ai/chat`（SSE 流式）。服务端 Agent 用工具调用（tool calling）决定是否检索知识库、是否读取用户数据。
-- **知识检索**由独立的 FastAPI 服务（`rag/`）提供，前端通过 `RAG_SERVICE_URL` 调用其 `/v1/retrieve`。
+- **Business data** goes through Next.js Server Actions straight to Supabase — no custom REST layer.
+- **AI chat** goes through `POST /api/ai/chat` (SSE streaming). The server-side Agent uses tool calling to decide whether to query the knowledge base and whether to read user data.
+- **Knowledge retrieval** is provided by a standalone FastAPI service (`rag/`); the frontend calls its `/v1/retrieve` via `RAG_SERVICE_URL`.
 
 ---
 
-## 2. 仓库结构
+## 2. Repo structure
 
 ```
 Fitcore/
-├── web/                      # 前端：Next.js 16 (App Router)
+├── web/                      # Frontend: Next.js 16 (App Router)
 │   ├── app/
-│   │   ├── page.tsx          # 主应用（tab 切换 5 个模块）
-│   │   ├── layout.tsx        # 根布局（字体 / 主题 / analytics）
-│   │   ├── onboarding/       # 首次引导
-│   │   ├── sign-in/ sign-up/ # Supabase Auth 鉴权页（Google + 邮箱密码）
-│   │   ├── auth/callback/    # OAuth / 邮箱验证回调（code → session）
-│   │   ├── api/ai/chat/      # SSE 流式 AI 接口
-│   │   └── actions/          # 'use server' 业务动作（dashboard/log/plans/chat...）
+│   │   ├── page.tsx          # Main app (tab-switched across 5 modules)
+│   │   ├── layout.tsx        # Root layout (fonts / theme / analytics)
+│   │   ├── onboarding/       # First-run onboarding
+│   │   ├── sign-in/ sign-up/ # Supabase Auth pages (Google + email/password)
+│   │   ├── auth/callback/    # OAuth / email-verification callback (code → session)
+│   │   ├── api/ai/chat/      # SSE streaming AI endpoint
+│   │   └── actions/          # 'use server' business actions (dashboard/log/plans/chat...)
 │   ├── components/
-│   │   ├── ui/               # shadcn/ui 基础组件（仅保留在用的）
+│   │   ├── ui/               # shadcn/ui base components (only the ones in use)
 │   │   ├── layout|dashboard|nutrition|training|plans|log-form|ai-chat/
 │   ├── lib/
 │   │   ├── ai/               # agent / rag-client / user-context / model / prompts / types
 │   │   ├── supabaseClient.ts openaiClient.ts database.types.ts
 │   │   └── plans|training|metrics|utils
 │   ├── hooks/                # toast / quick-log / sidebar
-│   ├── proxy.ts              # Supabase 会话刷新 + 路由保护 + onboarding 门禁（Next 16 用 proxy.ts）
+│   ├── proxy.ts              # Supabase session refresh + route protection + onboarding gate (Next 16 uses proxy.ts)
 │   └── .env.local.example
 │
-├── rag/                      # 后端：FastAPI + LangChain RAG 服务
+├── rag/                      # Backend: FastAPI + LangChain RAG service
 │   ├── app/
-│   │   ├── main.py           # 应用工厂 + lifespan 预热
-│   │   ├── api/              # chat / retrieve / health 路由
-│   │   ├── schemas/          # Pydantic 接口契约（LOCKED）
-│   │   ├── services/         # RagService、kb_service、retrieval/*、history_store
-│   │   ├── prompts/          # RAG 对话提示词
+│   │   ├── main.py           # App factory + lifespan warmup
+│   │   ├── api/              # chat / retrieve / health routes
+│   │   ├── schemas/          # Pydantic API contracts (LOCKED)
+│   │   ├── services/         # RagService, kb_service, retrieval/*, history_store
+│   │   ├── prompts/          # RAG chat prompts
 │   │   ├── infra/            # embeddings / cache / supabase_client
-│   │   ├── ingest/           # MD5 去重 / Supabase 写入
+│   │   ├── ingest/           # MD5 dedup / Supabase writer
 │   │   └── core/             # settings.py / constants.py
-│   ├── parsers/              # TXT/PDF/DOCX/MD/HTML 解析
-│   ├── data/                 # 知识库：kb_*.txt（策选）+ auto_*.txt（自动抓取）+ sources.yaml
+│   ├── parsers/              # TXT/PDF/DOCX/MD/HTML parsing
+│   ├── data/                 # Knowledge base: kb_*.txt (curated) + auto_*.txt (auto-harvested) + sources.yaml
 │   ├── scripts/              # ingest_seed_kb / print_embedding_dim / download_reranker
-│   ├── eval/                 # LLM-as-Judge 评估
-│   ├── supabase/migrations/  # pgvector 表 + RPC
+│   ├── eval/                 # LLM-as-Judge evaluation
+│   ├── supabase/migrations/  # pgvector table + RPC
 │   ├── tests/                # pytest
-│   ├── backend_api.py        # Docker 入口 shim：re-export app.main:app
+│   ├── backend_api.py        # Docker entry shim: re-exports app.main:app
 │   └── Dockerfile
 │
-├── render.yaml               # Render Blueprint（rootDir: rag）
-├── README.md                 # 产品概览
-└── DEVELOPMENT.md            # 本文件
+├── render.yaml               # Render Blueprint (rootDir: rag)
+├── README.md                 # Product overview
+└── DEVELOPMENT.md            # This file
 ```
 
 ---
 
-## 3. 环境要求
+## 3. Requirements
 
-| 工具 | 版本 |
+| Tool | Version |
 |------|------|
-| Node.js | 20+（建议 LTS） |
-| npm | 随 Node 附带 |
+| Node.js | 20+ (LTS recommended) |
+| npm | bundled with Node |
 | Python | 3.11 |
-| Git | 任意近期版本 |
+| Git | any recent version |
 
-外部服务账号（按需）：
+External service accounts (as needed):
 
-- **Supabase**（鉴权 + 业务数据库；若后端用 pgvector 也复用）
-- **Google AI Studio (Gemini)**（对话 + 结构化解析 + 视觉 + `gemini-embedding-001` 向量，一个 key 覆盖全部）
-- **Upstash Redis**（可选，后端检索缓存）
+- **Supabase** (auth + business database; also reused for backend pgvector)
+- **Google AI Studio (Gemini)** (chat + structured parsing + vision + `gemini-embedding-001` vectors — one key covers everything)
+- **Upstash Redis** (optional, backend retrieval cache)
 
 ---
 
-## 4. 本地启动
+## 4. Local setup
 
-> 建议先起后端（`:8000`），再起前端（`:3000`）。
+> Start the backend first (`:8000`), then the frontend (`:3000`).
 
-### 4.1 后端 `rag/`
+### 4.1 Backend `rag/`
 
 ```bash
 cd rag
@@ -126,172 +126,171 @@ python -m venv .venv
 # macOS / Linux
 # source .venv/bin/activate
 
-pip install -r requirements-dev.txt   # = 生产依赖 + pytest（不含重排序）
-# 可选：本地启用 CrossEncoder 重排序
+pip install -r requirements-dev.txt   # = production deps + pytest (no reranker)
+# Optional: enable CrossEncoder reranking locally
 # pip install torch sentence-transformers
 
-cp .env.example .env                   # 至少填 GOOGLE_AI_STUDIO_API_KEY
-python scripts/print_embedding_dim.py  # 确认向量维度（默认 768）
-python scripts/ingest_seed_kb.py       # 灌入 data/kb_*.txt + auto_*.txt 知识库
+cp .env.example .env                   # at minimum set GOOGLE_AI_STUDIO_API_KEY
+python scripts/print_embedding_dim.py  # confirm the vector dimension (default 768)
+python scripts/ingest_seed_kb.py       # ingest data/kb_*.txt + auto_*.txt knowledge base
 
 uvicorn backend_api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-健康检查：`curl http://127.0.0.1:8000/v1/health`
+Health check: `curl http://127.0.0.1:8000/v1/health`
 
-### 4.2 前端 `web/`
+### 4.2 Frontend `web/`
 
 ```bash
 cd web
-cp .env.local.example .env.local       # 填 Supabase / RAG_SERVICE_URL
+cp .env.local.example .env.local       # fill in Supabase / RAG_SERVICE_URL
 npm install
 npm run dev
 ```
 
-打开 http://localhost:3000 。首次登录后若无 `user_settings` 记录会被引导到 `/onboarding`。
+Open http://localhost:3000. After your first login, if there's no `user_settings` record you'll be redirected to `/onboarding`.
 
 ---
 
-## 5. 环境变量
+## 5. Environment variables
 
-### 5.1 前端（`web/.env.local`）
+### 5.1 Frontend (`web/.env.local`)
 
-| 变量 | 必填 | 说明 |
+| Variable | Required | Description |
 |------|------|------|
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase 项目地址（鉴权 + 数据共用） |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key，供 cookie 会话客户端（登录/注册/Google OAuth）使用 |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | service-role key，服务端数据访问（绕过 RLS，勿暴露给浏览器） |
-| `RAG_SERVICE_URL` | ✅ | 后端 RAG 服务地址（本地默认 `http://127.0.0.1:8000`） |
-| `RAG_CLIENT_TIMEOUT_MS` | | RAG 调用超时（默认 120000，冷启动时调大） |
-| `GOOGLE_AI_STUDIO_API_KEY` | ✅ | Gemini key，覆盖对话/解析/视觉全部 AI 功能 |
-| `AI_CHAT_MODEL` / `AI_FAST_MODEL` | | 模型名（默认 `gemini-2.5-flash`） |
-| `GEMINI_VISION_MODEL` | | 拍照识别饭菜的视觉模型（默认 `gemini-2.5-flash`） |
-| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | | 可选：指向其他 OpenAI 兼容供应商时覆盖 Gemini 默认 |
-| `GEMINI_VISION_MODEL` | | 默认 `gemini-2.5-flash` |
-| `AI_CHAT_DEBUG_META` / `RAG_VECTOR_BACKEND` | | 调试用，响应 meta 附带检索后端信息 |
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL (shared by auth + data) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key, used by the cookie session client (sign-in/sign-up/Google OAuth) |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | service-role key for server-side data access (bypasses RLS — never expose to the browser) |
+| `RAG_SERVICE_URL` | ✅ | Backend RAG service URL (local default `http://127.0.0.1:8000`) |
+| `RAG_CLIENT_TIMEOUT_MS` | | RAG call timeout (default 120000; raise it for cold starts) |
+| `GOOGLE_AI_STUDIO_API_KEY` | ✅ | Gemini key covering all AI features: chat / parsing / vision |
+| `AI_CHAT_MODEL` / `AI_FAST_MODEL` | | Model names (default `gemini-2.5-flash`) |
+| `GEMINI_VISION_MODEL` | | Vision model for meal photo recognition (default `gemini-2.5-flash`) |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | | Optional: override the Gemini default when pointing at another OpenAI-compatible provider |
+| `AI_CHAT_DEBUG_META` / `RAG_VECTOR_BACKEND` | | For debugging; response meta includes retrieval-backend info |
 
-### 5.2 后端（`rag/.env`）
+### 5.2 Backend (`rag/.env`)
 
-| 变量 | 必填 | 说明 |
+| Variable | Required | Description |
 |------|------|------|
-| `GOOGLE_AI_STUDIO_API_KEY` | ✅ | Gemini key（chat + embedding 共用；也接受 `GEMINI_API_KEY` / `DASHSCOPE_API_KEY`） |
-| `RAG_CHAT_MODEL` | | 默认 `gemini-2.5-flash` |
-| `EMBEDDING_MODEL` / `EMBEDDING_DIM` | | embedding 模型与维度（默认 `models/gemini-embedding-001` / `768`，须与 migration 一致） |
-| `LLM_BASE_URL` | | OpenAI 兼容 chat 端点（默认 Gemini） |
-| `VECTOR_BACKEND` | ✅ | `chroma`（本地默认）或 `supabase`（pgvector） |
-| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | △ | 仅 `VECTOR_BACKEND=supabase` 时必填 |
-| `RERANKER_ENABLED` | | `true` 启用重排序（需 torch）；云端必须 `false` |
-| `RERANKER_MODEL_NAME` / `_PATH` / `_KWARGS` | | 重排序模型配置 |
-| `CACHE_BACKEND` | | `memory`（默认）或 `redis` |
-| `UPSTASH_REDIS_REST_URL` / `_TOKEN` | △ | `CACHE_BACKEND=redis` 时必填 |
-| `ALLOWED_ORIGINS` | | 允许跨域的前端来源 |
-| `EVAL_JUDGE_MODEL` | | 评估用 LLM-as-Judge 模型 |
+| `GOOGLE_AI_STUDIO_API_KEY` | ✅ | Gemini key (shared by chat + embedding; also accepts `GEMINI_API_KEY` / `DASHSCOPE_API_KEY`) |
+| `RAG_CHAT_MODEL` | | Default `gemini-2.5-flash` |
+| `EMBEDDING_MODEL` / `EMBEDDING_DIM` | | Embedding model and dimension (default `models/gemini-embedding-001` / `768`; must match the migration) |
+| `LLM_BASE_URL` | | OpenAI-compatible chat endpoint (default Gemini) |
+| `VECTOR_BACKEND` | ✅ | `chroma` (local default) or `supabase` (pgvector) |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | △ | Required only when `VECTOR_BACKEND=supabase` |
+| `RERANKER_ENABLED` | | `true` enables reranking (needs torch); must be `false` in the cloud |
+| `RERANKER_MODEL_NAME` / `_PATH` / `_KWARGS` | | Reranker model config |
+| `CACHE_BACKEND` | | `memory` (default) or `redis` |
+| `UPSTASH_REDIS_REST_URL` / `_TOKEN` | △ | Required when `CACHE_BACKEND=redis` |
+| `ALLOWED_ORIGINS` | | Allowed cross-origin frontend origins |
+| `EVAL_JUDGE_MODEL` | | LLM-as-Judge model used for evaluation |
 
-> 所有 `.env` / `.env.local` 已被 gitignore，切勿提交密钥。`SUPABASE_SERVICE_ROLE_KEY` 是高权限密钥，仅在后端使用。
+> All `.env` / `.env.local` are gitignored — never commit secrets. `SUPABASE_SERVICE_ROLE_KEY` is a high-privilege key and is used only on the backend.
 
 ---
 
-## 6. 后端 `rag/`
+## 6. Backend `rag/`
 
-### 6.1 HTTP 接口
+### 6.1 HTTP API
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |------|------|------|
-| `GET` | `/v1/health`, `/api/health` | 健康检查 |
-| `POST` | `/v1/retrieve` | **仅检索**（给前端 Agent 的工具用），返回 `chunks` |
-| `POST` | `/v1/chat` | 完整 RAG：检索 → LLM 生成，返回答案 + 引用 + meta |
-| `POST` | `/api/chat` | 旧版精简包装，仅返回 `{ "response": answer }` |
+| `GET` | `/v1/health`, `/api/health` | Health check |
+| `POST` | `/v1/retrieve` | **Retrieval only** (used by the frontend Agent's tool), returns `chunks` |
+| `POST` | `/v1/chat` | Full RAG: retrieve → LLM generation, returns answer + citations + meta |
+| `POST` | `/api/chat` | Legacy slim wrapper, returns only `{ "response": answer }` |
 
-`/v1/retrieve` 契约（`app/schemas/retrieve.py`，**LOCKED**，改动需前后端同步）：
+`/v1/retrieve` contract (`app/schemas/retrieve.py`, **LOCKED** — changes require front/back coordination):
 
 ```jsonc
-// 请求
-{ "query": "如何增肌", "sessionId": "anonymous", "userContext": {}, "topK": 5 }
-// 响应
+// request
+{ "query": "how to build muscle", "sessionId": "anonymous", "userContext": {}, "topK": 5 }
+// response
 { "chunks": [ { "id": "...", "title": "...", "source": "...", "snippet": "...", "score": 0.83 } ] }
 ```
 
-### 6.2 RAG 流水线
+### 6.2 RAG pipeline
 
 ```
-查询 → 检索器
-        ├── 向量检索 (k=10)        Chroma 相似度 或 Supabase RPC match_rag_kb_chunks
-        └── BM25 (k=10)            内存全量语料
-        → EnsembleRetriever 融合 (0.5 / 0.5)
-        → [可选] CrossEncoder 重排 (RERANKER_ENABLED=true)
-        → 自适应 topK ∈ {3,5,8}（compute_retrieval_k，调用方可强制 1–20）
-        → 拼接 [资料N] 上下文 + 引用
-        → Gemini 生成（注入 userContext 个性化 + 文件型会话历史）
+query → retriever
+        ├── vector retrieval (k=10)   Chroma similarity or Supabase RPC match_rag_kb_chunks
+        └── BM25 (k=10)               in-memory full corpus
+        → EnsembleRetriever fusion (0.5 / 0.5)
+        → [optional] CrossEncoder rerank (RERANKER_ENABLED=true)
+        → adaptive topK ∈ {3,5,8} (compute_retrieval_k; callers may force 1–20)
+        → assemble [doc N] context + citations
+        → Gemini generation (inject userContext personalization + file-based chat history)
 ```
 
-关键文件：`app/services/rag_service.py`（编排）、`app/services/retrieval/*`（检索后端）、`app/infra/embeddings.py`、`app/prompts/rag_chat.py`。
+Key files: `app/services/rag_service.py` (orchestration), `app/services/retrieval/*` (retrieval backends), `app/infra/embeddings.py`, `app/prompts/rag_chat.py`.
 
-### 6.3 灌库（ingestion）
+### 6.3 Ingestion
 
-1. 解析：`parsers/`（TXT/PDF/DOCX/MD/HTML）
-2. 去重：MD5（`app/ingest/md5_store.py` → `./md5.text`）
-3. 切分：默认 `RecursiveCharacterTextSplitter`（1000/100）。`CHUNKING_STRATEGY=semantic` 可切到语义切片，但它对每句都调 embedding，**易超 Gemini 免费档 100 次/分钟限额（429）**，仅建议付费档/极小语料时用
-4. 向量化：`gemini-embedding-001`（默认 768 维，可调 `EMBEDDING_DIM`）
-5. 写入：Chroma（`./chroma`）或 Supabase（`rag_kb_chunks`）
+1. Parse: `parsers/` (TXT/PDF/DOCX/MD/HTML)
+2. Dedup: MD5 (`app/ingest/md5_store.py` → `./md5.text`)
+3. Split: default `RecursiveCharacterTextSplitter` (1000/100). `CHUNKING_STRATEGY=semantic` switches to semantic chunking, but it calls embedding for every sentence and **easily exceeds the Gemini free-tier 100 req/min limit (429)** — only recommended on a paid tier or for very small corpora.
+4. Embed: `gemini-embedding-001` (default 768 dims, tunable via `EMBEDDING_DIM`)
+5. Write: Chroma (`./chroma`) or Supabase (`rag_kb_chunks`)
 
 ```bash
-python scripts/fetch_sources.py             # 可选：按 data/sources.yaml 抓取权威英文源 → data/auto_*.txt
-python scripts/ingest_seed_kb.py            # 灌入 data/kb_*.txt + auto_*.txt
-python scripts/ingest_seed_kb.py --force    # 切换向量后端 / 重灌时强制覆盖
+python scripts/fetch_sources.py             # optional: harvest authoritative English sources per data/sources.yaml → data/auto_*.txt
+python scripts/ingest_seed_kb.py            # ingest data/kb_*.txt + auto_*.txt
+python scripts/ingest_seed_kb.py --force    # force overwrite when switching vector backends / re-ingesting
 ```
 
-> 知识库数据源（英文、循证、可免费用）登记在 `data/sources.yaml`：
-> - `kb_*.txt`：人工策选的高信号摘要（如 ISSN 立场声明），直接提交在仓库里。
-> - `auto_*.txt`：`scripts/fetch_sources.py` 按清单自动抓取（HTML→trafilatura，PDF→pypdf）并带出处头部。
-> 想新增知识：在 `sources.yaml` 加一条 `fetch: true` 的权威来源后跑 `fetch_sources.py`，或直接把 `kb_*.txt` 放进 `data/`。只收录 CC-BY / 公共领域 / 官方指南，避免版权内容。
+> Knowledge-base sources (English, evidence-based, freely usable) are registered in `data/sources.yaml`:
+> - `kb_*.txt`: hand-curated high-signal summaries (e.g. ISSN position stands), committed directly to the repo.
+> - `auto_*.txt`: auto-harvested by `scripts/fetch_sources.py` per the manifest (HTML→trafilatura, PDF→pypdf) with a provenance header.
+> To add knowledge: add a `fetch: true` authoritative source to `sources.yaml` and run `fetch_sources.py`, or drop a `kb_*.txt` straight into `data/`. Only include CC-BY / public-domain / official guidelines — avoid copyrighted content.
 
-### 6.4 向量后端切换
+### 6.4 Switching the vector backend
 
-- **Chroma（默认）**：零配置，数据落在 `./chroma`。
-- **Supabase pgvector**：先执行 `supabase/migrations/20260415120000_rag_kb_chunks.sql`，设 `VECTOR_BACKEND=supabase` + `SUPABASE_*`，再 `ingest_seed_kb.py --force`。若维度不是 768，改 migration 里的 `vector(768)`（或调 `EMBEDDING_DIM`）。
+- **Chroma (default)**: zero config, data lands in `./chroma`.
+- **Supabase pgvector**: first run `supabase/migrations/20260415120000_rag_kb_chunks.sql`, set `VECTOR_BACKEND=supabase` + `SUPABASE_*`, then `ingest_seed_kb.py --force`. If the dimension isn't 768, edit `vector(768)` in the migration (or adjust `EMBEDDING_DIM`).
 
-### 6.5 测试与评估
+### 6.5 Testing and evaluation
 
 ```bash
 pip install ruff
 ruff check .
-pytest                       # tests/：health / chat / retrieve / dual_mode
-python eval/evaluate.py      # 需要服务已在 :8000 运行；LLM-as-Judge 评估
+pytest                       # tests/: health / chat / retrieve / dual_mode
+python eval/evaluate.py      # requires the service running on :8000; LLM-as-Judge evaluation
 ```
 
 ---
 
-## 7. 前端 `web/`
+## 7. Frontend `web/`
 
-### 7.1 应用形态
+### 7.1 App shape
 
-主页 `/` 是单页应用，通过 tab 状态（`components/layout/nav-items.ts`）切换 5 个模块：今日概览 / 饮食中心 / 训练历史 / 我的计划 / 知识库（开发中）。文件路由只有 `/`、`/onboarding`、`/sign-in/*`、`/sign-up/*`。
+The home route `/` is a single-page app that switches between 5 modules via tab state (`components/layout/nav-items.ts`): Today / Nutrition / Training history / My plans / Knowledge base (in progress). File-based routes are only `/`, `/onboarding`, `/sign-in/*`, `/sign-up/*`.
 
-### 7.2 业务数据：Server Actions
+### 7.2 Business data: Server Actions
 
-`app/actions/*.ts` 是 `'use server'` 模块，直接读写 Supabase：
+`app/actions/*.ts` are `'use server'` modules that read/write Supabase directly:
 
-- `dashboard.ts` 今日统计 / 周趋势 / 喝水
-- `logFood.ts` `saveDietLog.ts` `updateDietLog.ts` `parseFoodFromPhoto.ts` 饮食
-- `logWorkout.ts` 训练；`quickLog.ts` 自然语言快速记录
-- `plans.ts` `exercises.ts` 计划与动作库
-- `onboarding.ts` 引导；`chat.ts` 聊天历史读取 / 清除
+- `dashboard.ts` today's stats / weekly trend / water
+- `logFood.ts` `saveDietLog.ts` `updateDietLog.ts` `parseFoodFromPhoto.ts` nutrition
+- `logWorkout.ts` training; `quickLog.ts` natural-language quick logging
+- `plans.ts` `exercises.ts` plans and the exercise library
+- `onboarding.ts` onboarding; `chat.ts` read / clear chat history
 
-### 7.3 AI 层
+### 7.3 AI layer
 
-- `lib/ai/agent.ts`：tool-calling Agent，工具含 `set_retrieval_params`、`query_knowledge_base`（调 `/v1/retrieve`）、`get_user_stats`。
-- `lib/ai/rag-client.ts`：封装对后端 RAG 服务的 `fetch`。
-- `lib/ai/user-context.ts`：组装个性化用户上下文。
-- `app/api/ai/chat/route.ts`：SSE 路由，跑 Agent 并把对话写回 Supabase。
-- 浏览器侧由 `components/ai-chat/hooks/use-chat-stream.ts` 消费 SSE。
+- `lib/ai/agent.ts`: tool-calling Agent; tools include `set_retrieval_params`, `query_knowledge_base` (calls `/v1/retrieve`), `get_user_stats`.
+- `lib/ai/rag-client.ts`: wraps `fetch` to the backend RAG service.
+- `lib/ai/user-context.ts`: assembles personalized user context.
+- `app/api/ai/chat/route.ts`: SSE route that runs the Agent and writes the conversation back to Supabase.
+- On the browser side, `components/ai-chat/hooks/use-chat-stream.ts` consumes the SSE.
 
-### 7.4 鉴权 / 门禁
+### 7.4 Auth / gating
 
-`proxy.ts`（Next 16 用 `proxy.ts` 取代 `middleware.ts`）：用 `@supabase/ssr` 在每次请求刷新会话 cookie；放行 `/sign-in`、`/sign-up`、`/auth/*`、`/api/*`；其余路由未登录跳 `/sign-in`；已登录但无 `user_settings` 的用户跳 `/onboarding`；已完成引导的用户访问 `/onboarding` 跳回 `/`。鉴权改为 Supabase Auth（Google OAuth + 邮箱密码），登录态由 `lib/supabase/server.ts` / `client.ts` 提供，身份解析仍统一走 `lib/auth/require-user.ts`。
+`proxy.ts` (Next 16 uses `proxy.ts` instead of `middleware.ts`): uses `@supabase/ssr` to refresh the session cookie on every request; allows `/sign-in`, `/sign-up`, `/auth/*`, `/api/*`; unauthenticated access to any other route redirects to `/sign-in`; logged-in users without `user_settings` go to `/onboarding`; onboarded users who hit `/onboarding` are sent back to `/`. Auth is Supabase Auth (Google OAuth + email/password); session state comes from `lib/supabase/server.ts` / `client.ts`, and identity resolution still goes through `lib/auth/require-user.ts`.
 
-### 7.5 UI 组件约定
+### 7.5 UI component conventions
 
-`components/ui/` 只保留实际在用的 shadcn 基础组件。需要新组件时用 shadcn CLI 按需添加：
+`components/ui/` keeps only the shadcn base components actually in use. Add new ones on demand via the shadcn CLI:
 
 ```bash
 npx shadcn@latest add <component>
@@ -299,59 +298,59 @@ npx shadcn@latest add <component>
 
 ---
 
-## 8. 常用开发命令
+## 8. Common dev commands
 
-### 前端（在 `web/`）
+### Frontend (in `web/`)
 
-| 命令 | 作用 |
+| Command | Purpose |
 |------|------|
-| `npm run dev` | 本地开发服务器 |
-| `npm run build` / `npm start` | 生产构建 / 运行 |
+| `npm run dev` | Local dev server |
+| `npm run build` / `npm start` | Production build / run |
 | `npm run lint` / `lint:fix` | ESLint |
 | `npm run format` / `format:check` | Prettier |
-| `npm run typecheck` | `tsc --noEmit` 类型检查 |
+| `npm run typecheck` | `tsc --noEmit` type check |
 
-> Supabase 类型可用 devDependency 里的 `supabase` CLI 生成，例如：
+> Supabase types can be generated with the `supabase` CLI in devDependencies, e.g.:
 > `npx supabase gen types typescript --project-id <id> > lib/database.types.ts`
 
-### 后端（在 `rag/`，已激活 venv）
+### Backend (in `rag/`, venv activated)
 
-| 命令 | 作用 |
+| Command | Purpose |
 |------|------|
-| `uvicorn backend_api:app --reload --port 8000` | 启动服务 |
-| `pytest` | 单元测试 |
+| `uvicorn backend_api:app --reload --port 8000` | Start the service |
+| `pytest` | Unit tests |
 | `ruff check .` | Lint |
-| `python scripts/ingest_seed_kb.py [--force]` | 灌库 |
-| `python scripts/print_embedding_dim.py` | 打印向量维度 |
+| `python scripts/ingest_seed_kb.py [--force]` | Ingest the knowledge base |
+| `python scripts/print_embedding_dim.py` | Print the vector dimension |
 
 ---
 
-## 9. 部署
+## 9. Deployment
 
-前后端分别部署，互不干扰。
+The frontend and backend deploy independently.
 
-### 前端 → Vercel
-- **Root Directory** 设为 `web`
-- 环境变量参考 `web/.env.local.example`
-- `RAG_SERVICE_URL` 指向线上后端地址
+### Frontend → Vercel
+- Set **Root Directory** to `web`
+- For environment variables see `web/.env.local.example`
+- Point `RAG_SERVICE_URL` at the production backend URL
 
-### 后端 → Render
-- 仓库根 `render.yaml` 已配 `rootDir: rag` + Docker；用 **Blueprint** 方式连接仓库
-- 标 `sync: false` 的密钥（`GOOGLE_AI_STUDIO_API_KEY`、`SUPABASE_*`、`UPSTASH_*`、`ALLOWED_ORIGINS`）在 Render Dashboard 手填
-- 免费实例内存受限，`RERANKER_ENABLED` 保持 `false`，`VECTOR_BACKEND=supabase`
+### Backend → Render
+- The repo-root `render.yaml` already sets `rootDir: rag` + Docker; connect the repo via the **Blueprint** flow
+- Secrets marked `sync: false` (`GOOGLE_AI_STUDIO_API_KEY`, `SUPABASE_*`, `UPSTASH_*`, `ALLOWED_ORIGINS`) are entered manually in the Render Dashboard
+- Free instances are memory-limited; keep `RERANKER_ENABLED=false` and `VECTOR_BACKEND=supabase`
 
-> 已有 Vercel / Render 项目时，无需重建：改「连接仓库 + Root Directory」即可，环境变量保留。Render 免费版有冷启动（闲置后首次请求需数十秒唤醒）。
+> If you already have Vercel / Render projects, there's no need to recreate them: just update "connected repo + Root Directory" and keep the env vars. Render's free tier has cold starts (the first request after idle takes tens of seconds to wake).
 
 ---
 
-## 10. 排错
+## 10. Troubleshooting
 
-| 现象 | 排查方向 |
+| Symptom | Where to look |
 |------|----------|
-| 前端 AI 对话报超时 | 后端是否在 `:8000`；`RAG_SERVICE_URL` 是否正确；冷启动时调大 `RAG_CLIENT_TIMEOUT_MS` |
-| 后端启动报重排序依赖缺失 | 正常降级提示；本地需重排序请 `pip install torch sentence-transformers`，云端保持 `RERANKER_ENABLED=false` |
-| 灌库一直「跳过」 | 切换向量后端后用 `ingest_seed_kb.py --force` |
-| Supabase 检索为空 | 是否执行了 migration；维度是否匹配（`print_embedding_dim.py`）；是否已灌库 |
-| 灌库 DNS/网络失败 | 配置 `HTTPS_PROXY`/`HTTP_PROXY`，或用 `.github/workflows/rag-supabase-ingest.yml` 在 CI 灌库 |
-| 登录后一直跳 onboarding | 该用户在 Supabase 是否有 `user_settings` 记录 |
-| 拍照识别饭菜失败 | `GOOGLE_AI_STUDIO_API_KEY` 是否配置 |
+| Frontend AI chat times out | Is the backend on `:8000`? Is `RAG_SERVICE_URL` correct? Raise `RAG_CLIENT_TIMEOUT_MS` for cold starts |
+| Backend startup reports missing reranker deps | Normal graceful-degradation notice; for local reranking `pip install torch sentence-transformers`, keep `RERANKER_ENABLED=false` in the cloud |
+| Ingestion keeps "skipping" | After switching the vector backend, use `ingest_seed_kb.py --force` |
+| Supabase retrieval is empty | Did you run the migration? Does the dimension match (`print_embedding_dim.py`)? Did you ingest? |
+| Ingestion DNS/network failures | Configure `HTTPS_PROXY`/`HTTP_PROXY`, or ingest in CI via `.github/workflows/rag-supabase-ingest.yml` |
+| Stuck redirecting to onboarding after login | Does the user have a `user_settings` record in Supabase? |
+| Meal photo recognition fails | Is `GOOGLE_AI_STUDIO_API_KEY` configured? |

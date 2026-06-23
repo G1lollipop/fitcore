@@ -16,7 +16,9 @@ def test_is_abstention_response_en():
     assert gm.is_abstention_response(
         "I don't have enough evidence in the knowledge base to answer that."
     )
-    assert gm.is_abstention_response("资料不足，无法给出可靠建议。")
+    assert gm.is_abstention_response(
+        "There is no relevant information in the references provided."
+    )
 
 
 def test_is_abstention_response_negative():

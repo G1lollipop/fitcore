@@ -20,7 +20,7 @@ def resolve_vector_store_service(
     if vector_backend() == "supabase":
         if not supabase_configured():
             raise RuntimeError(
-                "VECTOR_BACKEND=supabase 但未设置 SUPABASE_URL 或 SUPABASE_SERVICE_ROLE_KEY"
+                "VECTOR_BACKEND=supabase but SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set"
             )
         from app.services.retrieval.supabase_store import SupabaseVectorStoreService
 

@@ -31,12 +31,12 @@ export interface RagRetrieveResponse {
   citations: Citation[]
 }
 
-/** 纯检索：只做向量召回 + 重排序，不调用 LLM，供 Agent 工具使用 */
+/** Pure retrieval: vector recall + reranking only, no LLM call — for use by Agent tools. */
 export async function chatWithRagRetrieve(payload: {
   query: string
   sessionId: string
   userContext: RagChatRequest["userContext"]
-  topK?: number   // 由 Agent set_retrieval_params 工具决定；不传则后端自动判断
+  topK?: number   // decided by the Agent's set_retrieval_params tool; omit to let the backend choose automatically
 }): Promise<RagRetrieveResponse> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30_000)

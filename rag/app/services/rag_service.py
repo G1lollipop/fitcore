@@ -43,15 +43,15 @@ class RagService(object):
             cache_manager=self.cache_manager,
         )
         if vector_backend() == "supabase" and supabase_configured():
-            print("[RagService] 向量库后端: Supabase pgvector")
+            print("[RagService] Vector store backend: Supabase pgvector")
         else:
-            print("[RagService] 向量库后端: Chroma (本地)")
+            print("[RagService] Vector store backend: Chroma (local)")
         self.base_retriever = self.vector_service.get_retriever()
         self._compression_retriever: ContextualCompressionRetriever | None = None
         self._compression_retriever_lock = threading.Lock()
         # Sticky flag: once build_compression_retriever() returns None we stop
         # retrying on every request. Without this, RERANKER_ENABLED=false would
-        # re-enter the build path (and re-print its降级 message) per query.
+        # re-enter the build path (and re-print its fallback message) per query.
         self._compression_attempted: bool = False
         self.prompt_template = RAG_CHAT_PROMPT
         if not settings.llm_api_key:
@@ -78,11 +78,11 @@ class RagService(object):
         retriever = self._get_compression_retriever()
         if retriever is not None:
             print(
-                "[RagService] 检索模式: Reranker (Vector + BM25 + CrossEncoder rerank)"
+                "[RagService] Retrieval mode: Reranker (Vector + BM25 + CrossEncoder rerank)"
             )
         else:
             print(
-                "[RagService] 检索模式: Base retrieval (Vector + BM25 ensemble; reranker 未启用)"
+                "[RagService] Retrieval mode: Base retrieval (Vector + BM25 ensemble; reranker disabled)"
             )
 
     def _get_compression_retriever(self) -> ContextualCompressionRetriever | None:
@@ -109,17 +109,17 @@ class RagService(object):
     @staticmethod
     def _format_documents(docs: list[Document]) -> str:
         if not docs:
-            return "没有找到相关参考资料。"
+            return "No relevant reference materials were found."
 
         formatted_str = ""
         for i, doc in enumerate(docs):
-            formatted_str += f"[资料{i + 1}] {doc.page_content}\n"
+            formatted_str += f"[Reference {i + 1}] {doc.page_content}\n"
         return formatted_str
 
     @staticmethod
     def _format_user_context(user_context: Any) -> str:
         if not user_context:
-            return "暂无可用的个性化上下文。"
+            return "No personalized context available."
 
         if isinstance(user_context, str):
             return user_context
@@ -141,13 +141,13 @@ class RagService(object):
                 return
             lines.append(f"{title}: {value}")
 
-        append_section("用户画像", user_context.get("profile"))
-        append_section("当前目标", user_context.get("targets"))
-        append_section("今日数据", user_context.get("today"))
-        append_section("计划信息", user_context.get("plan"))
+        append_section("User profile", user_context.get("profile"))
+        append_section("Current goals", user_context.get("targets"))
+        append_section("Today's data", user_context.get("today"))
+        append_section("Plan info", user_context.get("plan"))
 
         if not lines:
-            return "暂无可用的个性化上下文。"
+            return "No personalized context available."
 
         return "\n".join(lines)
 
@@ -229,8 +229,9 @@ class RagService(object):
         user_context: dict[str, Any] | None = None,
         top_k: int | None = None,
     ) -> dict[str, Any]:
-        # 动态确定最终使用的文档数。
-        # top_k 为 None 时自动根据查询复杂度计算，也支持调用方显式指定。
+        # Dynamically determine the final number of documents to use.
+        # When top_k is None, compute it automatically from query complexity;
+        # callers may also specify it explicitly.
         k = (
             top_k
             if (top_k is not None and 1 <= top_k <= 20)

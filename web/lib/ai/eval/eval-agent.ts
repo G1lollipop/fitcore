@@ -90,7 +90,6 @@ async function main() {
     try {
       const plan = await planAgentStep({
         message: item.message,
-        language: item.language,
       })
       const row = scoreCase(item, plan.tools, plan.retrievalK)
       rows.push({ ...row, finish_reason: plan.finishReason })

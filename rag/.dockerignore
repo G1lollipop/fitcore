@@ -3,18 +3,18 @@
 __pycache__/
 *.py[cod]
 
-# 本地向量库和会话（云端用 Supabase）
+# Local vector store and sessions (the cloud uses Supabase)
 chroma/
 chat_history/
 md5.text
 
-# 评估报告
+# Evaluation reports
 eval/eval_report_*.json
 
-# 内部文档
+# Internal docs
 docs/
 md/
 
-# 开发工具
+# Dev tools
 *.egg-info/
 .pytest_cache/

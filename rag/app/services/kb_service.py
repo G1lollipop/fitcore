@@ -132,7 +132,7 @@ class KnowledgeBaseService(object):
         self._backend = vector_backend()
         if self._backend == "supabase" and not supabase_configured():
             raise RuntimeError(
-                "VECTOR_BACKEND=supabase 但未设置 SUPABASE_URL 或 SUPABASE_SERVICE_ROLE_KEY"
+                "VECTOR_BACKEND=supabase but SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set"
             )
         self._use_supabase = self._backend == "supabase"
         self._embedding = get_embedding()
@@ -155,18 +155,18 @@ class KnowledgeBaseService(object):
         ignore_md5: bool = False,
     ) -> str:
         """
-        上传文本内容到知识库。
+        Upload text content to the knowledge base.
 
         Args:
-            data: 文本内容
-            filename: 文件名（用于标识来源）
-            extra_metadata: 额外的元数据（如 URL、作者、来源站点等）
-            ignore_md5: 为 True 时跳过 md5.text 去重
+            data: Text content
+            filename: File name (used to identify the source)
+            extra_metadata: Extra metadata (e.g. URL, author, source site)
+            ignore_md5: When True, skip md5.text deduplication
         """
         md5_hex = get_string_md5(data)
 
         if not ignore_md5 and check_md5(md5_hex):
-            return "[跳过]内容已经存在知识库中"
+            return "[Skipped] Content already exists in the knowledge base"
 
         if len(data) > config.max_split_char_number:
             knowledge_chunks: list[str] = self.spliter.split_text(data)
@@ -177,7 +177,7 @@ class KnowledgeBaseService(object):
         # content ("contains an empty Part"), and they add no retrieval value.
         knowledge_chunks = [c for c in knowledge_chunks if c and c.strip()]
         if not knowledge_chunks:
-            return "[跳过]切分后无有效内容"
+            return "[Skipped] No valid content after splitting"
 
         metadata = {
             "source": filename,
@@ -223,7 +223,7 @@ class KnowledgeBaseService(object):
         if self.cache_manager:
             self.cache_manager.invalidate_all()
 
-        return f"[成功]内容已经成功载入向量库（{len(knowledge_chunks)} 个片段）"
+        return f"[Success] Content loaded into the vector store ({len(knowledge_chunks)} chunks)"
 
     def upload_file(
         self,
@@ -235,14 +235,14 @@ class KnowledgeBaseService(object):
         ignore_md5: bool = False,
     ) -> Dict[str, Any]:
         """
-        上传文件到知识库（支持多种文件格式）。
+        Upload a file to the knowledge base (supports multiple file formats).
         """
         parse_result = FileParserFactory.parse_file(file_content, filename, mime_type)
 
         if not parse_result["success"]:
             return {
                 "success": False,
-                "message": f"[失败]文件解析失败: {parse_result.get('error', '未知错误')}",
+                "message": f"[Failed] File parsing failed: {parse_result.get('error', 'Unknown error')}",
                 "parsed_metadata": parse_result.get("metadata", {}),
             }
 
@@ -254,7 +254,7 @@ class KnowledgeBaseService(object):
         if not text or not text.strip():
             return {
                 "success": False,
-                "message": "[失败]文件内容为空",
+                "message": "[Failed] File content is empty",
                 "parsed_metadata": parsed_metadata,
             }
 

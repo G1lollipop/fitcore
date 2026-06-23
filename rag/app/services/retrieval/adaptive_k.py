@@ -8,44 +8,42 @@ reranking. Pure string heuristics — no LLM call, zero added latency.
 
 def compute_retrieval_k(query: str) -> int:
     """
-    自适应计算最终使用的文档数量 k。
+    Adaptively compute the final number of documents (k) to use.
 
-    复杂度判断逻辑：
-      - 复杂型（多概念对比 / 综合方案）→ k=8
-      - 简单事实型（定义 / 单一数值）  → k=3
-      - 默认中等复杂度                → k=5
+    Complexity heuristic:
+      - Complex (multi-concept comparison / comprehensive plan) -> k=8
+      - Simple factual (definition / single value)             -> k=3
+      - Default medium complexity                              -> k=5
+
+    Note: the keyword signal lists below are substring-matched against the
+    query text.
     """
     _COMPLEX_SIGNALS = [
-        "区别",
-        "对比",
-        "比较",
-        "计划",
-        "方案",
-        "怎么",
-        "如何",
-        "步骤",
-        "流程",
-        "综合",
-        "全面",
-        "详细",
-        "总结",
-        "分析",
         "difference",
+        "contrast",
         "compare",
-        "how to",
+        "comparison",
         "plan",
+        "program",
+        "how to",
+        "how do",
+        "steps",
+        "process",
+        "comprehensive",
+        "thorough",
+        "detailed",
+        "summary",
+        "analyze",
         "explain",
     ]
     _SIMPLE_SIGNALS = [
-        "是什么",
-        "定义",
-        "叫什么",
-        "英文",
         "what is",
-        "多少克",
-        "多少次",
-        "几组",
-        "几天",
+        "definition",
+        "what's it called",
+        "how many grams",
+        "how many reps",
+        "how many sets",
+        "how many days",
     ]
 
     q = query.strip()

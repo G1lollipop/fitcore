@@ -1,5 +1,5 @@
 """
-PDF 文件解析器
+PDF file parser.
 """
 
 from typing import Dict, Any, Optional
@@ -7,10 +7,10 @@ from .base_parser import BaseFileParser
 
 
 class PdfParser(BaseFileParser):
-    """PDF 文件解析器"""
+    """PDF file parser."""
 
     def parse(self, file_content: bytes, filename: str, **kwargs) -> Dict[str, Any]:
-        """解析 PDF 文件"""
+        """Parse a PDF file."""
         try:
             from pypdf import PdfReader
             from io import BytesIO
@@ -18,24 +18,24 @@ class PdfParser(BaseFileParser):
             pdf_file = BytesIO(file_content)
             pdf_reader = PdfReader(pdf_file)
 
-            # 提取所有页面的文本
+            # Extract text from every page.
             text_parts = []
             for page_num, page in enumerate(pdf_reader.pages, 1):
                 try:
                     text_parts.append(page.extract_text())
                 except Exception as e:
-                    # 如果某页提取失败，记录但继续
-                    text_parts.append(f"[页面 {page_num} 提取失败: {str(e)}]")
+                    # If a page fails to extract, record it but keep going.
+                    text_parts.append(f"[Page {page_num} extraction failed: {str(e)}]")
 
             text = "\n\n".join(text_parts)
 
-            # 提取 PDF 元数据
+            # Extract PDF metadata.
             metadata = self._extract_basic_metadata(filename)
             metadata["file_type"] = "application/pdf"
             metadata["page_count"] = len(pdf_reader.pages)
             metadata["character_count"] = len(text)
 
-            # PDF 文档元数据
+            # PDF document metadata.
             if pdf_reader.metadata:
                 pdf_meta = pdf_reader.metadata
                 if pdf_meta.get("/Title"):
@@ -58,18 +58,18 @@ class PdfParser(BaseFileParser):
                 "text": "",
                 "metadata": self._extract_basic_metadata(filename),
                 "success": False,
-                "error": "pypdf 未安装，请运行: pip install pypdf",
+                "error": "pypdf is not installed; please run: pip install pypdf",
             }
         except Exception as e:
             return {
                 "text": "",
                 "metadata": self._extract_basic_metadata(filename),
                 "success": False,
-                "error": f"PDF 解析失败: {str(e)}",
+                "error": f"PDF parsing failed: {str(e)}",
             }
 
     def can_parse(self, filename: str, mime_type: Optional[str] = None) -> bool:
-        """判断是否为 PDF 文件"""
+        """Determine whether the file is a PDF file."""
         if mime_type:
             return mime_type == "application/pdf"
         return filename.lower().endswith(".pdf")

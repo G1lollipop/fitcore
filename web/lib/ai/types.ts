@@ -2,16 +2,16 @@ import type { DietLogItem, WorkoutLogItem } from "@/app/actions/types"
 
 export type ChatMode = "personal" | "rag" | "hybrid"
 
-/** 单条对话消息（用户 / 助手） */
+/** A single chat message (user / assistant). */
 export interface CoachChatMessage {
   role: "user" | "assistant"
   content: string
 }
 
-/** Agent 模式：由 LLM 自主决定调用哪些工具 */
+/** Agent mode: the LLM autonomously decides which tools to call. */
 export type AgentMode = "knowledge" | "personal" | "hybrid" | "direct"
 
-/** SSE 流式事件 */
+/** SSE streaming event. */
 export type AgentSSEEvent =
   | { type: "token"; content: string }
   | { type: "done"; mode: AgentMode; citations: Citation[]; toolsUsed: string[]; meta: AIChatMeta }
@@ -21,10 +21,10 @@ export interface AIChatMeta {
   latencyMs?: number
   conversationId?: string
   retrievalBackend?: VectorRetrievalBackend
-  retrievalK?: number        // LLM 选择的召回数量
-  retrievalKReason?: string  // LLM 给出的理由
-  persisted?: boolean        // 消息是否成功写入历史库
-  loggedActivity?: boolean   // 本轮是否通过 log_* 工具写入了饮食/训练/饮水
+  retrievalK?: number        // number of chunks the LLM chose to retrieve
+  retrievalKReason?: string  // the LLM's stated rationale
+  persisted?: boolean        // whether the message was successfully written to the history store
+  loggedActivity?: boolean   // whether this turn wrote diet/workout/water via a log_* tool
 }
 
 export interface Citation {

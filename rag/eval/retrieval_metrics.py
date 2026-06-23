@@ -1,18 +1,22 @@
 """
-离线检索指标（document/source 级）
-==================================
+Offline retrieval metrics (document/source level)
+==================================================
 
-纯函数，无外部依赖，便于单测。所有指标都作用在「已排序的检索结果」上：
+Pure functions with no external dependencies, easy to unit-test. All metrics
+operate on "ranked retrieval results":
 
 - ranked_sources : list[str]
-    检索器返回的 source 标识，按相关性从高到低排序。允许重复（同一文档的
-    多个 chunk 命中）；本模块统一按「首次出现」去重到文档级再算指标。
+    The source identifiers returned by the retriever, ordered from most to least
+    relevant. Duplicates are allowed (multiple chunks of the same document
+    hitting); this module deduplicates by "first occurrence" to the document
+    level before computing metrics.
 - qrels : dict[str, int]
-    该 query 的标准答案：{source: grade}，grade ∈ {1,2,3}（越大越相关）。
-    二元指标（recall/precision/mrr/hit_rate）将 grade >= 1 视为相关。
-    nDCG 使用分级 grade。
+    The gold answers for the query: {source: grade}, grade in {1,2,3} (higher is
+    more relevant). Binary metrics (recall/precision/mrr/hit_rate) treat
+    grade >= 1 as relevant. nDCG uses the graded grade.
 
-约定：k 会被截断到 ranked 列表长度；qrels 为空时，召回类指标返回 0.0。
+Convention: k is truncated to the length of the ranked list; when qrels is
+empty, recall-style metrics return 0.0.
 """
 
 from __future__ import annotations
@@ -22,7 +26,7 @@ from typing import Iterable, Mapping, Sequence
 
 
 def dedup_keep_order(items: Iterable[str]) -> list[str]:
-    """按首次出现顺序去重（把 chunk 级排名折叠到文档级，保留各文档最好名次）。"""
+    """Deduplicate in first-occurrence order (collapse chunk-level ranking to document level, keeping each document's best rank)."""
     seen: set[str] = set()
     out: list[str] = []
     for it in items:
@@ -39,7 +43,7 @@ def _relevant_set(qrels: Mapping[str, int]) -> set[str]:
 def hit_rate_at_k(
     ranked_sources: Sequence[str], qrels: Mapping[str, int], k: int
 ) -> float:
-    """Top-k 内是否至少命中 1 个相关文档（1.0 / 0.0）。"""
+    """Whether at least one relevant document is hit within the top-k (1.0 / 0.0)."""
     relevant = _relevant_set(qrels)
     if not relevant:
         return 0.0
@@ -50,7 +54,7 @@ def hit_rate_at_k(
 def recall_at_k(
     ranked_sources: Sequence[str], qrels: Mapping[str, int], k: int
 ) -> float:
-    """命中的相关文档数 / 相关文档总数。"""
+    """Number of relevant documents hit / total number of relevant documents."""
     relevant = _relevant_set(qrels)
     if not relevant:
         return 0.0
@@ -62,7 +66,7 @@ def recall_at_k(
 def precision_at_k(
     ranked_sources: Sequence[str], qrels: Mapping[str, int], k: int
 ) -> float:
-    """命中的相关文档数 / k。"""
+    """Number of relevant documents hit / k."""
     if k <= 0:
         return 0.0
     relevant = _relevant_set(qrels)
@@ -72,7 +76,7 @@ def precision_at_k(
 
 
 def mrr_at_k(ranked_sources: Sequence[str], qrels: Mapping[str, int], k: int) -> float:
-    """第一个相关文档名次的倒数（top-k 内无相关则为 0）。"""
+    """Reciprocal of the rank of the first relevant document (0 if none within top-k)."""
     relevant = _relevant_set(qrels)
     if not relevant:
         return 0.0
@@ -84,12 +88,12 @@ def mrr_at_k(ranked_sources: Sequence[str], qrels: Mapping[str, int], k: int) ->
 
 
 def _dcg(gains: Sequence[float]) -> float:
-    # gain_i / log2(i + 1)，i 从 1 开始
+    # gain_i / log2(i + 1), i starts at 1
     return sum(g / math.log2(i + 1) for i, g in enumerate(gains, start=1))
 
 
 def ndcg_at_k(ranked_sources: Sequence[str], qrels: Mapping[str, int], k: int) -> float:
-    """分级 nDCG@k，增益采用 2^grade - 1。qrels 为空返回 0.0。"""
+    """Graded nDCG@k using gain 2^grade - 1. Returns 0.0 when qrels is empty."""
     if not qrels:
         return 0.0
     topk = dedup_keep_order(ranked_sources)[:k]
@@ -108,7 +112,7 @@ def ndcg_at_k(ranked_sources: Sequence[str], qrels: Mapping[str, int], k: int) -
 def average_precision_at_k(
     ranked_sources: Sequence[str], qrels: Mapping[str, int], k: int
 ) -> float:
-    """AP@k：命中处 precision 的均值（按相关文档总数归一）。"""
+    """AP@k: mean precision at hit positions (normalized by total relevant documents)."""
     relevant = _relevant_set(qrels)
     if not relevant:
         return 0.0
@@ -125,7 +129,7 @@ def average_precision_at_k(
 def compute_all(
     ranked_sources: Sequence[str], qrels: Mapping[str, int], ks: Sequence[int]
 ) -> dict[str, float]:
-    """对给定的多个 k 一次性算出全部指标，返回扁平 dict，键如 'recall@5'。"""
+    """Compute all metrics at once for the given k values; returns a flat dict with keys like 'recall@5'."""
     out: dict[str, float] = {}
     for k in ks:
         out[f"hit_rate@{k}"] = hit_rate_at_k(ranked_sources, qrels, k)
@@ -135,6 +139,29 @@ def compute_all(
         out[f"ndcg@{k}"] = ndcg_at_k(ranked_sources, qrels, k)
         out[f"ap@{k}"] = average_precision_at_k(ranked_sources, qrels, k)
     return out
+
+
+def keyword_coverage_at_k(
+    chunk_texts: Sequence[str], keywords: Sequence[str], k: int
+) -> float:
+    """Deterministic content-quality score — NO LLM.
+
+    Fraction of the question's expected_keywords that appear (case-insensitive
+    substring) anywhere in the concatenated top-k retrieved chunk texts. Measures
+    whether retrieval actually surfaced the expected key facts/numbers, which —
+    unlike sparse file-level anchors — stays meaningful as the corpus grows to
+    thousands of docs (it doesn't care WHICH doc supplied the fact).
+
+    Empty keyword list → 1.0 (vacuous); callers should exclude such items from
+    the aggregate. Substring match means it slightly UNDER-counts when the KB
+    phrases a fact differently than the keyword (a known, conservative bias).
+    """
+    kws = [str(w).strip().lower() for w in keywords if str(w).strip()]
+    if not kws:
+        return 1.0
+    blob = " ".join(t for t in list(chunk_texts)[:k] if t).lower()
+    found = sum(1 for kw in kws if kw in blob)
+    return found / len(kws)
 
 
 def context_precision_at_k(judgments: Sequence[bool], k: int) -> float:
@@ -161,9 +188,11 @@ def false_retrieval_rate(
     top1_scores: Sequence[float | None], threshold: float
 ) -> float:
     """
-    abstention 评估（仅对 out-of-scope query）：top-1 相似度 >= threshold
-    视为「本不该召回却高分召回」。只统计有分数的样本；分数全为 None 时返回
-    -1.0 表示当前后端不提供可比分数（base ensemble 常见），需启用打分后端。
+    Abstention evaluation (only for out-of-scope queries): a top-1 similarity
+    >= threshold counts as "retrieved with a high score when it should not have
+    been." Only samples with scores are counted; when all scores are None it
+    returns -1.0, meaning the current backend provides no comparable scores
+    (common for the base ensemble) and a scoring backend must be enabled.
     """
     scored = [s for s in top1_scores if s is not None]
     if not scored:

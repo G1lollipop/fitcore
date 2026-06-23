@@ -36,7 +36,7 @@ def main() -> int:
         f"model={settings.embedding_model} "
         f"configured_dim={settings.embedding_dim} actual_dim={len(v)}"
     )
-    print("Supabase migration vector(N) 中的 N 必须等于 actual_dim。")
+    print("N in the Supabase migration vector(N) must equal actual_dim.")
     return 0 if len(v) == settings.embedding_dim else 1
 
 

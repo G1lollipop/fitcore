@@ -1,6 +1,6 @@
 """
-文件解析器模块
-支持多种文件格式的文本提取
+File parser module.
+Supports text extraction from multiple file formats.
 """
 
 from .base_parser import BaseFileParser

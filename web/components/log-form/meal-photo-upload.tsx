@@ -48,7 +48,7 @@ type Props = {
 
 /**
  * Confidence floor for the auto-save fast path. Above this the entry is
- * persisted immediately and the user can optionally tap "调整" to edit;
+ * persisted immediately and the user can optionally tap "Adjust" to edit;
  * below it the user must confirm before anything is written.
  */
 const HIGH_CONFIDENCE_THRESHOLD = 0.75;
@@ -108,13 +108,13 @@ function ConfidenceBadge({ value, t }: { value: number; t: Dictionary }) {
  *
  *   FAB click → file picker
  *     ↓ (immediate, no dialog)
- *   Loading toast "正在识别…"
+ *   Loading toast "Recognizing…"
  *     ↓ background parse via Gemini
- *   ┌─ confidence ≥ 0.75 → auto-save → "已记录" toast w/ "调整" action
- *   └─ confidence  < 0.75 → "请确认" toast w/ "审核" action → opens dialog
+ *   ┌─ confidence ≥ 0.75 → auto-save → "Logged" toast w/ "Adjust" action
+ *   └─ confidence  < 0.75 → "Please confirm" toast w/ "Review" action → opens dialog
  *
  * The dialog only mounts when the user opts in (low-conf review or high-conf
- * "调整"), so the happy path is fully background and zero-wait.
+ * "Adjust"), so the happy path is fully background and zero-wait.
  */
 export function MealPhotoUpload({ userId, onSuccess }: Props) {
   const t = useT();

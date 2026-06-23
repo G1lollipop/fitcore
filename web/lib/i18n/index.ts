@@ -1,19 +1,11 @@
-import { en } from './dictionaries/en'
-import { zh, type Dictionary } from './dictionaries/zh'
+import { en, type Dictionary } from './dictionaries/en'
 import type { Language } from './config'
 
-export type { Dictionary } from './dictionaries/zh'
+export type { Dictionary } from './dictionaries/en'
 export type { Language } from './config'
-export {
-  LANGUAGES,
-  DEFAULT_LANGUAGE,
-  LANGUAGE_STORAGE_KEY,
-  HTML_LANG,
-  isLanguage,
-  detectBrowserLanguage,
-} from './config'
+export { LANGUAGES, DEFAULT_LANGUAGE, HTML_LANG, isLanguage } from './config'
 
-const DICTIONARIES: Record<Language, Dictionary> = { zh, en }
+const DICTIONARIES: Record<Language, Dictionary> = { en }
 
 export function getDictionary(language: Language): Dictionary {
   return DICTIONARIES[language]
@@ -44,23 +36,18 @@ export function tError(
   return (t.errors as Record<string, string>)[code] ?? code
 }
 
-/** True when the active dictionary is the English one. */
-function isEnglish(t: Dictionary): boolean {
-  return t.common.locale.startsWith('en')
-}
-
 /**
- * Pick the locale-appropriate display name for a DB-sourced exercise.
- * English UI prefers `name_en` (the seeded English label) and falls back to
- * the original `name` when it's missing (e.g. user-created exercises).
+ * Pick the display name for a DB-sourced exercise. Prefers `name_en` (the
+ * seeded English label) and falls back to the original `name` when it's
+ * missing (e.g. user-created exercises). The `t` parameter is kept for a
+ * stable call signature across the codebase.
  */
 export function localizedName(
-  t: Dictionary,
+  _t: Dictionary,
   name: string,
   nameEn?: string | null
 ): string {
-  if (isEnglish(t)) return nameEn?.trim() || name
-  return name
+  return nameEn?.trim() || name
 }
 
 /**

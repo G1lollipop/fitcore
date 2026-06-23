@@ -53,34 +53,34 @@ interface ParsedSegment {
   calories_burned?: number;
 }
 
-const SYSTEM_PROMPT = `你是 FitCore 的快捷记录解析器。用户用一句自然语言可能同时记录"吃了什么"和"练了什么"，你需要把它拆开并准确提取每一项的结构化数据。
+const SYSTEM_PROMPT = `You are FitCore's quick-log parser. In one natural-language sentence the user may log both what they ate and what they did, so split it apart and accurately extract structured data for each item.
 
-返回 JSON：{ "items": ParsedSegment[] }
+Return JSON: { "items": ParsedSegment[] }
 
-每个 ParsedSegment 形状：
-- kind: "food" 或 "workout" — 必填
-- 当 kind="food"：
-  - food_name: string — 保留用户原话中的份量（如 "30g 蛋白粉"）
+Each ParsedSegment shape:
+- kind: "food" or "workout" — required
+- when kind="food":
+  - food_name: string — keep the portion from the user's wording (e.g. "30g whey protein")
   - calories: int (kcal)
   - protein: int (g)
   - carbs: int (g)
   - fat: int (g)
-- 当 kind="workout"：
-  - workout_name: string — 标准化的运动名（如 "深蹲"、"跑步"）
-  - sets: int | null — 没说就给 null
+- when kind="workout":
+  - workout_name: string — a normalized workout name (e.g. "Squat", "Running")
+  - sets: int | null — null if not stated
   - duration_minutes: int
   - calories_burned: int (kcal)
 
-营养/能耗参考（60kg 成年人）：
-- 鸡胸肉 100g≈165kcal/31P/0C/4F；蛋白粉 100g≈380kcal/75P/8C/3F；米饭 100g≈130kcal/3P/28C/0F；鸡蛋 1个≈70kcal/6P/1C/5F
-- 深蹲 10次≈9kcal；卧推 10次≈7kcal；硬拉 10次≈11kcal；引体向上 10次≈9kcal；俯卧撑 10次≈6kcal
-- 跑步 1分钟≈11kcal；跳绳 1分钟≈13kcal；游泳 1分钟≈9kcal；骑行 1分钟≈8kcal
+Nutrition / burn references (60kg adult):
+- Chicken breast 100g≈165kcal/31P/0C/4F; whey protein 100g≈380kcal/75P/8C/3F; cooked rice 100g≈130kcal/3P/28C/0F; egg 1≈70kcal/6P/1C/5F
+- Squat 10 reps≈9kcal; bench press 10 reps≈7kcal; deadlift 10 reps≈11kcal; pull-up 10 reps≈9kcal; push-up 10 reps≈6kcal
+- Running 1 min≈11kcal; jump rope 1 min≈13kcal; swimming 1 min≈9kcal; cycling 1 min≈8kcal
 
-规则：
-1) 单条输入可能含多项，请全部识别。
-2) 重量、次数、组数都要按比例换算。
-3) 没提到组数就 sets=null；没提到时长就用组数估算。
-4) 只输出可信的结构化数据；含糊不清的也尽量给出合理估算，绝不返回空。
+Rules:
+1) A single input may contain multiple items — identify all of them.
+2) Scale by weight, reps, and sets proportionally.
+3) If sets aren't mentioned, sets=null; if duration isn't mentioned, estimate from sets.
+4) Only output credible structured data; for vague inputs still give a reasonable estimate — never return empty.
 `;
 
 async function parseQuickLog(userInput: string): Promise<ParsedSegment[]> {
@@ -150,7 +150,7 @@ export async function quickLog(userInput: string): Promise<QuickLogResponse> {
   for (const seg of segments) {
     if (seg.kind === 'food') {
       const id = randomUUID();
-      const name = seg.food_name?.trim() || '未知食物';
+      const name = seg.food_name?.trim() || 'Unknown food';
       const calories = Math.round(Number(seg.calories) || 0);
       const protein = Math.round(Number(seg.protein) || 0);
       const carbs = Math.round(Number(seg.carbs) || 0);
@@ -159,7 +159,7 @@ export async function quickLog(userInput: string): Promise<QuickLogResponse> {
       results.push({ kind: 'food', id, name, calories, protein, carbs, fat });
     } else {
       const id = randomUUID();
-      const name = seg.workout_name?.trim() || '未知运动';
+      const name = seg.workout_name?.trim() || 'Unknown workout';
       const sets =
         seg.sets === null || seg.sets === undefined ? null : Math.round(Number(seg.sets));
       const duration = Math.round(Number(seg.duration_minutes) || 0);

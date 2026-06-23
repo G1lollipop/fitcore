@@ -18,24 +18,24 @@ async function parseFoodWithAI(userInput: string): Promise<DietLogItem | null> {
       messages: [
         {
           role: 'system',
-          content: `你是一个专业的营养师助手。请根据用户输入的食物，准确计算其营养成分。
+          content: `You are a professional nutritionist assistant. Based on the food the user describes, accurately compute its nutritional content.
 
-重要规则：
-1. 注意食物的重量/分量，根据实际重量计算营养成分
-2. 食物名称要保留用户输入的具体信息（如"30g蛋白粉"而不是"蛋白粉"）
-3. 常见食物营养成分参考：
-   - 蛋白粉：每100g约含蛋白质70-80g，热量约350-400kcal
-   - 鸡胸肉：每100g约含蛋白质31g，热量约165kcal
-   - 米饭：每100g约含碳水28g，热量约130kcal
-   - 鸡蛋：每个约含蛋白质6g，热量约70kcal
-4. 根据用户指定的重量按比例计算
+Key rules:
+1. Pay attention to the food's weight/portion and compute nutrition from the actual amount.
+2. Keep the specifics from the user's input in the food name (e.g. "30g whey protein", not just "whey protein").
+3. Reference values for common foods:
+   - Whey protein: ~70-80g protein per 100g, ~350-400 kcal
+   - Chicken breast: ~31g protein per 100g, ~165 kcal
+   - Cooked rice: ~28g carbs per 100g, ~130 kcal
+   - Egg: ~6g protein each, ~70 kcal
+4. Scale proportionally to the weight the user specifies.
 
-返回 JSON 格式：{food_name, calories, protein, carbs, fat}
-- food_name: 保留用户输入的食物描述（如"30g蛋白粉"）
-- calories: 总热量(kcal)，整数
-- protein: 蛋白质含量(g)，整数
-- carbs: 碳水化合物含量(g)，整数
-- fat: 脂肪含量(g)，整数`,
+Return JSON: {food_name, calories, protein, carbs, fat}
+- food_name: keep the user's food description (e.g. "30g whey protein")
+- calories: total calories (kcal), integer
+- protein: protein (g), integer
+- carbs: carbohydrates (g), integer
+- fat: fat (g), integer`,
         },
         {
           role: 'user',
@@ -51,7 +51,7 @@ async function parseFoodWithAI(userInput: string): Promise<DietLogItem | null> {
     const parsed = JSON.parse(content);
     const result = {
       id: randomUUID(),
-      food_name: parsed.food_name || '未知食物',
+      food_name: parsed.food_name || 'Unknown food',
       calories: Math.round(Number(parsed.calories)) || 0,
       protein: Math.round(Number(parsed.protein)) || 0,
       carbs: Math.round(Number(parsed.carbs)) || 0,

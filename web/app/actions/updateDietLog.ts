@@ -12,8 +12,8 @@ import type { DietLogItem } from './types';
  * Replaces an existing `food_logs` row's nutrition values in place, then
  * recomputes the daily_stats aggregate cache for that row's date.
  *
- * Backs the meal-photo "调整" path: a high-confidence parse auto-saves, then
- * the success toast offers an "调整" action that re-opens the review dialog.
+ * Backs the meal-photo "Adjust" path: a high-confidence parse auto-saves, then
+ * the success toast offers an "Adjust" action that re-opens the review dialog.
  * Saving from that dialog calls updateDietLog so the entry is replaced in
  * place rather than producing a duplicate row.
  */

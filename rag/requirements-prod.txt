@@ -1,7 +1,7 @@
-# 生产环境依赖（不含 torch / sentence-transformers）
-# RERANKER_ENABLED=false 时无需重排序相关包，镜像大幅缩小
+# Production dependencies (excluding torch / sentence-transformers)
+# When RERANKER_ENABLED=false, no reranking packages are needed and the image shrinks significantly.
 #
-# 本地开发若需启用重排序，额外安装：pip install torch sentence-transformers
+# For local development with reranking enabled, additionally install: pip install torch sentence-transformers
 
 fastapi
 uvicorn[standard]
@@ -9,7 +9,7 @@ python-dotenv
 pydantic>=2.0
 pydantic-settings
 
-# LangChain 生态
+# LangChain ecosystem
 langchain>=1.2.17
 langchain-core>=1.2.17
 langchain-community>=0.4.1
@@ -17,28 +17,28 @@ langchain-text-splitters>=1.1.0
 langchain-classic>=1.0.1
 langchain-chroma>=1.1.0
 
-# 向量数据库
+# Vector database
 chromadb
 
-# Google Gemini（chat + embeddings）
-# Chat 走 Gemini 的 OpenAI 兼容端点，所以用 langchain-openai + ChatOpenAI；
-# embedding 用原生 langchain-google-genai（可控制输出维度 EMBEDDING_DIM）。
+# Google Gemini (chat + embeddings)
+# Chat uses Gemini's OpenAI-compatible endpoint, so we use langchain-openai + ChatOpenAI;
+# embeddings use the native langchain-google-genai (which can control the output dimension EMBEDDING_DIM).
 langchain-openai>=1.2.1
 langchain-google-genai>=2.0.0
 
-# Supabase（pgvector 后端）
+# Supabase (pgvector backend)
 supabase
 
-# BM25 检索
+# BM25 retrieval
 rank-bm25
 
-# 文件解析（KB 上传 / 灌库支持 txt·md·pdf·docx·html）
+# File parsing (KB upload / ingest supports txt, md, pdf, docx, html)
 pypdf
 python-docx
 beautifulsoup4
 requests
 httpx
 
-# 缓存层（Upstash Redis 后端，REST API，无需常驻连接）
-# CACHE_BACKEND=memory 时不会被加载；保留依赖以便随时切到 redis 后端
+# Cache layer (Upstash Redis backend, REST API, no persistent connection needed)
+# Not loaded when CACHE_BACKEND=memory; kept as a dependency so you can switch to the redis backend anytime
 upstash-redis>=1.4.0

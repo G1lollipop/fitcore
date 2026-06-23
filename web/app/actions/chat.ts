@@ -35,8 +35,8 @@ export async function listChatConversations(): Promise<{
       .limit(400);
 
     if (error) {
-      console.error('[listChatConversations] 查询错误:', error);
-      return { success: false, error: '获取会话列表失败' };
+      console.error('[listChatConversations] Query error:', error);
+      return { success: false, error: 'Failed to fetch conversation list' };
     }
 
     const map = new Map<string, { lastAt: string; preview: string }>();
@@ -45,7 +45,7 @@ export async function listChatConversations(): Promise<{
       if (!cid || map.has(cid)) continue;
       const raw = row.content ?? '';
       const preview = raw.length > 72 ? `${raw.slice(0, 72)}…` : raw;
-      map.set(cid, { lastAt: row.created_at ?? '', preview: preview || '（空消息）' });
+      map.set(cid, { lastAt: row.created_at ?? '', preview: preview || '(empty message)' });
     }
 
     const conversations: ChatConversationSummary[] = Array.from(map.entries())
@@ -54,8 +54,8 @@ export async function listChatConversations(): Promise<{
 
     return { success: true, conversations };
   } catch (error) {
-    console.error('[listChatConversations] 异常:', error);
-    return { success: false, error: '获取会话列表失败' };
+    console.error('[listChatConversations] Error:', error);
+    return { success: false, error: 'Failed to fetch conversation list' };
   }
 }
 
@@ -80,8 +80,8 @@ export async function getChatHistory(
       .limit(limit);
 
     if (error) {
-      console.error('[getChatHistory] 查询错误:', error);
-      return { success: false, error: '获取历史消息失败' };
+      console.error('[getChatHistory] Query error:', error);
+      return { success: false, error: 'Failed to fetch message history' };
     }
 
     const messages: ChatMessage[] = (data as ChatMessageRow[]).map((row) => ({
@@ -91,8 +91,8 @@ export async function getChatHistory(
 
     return { success: true, messages };
   } catch (error) {
-    console.error('[getChatHistory] 异常:', error);
-    return { success: false, error: '获取历史消息失败' };
+    console.error('[getChatHistory] Error:', error);
+    return { success: false, error: 'Failed to fetch message history' };
   }
 }
 
@@ -110,13 +110,13 @@ export async function clearChatHistory(
     const { error } = await q;
 
     if (error) {
-      console.error('[clearChatHistory] 清除错误:', error);
-      return { success: false, error: '清除历史失败' };
+      console.error('[clearChatHistory] Clear error:', error);
+      return { success: false, error: 'Failed to clear history' };
     }
 
     return { success: true };
   } catch (error) {
-    console.error('[clearChatHistory] 异常:', error);
-    return { success: false, error: '清除历史失败' };
+    console.error('[clearChatHistory] Error:', error);
+    return { success: false, error: 'Failed to clear history' };
   }
 }

@@ -1,18 +1,24 @@
 {
-  "_comment": "检索回归门禁基线。eval_retrieval.py --gate 读取这里的阈值，低于下限即判回归（CI fail）。KB 扩到 1000+ 篇后改用『锚点指标』做确定性门禁：anchor_* = golden 的 relevant_sources(必中的代表性文档)是否仍被检索到，抗 re-chunk、与语料规模无关。LLM 裁判的 context_precision/hit 是质量口径（--judge），不进 CI 门禁（省 API）。下方阈值为保守地板占位，需用扩库灌库后第一次 `--variant ensemble` 实测值回填校准（建议地板设在实测值下方 ~0.1）。",
+  "_comment": "Retrieval regression-gate baseline. eval_retrieval.py --gate reads the thresholds here; falling below the floor is treated as a regression (CI fail). After the KB grew to 1000+ documents, switch to 'anchor metrics' for deterministic gating: anchor_* = whether the golden set's relevant_sources (the must-hit representative documents) are still retrieved, which is robust to re-chunking and independent of corpus size. The LLM judge's context_precision/hit are quality measures (--judge) and do not enter the CI gate (to save API). The thresholds below are conservative floor placeholders and must be calibrated by backfilling the first `--variant ensemble` measured values after the expanded KB is ingested (recommended: set the floor ~0.1 below the measured value).",
   "dataset": "golden_dataset_en.json",
   "variant": "ensemble",
   "vector_weight": 0.8,
   "thresholds": {
     "anchor_hit@10": 0.80,
     "anchor_recall@10": 0.65,
-    "anchor_mrr@10": 0.55
+    "keyword_coverage@10": 0.80
+  },
+  "_observed_local_full_bge": {
+    "_comment": "本地全量(1070篇,bge,Chroma)实测参考，非云端门禁值。keyword_coverage 是无 LLM 的确定性内容质量主指标。",
+    "keyword_coverage@10": 0.901,
+    "anchor_hit@10": 0.716,
+    "anchor_recall@10": 0.46
   },
   "abstention": {
     "max_false_retrieval_rate": 0.34
   },
   "_quality_reference_only": {
-    "_comment": "以下为 --judge 质量口径，仅供观测，不参与门禁；首次实测后回填。",
+    "_comment": "The following are --judge quality measures, for observation only and not part of the gate; backfill after the first measurement.",
     "context_precision@5": null,
     "context_hit@5": null
   }

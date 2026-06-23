@@ -44,7 +44,7 @@ const ACTIVITY_VALUES = [
 ] as const
 
 export default function OnboardingForm({ userName }: { userName: string }) {
-  const { t, language } = useLanguage()
+  const { t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [currentStep, setCurrentStep] = useState(1)
@@ -110,7 +110,7 @@ export default function OnboardingForm({ userName }: { userName: string }) {
   const handleCalculateRecommendation = async () => {
     setIsCalculating(true)
     try {
-      const result = await calculateNutritionRecommendation(formData, language)
+      const result = await calculateNutritionRecommendation(formData)
       if (result.success && result.recommendation) {
         setRecommendation(result.recommendation)
       }

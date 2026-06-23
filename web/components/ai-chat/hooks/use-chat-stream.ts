@@ -104,7 +104,7 @@ export function useChatStream({
   onAssistantDone,
   onLoggedActivity,
 }: UseChatStreamArgs): UseChatStreamResult {
-  const { t, language } = useLanguage()
+  const { t } = useLanguage()
   const [isTyping, setIsTyping] = useState(false)
 
   const sendMessage = useCallback(
@@ -143,7 +143,6 @@ export function useChatStream({
           body: JSON.stringify({
             message: trimmed,
             conversationId: conversationId || undefined,
-            language,
           }),
         })
 
@@ -198,7 +197,7 @@ export function useChatStream({
         setIsTyping(false)
       }
     },
-    [conversationId, isTyping, setMessages, onAssistantDone, onLoggedActivity, t, language]
+    [conversationId, isTyping, setMessages, onAssistantDone, onLoggedActivity, t]
   )
 
   return { isTyping, sendMessage }

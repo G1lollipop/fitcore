@@ -1,10 +1,9 @@
-import type { Dictionary } from './zh'
-
 /**
- * English copy. Kept structurally identical to `zh.ts` (enforced by the
- * `Dictionary` type). When you add a key to `zh.ts`, add it here too.
+ * English UI copy. This is the single source of truth for all user-facing
+ * strings; the `Dictionary` type is derived from its shape (see bottom of
+ * file) so every consumer stays in sync automatically.
  */
-export const en: Dictionary = {
+export const en = {
   common: {
     appName: 'FitCore',
     locale: 'en-US',
@@ -34,13 +33,6 @@ export const en: Dictionary = {
   metadata: {
     title: 'FitCore — Smart Fitness Assistant',
     description: 'Track nutrition and training, and get personalized fitness advice',
-  },
-
-  language: {
-    label: 'Language',
-    switchTo: 'Switch to 中文',
-    zh: '中文',
-    en: 'English',
   },
 
   auth: {
@@ -749,3 +741,5 @@ export const en: Dictionary = {
     },
   },
 }
+
+export type Dictionary = typeof en

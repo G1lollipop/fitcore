@@ -42,11 +42,11 @@ function getWeekBounds(date: Date): { start: Date; end: Date } {
 }
 
 function getWeekLabel(date: Date): string {
-  const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
   const firstDayOfWeek = firstDayOfMonth.getDay();
   const weekOfMonth = Math.ceil((date.getDate() + firstDayOfWeek) / 7);
-  return `${monthNames[date.getMonth()]}第${weekOfMonth}周`;
+  return `${monthNames[date.getMonth()]} Week ${weekOfMonth}`;
 }
 
 function getTodayWeekIndex(): number {
@@ -101,7 +101,7 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
     const error = queryResult.error;
 
     if (error && error.code !== 'PGRST116') {
-      console.warn('[getTodayWorkoutData] 获取用户设置失败', { error: error.message });
+      console.warn('[getTodayWorkoutData] Failed to fetch user settings', { error: error.message });
     }
 
     if (!settingsWithPlan?.workout_plans) {
@@ -125,7 +125,7 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
       todayDay: result.todayDay
         ? {
             id: result.todayDay.id,
-            name: result.isRestDay ? '休息日' : result.todayDay.name ?? '',
+            name: result.isRestDay ? 'Rest day' : result.todayDay.name ?? '',
             isRestDay: result.isRestDay,
           }
         : null,
@@ -139,7 +139,7 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
       })),
     };
   } catch (error) {
-    console.error('[getTodayWorkoutData] 异常', { error: String(error) });
+    console.error('[getTodayWorkoutData] Error', { error: String(error) });
     return null;
   }
 }
@@ -310,7 +310,7 @@ export async function getWeeklyActivity(): Promise<WeeklyActivityData> {
   };
 }
 
-const TREND_DAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'] as const;
+const TREND_DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
 function emptyTrend(today: Date): WeeklyTrendData {
   const todayIndex = getTodayWeekIndex();

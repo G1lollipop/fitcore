@@ -66,8 +66,9 @@ sql/
 # Documentation (local only)
 docs/
 
-# Scripts: 本地一次性脚本默认忽略，但已纳入版本管理的维护脚本需保留。
-# 用 scripts/* 而非 scripts/ 才能让下面的 ! 例外生效（被忽略的目录无法再单独反选文件）。
+# Scripts: ignore one-off local scripts by default, but keep version-controlled
+# maintenance scripts. Use `scripts/*` (not `scripts/`) so the `!` exceptions
+# below take effect — files inside a fully ignored directory can't be re-included.
 scripts/*
 !scripts/backfill-exercise-name-en.mjs
 

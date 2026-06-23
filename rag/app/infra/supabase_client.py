@@ -36,9 +36,9 @@ def supabase_configured() -> bool:
 def get_supabase_client() -> Client:
     if _SUPABASE_IMPORT_ERROR is not None:
         raise RuntimeError(
-            "缺少 supabase 包。请执行: pip install supabase"
+            "Missing the supabase package. Run: pip install supabase"
         ) from _SUPABASE_IMPORT_ERROR
     settings = get_settings()
     if not settings.supabase_url or not settings.supabase_service_role_key:
-        raise RuntimeError("缺少 SUPABASE_URL 或 SUPABASE_SERVICE_ROLE_KEY")
+        raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
     return create_client(settings.supabase_url, settings.supabase_service_role_key)

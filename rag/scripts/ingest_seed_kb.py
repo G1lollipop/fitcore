@@ -8,7 +8,7 @@ Usage (from repo root):
 
 Notes:
 - Requires GOOGLE_AI_STUDIO_API_KEY (Gemini embeddings).
-- Default: md5 de-dup in ./md5.text (identical content skipped — 切到 Supabase 后若仍显示「跳过」请用 --force)。
+- Default: md5 de-dup in ./md5.text (identical content skipped — after switching to Supabase, if items still show "skipped", use --force).
 """
 
 from __future__ import annotations
@@ -33,13 +33,13 @@ def main() -> int:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="忽略 md5.text 去重，强制写入（首次灌入 Supabase 或更新正文时用）",
+        help="Ignore md5.text dedup and force write (use for the first Supabase ingest or when updating content)",
     )
     parser.add_argument(
         "--keep-list",
         default=None,
-        help="只灌入清单内的文件（每行一个文件名，如 data/cloud_keep.txt）；"
-        "用于云端精选子集灌库。不传则灌全部 data/{kb,auto}_*.txt。",
+        help="Only ingest files listed in this file (one file name per line, e.g. data/cloud_keep.txt); "
+        "used for ingesting a curated cloud subset. If omitted, ingest all data/{kb,auto}_*.txt.",
     )
     args = parser.parse_args()
 
@@ -53,7 +53,7 @@ def main() -> int:
             for ln in kp.read_text(encoding="utf-8").splitlines()
             if ln.strip() and not ln.startswith("#")
         }
-        print(f"[ingest] keep-list: 仅灌入 {len(keep)} 个文件（来自 {kp.name}）")
+        print(f"[ingest] keep-list: ingesting only {len(keep)} files (from {kp.name})")
 
     from app.core.settings import get_settings  # noqa: WPS433
 
@@ -67,7 +67,7 @@ def main() -> int:
 
     if vector_backend() == "supabase" and not supabase_configured():
         print(
-            "[ingest] VECTOR_BACKEND=supabase 需要 SUPABASE_URL 与 SUPABASE_SERVICE_ROLE_KEY（Rag/.env）"
+            "[ingest] VECTOR_BACKEND=supabase requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (rag/.env)"
         )
         return 2
 
@@ -110,21 +110,21 @@ def main() -> int:
             )
             if not result.get("success"):
                 failed += 1
-                print(f"[失败] {path.name}: {result.get('message')}")
+                print(f"[Failed] {path.name}: {result.get('message')}")
                 continue
 
             msg = result.get("message", "")
-            print(f"[完成] {path.name}: {msg}")
-            if isinstance(msg, str) and msg.startswith("[跳过]"):
+            print(f"[Done] {path.name}: {msg}")
+            if isinstance(msg, str) and msg.startswith("[Skipped]"):
                 skipped += 1
             else:
                 ok += 1
         except Exception as exc:  # noqa: BLE001 (CLI tool)
             failed += 1
-            print(f"[异常] {path.name}: {exc}")
+            print(f"[Error] {path.name}: {exc}")
 
     print(
-        f"[汇总] success={ok}, skipped={skipped}, failed={failed}, total={len(files)}"
+        f"[Summary] success={ok}, skipped={skipped}, failed={failed}, total={len(files)}"
     )
 
     # Cache invalidation crosses processes only with a shared backend (Redis).
@@ -135,11 +135,11 @@ def main() -> int:
 
         if get_settings().cache_backend == "redis":
             print(
-                "[缓存] 已失效共享缓存（Redis）；运行中的 API 会在下次查询重建检索器。"
+                "[Cache] Invalidated the shared cache (Redis); a running API will rebuild the retriever on the next query."
             )
         else:
             print(
-                "[缓存] 当前为内存缓存（进程隔离）；如有运行中的 API 服务，请重启以加载新语料。"
+                "[Cache] Currently using in-memory cache (process-isolated); restart any running API service to load the new corpus."
             )
 
     return 0 if failed == 0 else 3

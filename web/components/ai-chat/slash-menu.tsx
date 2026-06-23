@@ -23,7 +23,7 @@ interface SlashMenuProps {
  * navigation; the input keeps focus the whole time.
  *
  * Filtering is case-insensitive and matches both the literal `cmd` and
- * the human label, so `/计划` finds `/plan`.
+ * the human label, so typing part of the label also finds the command.
  */
 export function SlashMenu({
   query,

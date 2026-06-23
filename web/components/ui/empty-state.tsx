@@ -29,7 +29,7 @@ export interface EmptyStateProps {
  * messages that had drifted across plans / nutrition / training.
  *
  * Three sizes (`hero` | `inset` | `inline`) cover the audit findings:
- *   • `hero`   — section-level, like "还没有训练计划"
+ *   • `hero`   — section-level, like "No workout plans yet"
  *   • `inset`  — card-level, like the nutrition timeline's "no meals" card
  *   • `inline` — terse line, like wizard step warnings
  *

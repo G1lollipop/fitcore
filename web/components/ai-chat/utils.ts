@@ -14,7 +14,7 @@ export function isHttpUrl(s: string): boolean {
 
 /**
  * Compose the dropdown label for a single conversation entry.
- * Format: "<short> MM/DD · <preview>" — where <short> is "当前" for the
+ * Format: "<short> MM/DD · <preview>" — where <short> is "Current" for the
  * active conversation or "…<lastSix>" for siblings.
  */
 export function sessionSelectLabel(c: ChatConversationSummary, activeId: string, t: Dictionary): string {

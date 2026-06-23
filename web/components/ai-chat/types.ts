@@ -41,7 +41,7 @@ export function buildSlashCommands(t: Dictionary): SlashCommand[] {
 /**
  * Filter slash commands by the user's current input. Matches the
  * leading `/token` against either the literal `cmd` or the localized
- * `label`, so `/计划` finds `/plan`.
+ * `label`, so typing part of the label also finds the command.
  */
 export function filterSlashCommands(input: string, commands: SlashCommand[]): SlashCommand[] {
   const trimmed = input.trim().toLowerCase()

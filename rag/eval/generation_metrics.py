@@ -19,10 +19,6 @@ ABSTENTION_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"no relevant (information|evidence|content|references)", re.I),
     re.compile(r"outside (my|the) (knowledge base|available references)", re.I),
     re.compile(r"beyond (what|the) (I|the) (can|have)", re.I),
-    re.compile(r"资料不足"),
-    re.compile(r"没有(找到|足够|相关)"),
-    re.compile(r"无法(找到|提供).*依据"),
-    re.compile(r"知识库.*(没有|未找到|无相关)"),
 )
 
 

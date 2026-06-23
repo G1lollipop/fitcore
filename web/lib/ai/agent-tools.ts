@@ -2,7 +2,6 @@
  * Agent tool definitions and system prompts — shared by runAgent and offline eval.
  */
 
-import type { Language } from "@/lib/i18n"
 import type { CoachChatMessage } from "@/lib/ai/types"
 
 export const AGENT_TOOLS: Parameters<
@@ -160,34 +159,7 @@ export const AGENT_TOOLS: Parameters<
   },
 ]
 
-const SYSTEM_PROMPT_ZH = `你是 FitCore 的 AI 健身教练，专业、友善、富有洞察力。你不仅能答疑，还能直接帮用户记录饮食、训练和饮水。
-
-你有以下工具：
-- set_retrieval_params：声明知识库检索策略（k 值），与 query_knowledge_base 配套使用
-- query_knowledge_base：查询健身知识库（训练技术、营养原理、计划模板等）
-- get_user_stats：获取用户今日的个人数据（摄入、消耗、目标等）
-- log_food：把用户吃/喝的东西记录到今日饮食（用户说"我吃了…/喝了…"时调用，原话传入即可）
-- log_workout：把用户做的运动记录到今日训练（用户说"我练了…/跑了…"时调用）
-- log_water：记录饮水量（用户说"我喝了 XXX 毫升水"时调用）
-- adjust_plan：按用户要求调整当前训练计划（用户说"把腿日换成上肢""强度调低""这周只练3天"等时调用）
-
-调用规则：
-• 用户说"我（刚）吃了/喝了 X" → 调用 log_food
-• 用户说"我（刚）练了/跑了/做了 X" → 调用 log_workout
-• 用户说"我喝了 X 毫升水" → 调用 log_water
-• 用户一句话同时说了吃和练 → 同时调用 log_food 和 log_workout
-• 用户问训练动作/营养知识/健身原理 → 同时调用 set_retrieval_params + query_knowledge_base
-• 用户问"我今天吃了多少"/"我的数据"/"够不够" → 调用 get_user_stats
-• 用户要求修改/调整训练计划（换训练日、调强度、改频率等）→ 调用 adjust_plan
-• 简单闲聊或问候 → 直接回答，不调用工具
-
-回答要求：
-- 使用中文，语气专业友善，适当使用 emoji
-- 记录成功后，用一句话确认记录了什么（含解析出的热量/时长等），再给一句简短建议
-- 严格基于工具返回的数据，不编造数字
-- 如知识库没有相关内容，如实告知`
-
-const SYSTEM_PROMPT_EN = `You are FitCore's AI fitness coach — professional, friendly, and insightful. You can both answer questions and directly log the user's food, workouts, and water.
+const SYSTEM_PROMPT = `You are FitCore's AI fitness coach — professional, friendly, and insightful. You can both answer questions and directly log the user's food, workouts, and water.
 
 You have these tools:
 - set_retrieval_params: declare the knowledge-base retrieval strategy (the k value), used together with query_knowledge_base
@@ -214,20 +186,19 @@ Answer requirements:
 - Base answers strictly on the data returned by tools; never fabricate numbers
 - If the knowledge base has no relevant content, say so honestly`
 
-export function buildAgentSystemPrompt(language: Language): string {
-  return language === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_ZH
+export function buildAgentSystemPrompt(): string {
+  return SYSTEM_PROMPT
 }
 
 export function buildAgentPlanMessages(params: {
   message: string
-  language: Language
   conversationHistory?: CoachChatMessage[]
 }): Parameters<
   typeof import("@/lib/openaiClient").openai.chat.completions.create
 >[0]["messages"] {
-  const { message, language, conversationHistory = [] } = params
+  const { message, conversationHistory = [] } = params
   return [
-    { role: "system", content: buildAgentSystemPrompt(language) },
+    { role: "system", content: buildAgentSystemPrompt() },
     ...conversationHistory.slice(-10),
     { role: "user", content: message },
   ]

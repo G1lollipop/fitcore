@@ -6,20 +6,20 @@
 __pycache__/
 *.py[cod]
 
-# Claude Code 本地工作区（个人配置 / 缓存，勿提交）
+# Claude Code local workspace (personal config / cache, do not commit)
 .claude/
 
 # Local vector store
 chroma/
 
-# 本地会话 / 去重状态（勿上传）
+# Local sessions / dedup state (do not upload)
 chat_history/
 md5.text
 
-# 评估报告（运行时产物，指标已汇总进 README）
+# Evaluation reports (runtime artifacts; metrics are summarized in the README)
 eval/eval_report_*.json
 eval/retrieval_report_*.json
 
-# 内部开发文档
+# Internal development docs
 docs/
 md/

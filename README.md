@@ -1,49 +1,49 @@
 # FitCore
 
-AI 驱动的健身教练应用。前后端合并为一个 monorepo 管理：
+An AI-powered fitness coaching app. The frontend and backend are managed together in a single monorepo:
 
 ```
 Fitcore/
-├── web/   # 前端：Next.js 16 (App Router) + React 19 + Supabase（Auth + 数据）
-└── rag/   # 后端：FastAPI + LangChain RAG 检索服务（Google Gemini）
+├── web/   # Frontend: Next.js 16 (App Router) + React 19 + Supabase (Auth + data)
+└── rag/   # Backend: FastAPI + LangChain RAG retrieval service (Google Gemini)
 ```
 
-## 整体架构
+## Architecture
 
 ```mermaid
 flowchart TD
-    Browser["浏览器 (React 19 客户端组件)"]
-    Auth["Supabase Auth 鉴权<br/>(proxy.ts 中间件 · Google + 邮箱密码)"]
+    Browser["Browser (React 19 client components)"]
+    Auth["Supabase Auth<br/>(proxy.ts middleware · Google + email/password)"]
     Actions["Server Actions<br/>(web/app/actions/*)"]
     ChatAPI["/api/ai/chat (SSE)<br/>route.ts"]
-    Supabase[("Supabase<br/>Auth + 日志/计划/统计/聊天")]
-    LLM["Google Gemini<br/>(对话 / 解析 / 视觉 / embedding)"]
-    RAG["RAG 服务 FastAPI (rag/)<br/>/v1/retrieve · /v1/chat"]
+    Supabase[("Supabase<br/>Auth + logs/plans/stats/chat")]
+    LLM["Google Gemini<br/>(chat / parsing / vision / embedding)"]
+    RAG["RAG service FastAPI (rag/)<br/>/v1/retrieve · /v1/chat"]
 
-    Browser -->|"受保护路由"| Auth
-    Browser -->|"业务读写<br/>(userId 由服务端 requireUserId() 注入)"| Actions
-    Browser -->|"对话"| ChatAPI
+    Browser -->|"protected routes"| Auth
+    Browser -->|"data read/write<br/>(userId injected server-side via requireUserId())"| Actions
+    Browser -->|"chat"| ChatAPI
     Actions --> Supabase
-    ChatAPI -->|"个人上下文 user-context.ts"| Supabase
-    ChatAPI -->|"生成"| LLM
-    ChatAPI -->|"知识检索 rag-client.ts"| RAG
-    RAG -->|"向量+BM25 融合·重排"| RAG
+    ChatAPI -->|"personal context user-context.ts"| Supabase
+    ChatAPI -->|"generation"| LLM
+    ChatAPI -->|"knowledge retrieval rag-client.ts"| RAG
+    RAG -->|"vector + BM25 fusion · rerank"| RAG
 ```
 
-> 说明：前端不直连 Supabase——所有数据访问都走 Server Actions（`web/lib/supabaseClient.ts` 是 `server-only` + service-role）。前端通过 `RAG_SERVICE_URL`（默认 `http://127.0.0.1:8000`）调用后端 RAG 服务。
+> Note: the frontend never talks to Supabase directly — all data access goes through Server Actions (`web/lib/supabaseClient.ts` is `server-only` + service-role). The frontend calls the backend RAG service via `RAG_SERVICE_URL` (default `http://127.0.0.1:8000`).
 
-> 完整的开发指南（架构细节、接口契约、灌库、测试、排错）见 [`DEVELOPMENT.md`](./DEVELOPMENT.md)。
+> For the full development guide (architecture details, API contracts, ingestion, testing, troubleshooting), see [`DEVELOPMENT.md`](./DEVELOPMENT.md).
 
-## 子项目
+## Subprojects
 
-| 目录 | 说明 | 文档 |
+| Directory | Description | Docs |
 |------|------|------|
-| [`web/`](./web) | 前端单页应用，主页 `/` 内含「今日概览 / 饮食中心 / 训练历史 / 我的计划 / 知识库」五个模块 | [`web/README.md`](./web/README.md) |
-| [`rag/`](./rag) | RAG 检索服务：向量检索 + BM25 融合，可选重排，自适应 topK | [`DEVELOPMENT.md`](./DEVELOPMENT.md) |
+| [`web/`](./web) | Frontend single-page app; the home route `/` contains five modules: "Today / Nutrition / Training history / My plans / Knowledge base" | [`web/README.md`](./web/README.md) |
+| [`rag/`](./rag) | RAG retrieval service: vector retrieval + BM25 fusion, optional reranking, adaptive topK | [`DEVELOPMENT.md`](./DEVELOPMENT.md) |
 
-## 本地启动
+## Local setup
 
-### 1. 后端 RAG 服务（rag/）
+### 1. Backend RAG service (rag/)
 
 ```bash
 cd rag
@@ -51,40 +51,40 @@ python -m venv .venv
 .venv/Scripts/pip install -r requirements-dev.txt   # Windows
 # source .venv/bin/activate && pip install -r requirements-dev.txt  # macOS/Linux
 
-cp .env.example .env          # 至少配置 GOOGLE_AI_STUDIO_API_KEY
-python scripts/ingest_seed_kb.py   # 灌入种子知识库（首次）
+cp .env.example .env          # at minimum set GOOGLE_AI_STUDIO_API_KEY
+python scripts/ingest_seed_kb.py   # ingest the seed knowledge base (first run)
 uvicorn backend_api:app --host 0.0.0.0 --port 8000
 ```
 
-### 2. 前端（web/）
+### 2. Frontend (web/)
 
 ```bash
 cd web
-cp .env.local.example .env.local   # 配置 Supabase / RAG_SERVICE_URL 等
+cp .env.local.example .env.local   # configure Supabase / RAG_SERVICE_URL, etc.
 npm install
 npm run dev
 ```
 
-打开 http://localhost:3000 即可访问。
+Open http://localhost:3000 to use the app.
 
-## 部署
+## Deployment
 
-monorepo 下前后端分别部署，互不干扰：
+In the monorepo the frontend and backend deploy independently:
 
-### 前端 → Vercel
+### Frontend → Vercel
 
-在 Vercel 新建/关联项目时，将 **Root Directory** 设为 `web`（Settings → General → Root Directory）。
-其余按 Next.js 默认即可，环境变量参考 `web/.env.local.example`。
+When creating/linking a project on Vercel, set the **Root Directory** to `web` (Settings → General → Root Directory).
+Everything else follows Next.js defaults; for environment variables see `web/.env.local.example`.
 
-### 后端 → Render
+### Backend → Render
 
-仓库根目录已有 `render.yaml`（Blueprint），其中 `rootDir: rag` 指向后端子目录。
-在 Render 用 **Blueprint** 方式连接本仓库即可自动识别；
-标记为 `sync: false` 的密钥（`GOOGLE_AI_STUDIO_API_KEY`、`SUPABASE_*`、`UPSTASH_*` 等）在 Render Dashboard 手动填写。
+The repo root already has `render.yaml` (a Blueprint) whose `rootDir: rag` points at the backend subdirectory.
+Connect this repo on Render using the **Blueprint** flow and it will be detected automatically;
+secrets marked `sync: false` (`GOOGLE_AI_STUDIO_API_KEY`, `SUPABASE_*`, `UPSTASH_*`, etc.) are entered manually in the Render Dashboard.
 
-> 前端的 `RAG_SERVICE_URL` 需指向 Render 上后端服务的公网地址。
+> The frontend's `RAG_SERVICE_URL` must point at the public address of the backend service on Render.
 
-## 技术栈
+## Tech stack
 
-- **前端**：Next.js 16、React 19、TypeScript、Tailwind CSS 4、shadcn/ui、Supabase（Auth + 数据）
-- **后端**：Python 3.11、FastAPI、LangChain 1.x、Google Gemini（gemini-2.5-flash + gemini-embedding-001）、Chroma / Supabase pgvector
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, Supabase (Auth + data)
+- **Backend**: Python 3.11, FastAPI, LangChain 1.x, Google Gemini (gemini-2.5-flash + gemini-embedding-001), Chroma / Supabase pgvector

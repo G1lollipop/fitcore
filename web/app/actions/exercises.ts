@@ -73,7 +73,7 @@ export async function getExercises(filters: ExerciseFilters = {}): Promise<{ suc
     const pageSize = filters.pageSize || 10
     const offset = (page - 1) * pageSize
 
-    exerciseLogger.info('获取动作列表', { filters, page, pageSize })
+    exerciseLogger.info('Fetching exercise list', { filters, page, pageSize })
 
     let query = supabase.from('exercises').select('*', { count: 'exact' })
 
@@ -110,15 +110,15 @@ export async function getExercises(filters: ExerciseFilters = {}): Promise<{ suc
     const { data, error, count } = await query
 
     if (error) {
-      exerciseLogger.error('获取动作列表失败', { error: error.message })
-      logger.error('获取动作列表失败', { module: 'ExerciseAPI' }, { error })
+      exerciseLogger.error('Failed to fetch exercise list', { error: error.message })
+      logger.error('Failed to fetch exercise list', { module: 'ExerciseAPI' }, { error })
       throw new Error(error.message)
     }
 
     const total = count || 0
     const totalPages = Math.ceil(total / pageSize)
 
-    exerciseLogger.info('获取动作成功', { count: data?.length || 0, total, page, pageSize })
+    exerciseLogger.info('Fetched exercises successfully', { count: data?.length || 0, total, page, pageSize })
 
     return {
       success: true,
@@ -134,14 +134,14 @@ export async function getExercises(filters: ExerciseFilters = {}): Promise<{ suc
       }
     }
   } catch (error) {
-    exerciseLogger.error('获取动作异常', { error: String(error) })
+    exerciseLogger.error('Error fetching exercises', { error: String(error) })
     return { success: false, error: String(error) }
   }
 }
 
 export async function getExerciseById(id: string) {
   try {
-    exerciseLogger.info('获取单个动作', { exerciseId: id })
+    exerciseLogger.info('Fetching single exercise', { exerciseId: id })
 
     const { data, error } = await supabase
       .from('exercises')
@@ -150,13 +150,13 @@ export async function getExerciseById(id: string) {
       .single()
 
     if (error) {
-      exerciseLogger.error('获取动作失败', { error: error.message, exerciseId: id })
+      exerciseLogger.error('Failed to fetch exercise', { error: error.message, exerciseId: id })
       throw new Error(error.message)
     }
 
     return { success: true, data }
   } catch (error) {
-    exerciseLogger.error('获取动作异常', { error: String(error), exerciseId: id })
+    exerciseLogger.error('Error fetching exercise', { error: String(error), exerciseId: id })
     return { success: false, error: String(error) }
   }
 }
@@ -173,7 +173,7 @@ export async function getExerciseCategories() {
     const categories = [...new Set(data?.map((e) => e.category) || [])]
     return { success: true, data: categories }
   } catch (error) {
-    exerciseLogger.error('获取动作分类失败', { error: String(error) })
+    exerciseLogger.error('Failed to fetch exercise categories', { error: String(error) })
     return { success: false, error: String(error) }
   }
 }
@@ -190,7 +190,7 @@ export async function getMuscleGroups() {
     const muscleGroups = [...new Set(allMuscleGroups)]
     return { success: true, data: muscleGroups }
   } catch (error) {
-    exerciseLogger.error('获取肌肉群失败', { error: String(error) })
+    exerciseLogger.error('Failed to fetch muscle groups', { error: String(error) })
     return { success: false, error: String(error) }
   }
 }
@@ -207,7 +207,7 @@ export async function getEquipmentList() {
     const equipment = [...new Set(data?.map((e) => e.equipment) || [])]
     return { success: true, data: equipment }
   } catch (error) {
-    exerciseLogger.error('获取器械列表失败', { error: String(error) })
+    exerciseLogger.error('Failed to fetch equipment list', { error: String(error) })
     return { success: false, error: String(error) }
   }
 }
@@ -237,7 +237,7 @@ export async function createExercise(
   if (!a.ok) return a.result;
   const userId = a.userId;
   try {
-    exerciseLogger.info('创建新动作', { userId, exerciseName: exercise.name })
+    exerciseLogger.info('Creating new exercise', { userId, exerciseName: exercise.name })
 
     const { data, error } = await supabase
       .from('exercises')
@@ -251,14 +251,14 @@ export async function createExercise(
       .single()
 
     if (error) {
-      exerciseLogger.error('创建动作失败', { error: error.message })
+      exerciseLogger.error('Failed to create exercise', { error: error.message })
       throw new Error(error.message)
     }
 
-    exerciseLogger.info('创建动作成功', { exerciseId: data.id })
+    exerciseLogger.info('Created exercise successfully', { exerciseId: data.id })
     return { success: true, data }
   } catch (error) {
-    exerciseLogger.error('创建动作异常', { error: String(error) })
+    exerciseLogger.error('Error creating exercise', { error: String(error) })
     return { success: false, error: String(error) }
   }
 }
@@ -272,7 +272,7 @@ export async function updateExercise(
   const ownerCheck = await assertExerciseOwner(id, a.userId);
   if (ownerCheck) return ownerCheck;
   try {
-    exerciseLogger.info('更新动作', { exerciseId: id, updates })
+    exerciseLogger.info('Updating exercise', { exerciseId: id, updates })
 
     const { data, error } = await supabase
       .from('exercises')
@@ -285,14 +285,14 @@ export async function updateExercise(
       .single()
 
     if (error) {
-      exerciseLogger.error('更新动作失败', { error: error.message, exerciseId: id })
+      exerciseLogger.error('Failed to update exercise', { error: error.message, exerciseId: id })
       throw new Error(error.message)
     }
 
-    exerciseLogger.info('更新动作成功', { exerciseId: id })
+    exerciseLogger.info('Updated exercise successfully', { exerciseId: id })
     return { success: true, data }
   } catch (error) {
-    exerciseLogger.error('更新动作异常', { error: String(error), exerciseId: id })
+    exerciseLogger.error('Error updating exercise', { error: String(error), exerciseId: id })
     return { success: false, error: String(error) }
   }
 }
@@ -303,7 +303,7 @@ export async function deleteExercise(id: string) {
   const ownerCheck = await assertExerciseOwner(id, a.userId);
   if (ownerCheck) return ownerCheck;
   try {
-    exerciseLogger.info('删除动作', { exerciseId: id })
+    exerciseLogger.info('Deleting exercise', { exerciseId: id })
 
     const { error } = await supabase
       .from('exercises')
@@ -311,14 +311,14 @@ export async function deleteExercise(id: string) {
       .eq('id', id)
 
     if (error) {
-      exerciseLogger.error('删除动作失败', { error: error.message, exerciseId: id })
+      exerciseLogger.error('Failed to delete exercise', { error: error.message, exerciseId: id })
       throw new Error(error.message)
     }
 
-    exerciseLogger.info('删除动作成功', { exerciseId: id })
+    exerciseLogger.info('Deleted exercise successfully', { exerciseId: id })
     return { success: true }
   } catch (error) {
-    exerciseLogger.error('删除动作异常', { error: String(error), exerciseId: id })
+    exerciseLogger.error('Error deleting exercise', { error: String(error), exerciseId: id })
     return { success: false, error: String(error) }
   }
 }
@@ -346,13 +346,13 @@ export async function incrementExerciseUsage(id: string) {
       .eq('id', id)
 
     if (updateError) {
-      exerciseLogger.warn('增加使用次数失败', { error: updateError.message, exerciseId: id })
+      exerciseLogger.warn('Failed to increment usage count', { error: updateError.message, exerciseId: id })
       return { success: false, error: updateError.message }
     }
 
     return { success: true }
   } catch (error) {
-    exerciseLogger.error('增加使用次数异常', { error: String(error), exerciseId: id })
+    exerciseLogger.error('Error incrementing usage count', { error: String(error), exerciseId: id })
     return { success: false, error: String(error) }
   }
 }

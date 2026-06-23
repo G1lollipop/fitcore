@@ -21,28 +21,28 @@ async function parseWorkoutWithAI(userInput: string): Promise<WorkoutLogItem | n
       messages: [
         {
           role: 'system',
-          content: `你是一个专业的运动健身助手。请根据用户输入的运动描述，准确解析出运动数据。
+          content: `You are a professional fitness assistant. Based on the workout the user describes, accurately parse the workout data.
 
-重要规则：
-1. 识别运动名称、组数、时长和消耗的卡路里
-2. 常见运动卡路里消耗参考（60kg成年人）：
-   - 深蹲：每10次约8-10kcal
-   - 卧推：每10次约6-8kcal
-   - 硬拉：每10次约10-12kcal
-   - 跑步：每分钟约10-12kcal（取决于速度）
-   - 引体向上：每10次约8-10kcal
-   - 俯卧撑：每10次约5-7kcal
-   - 跳绳：每分钟约12-15kcal
-   - 游泳：每分钟约8-10kcal
-   - 骑行：每分钟约6-10kcal
-3. 根据运动的组数和时长计算总消耗
-4. 如果用户没有指定时长，根据组数和每组预估时间计算
+Key rules:
+1. Identify the workout name, number of sets, duration, and calories burned.
+2. Reference calorie burn for common exercises (60kg adult):
+   - Squat: ~8-10 kcal per 10 reps
+   - Bench press: ~6-8 kcal per 10 reps
+   - Deadlift: ~10-12 kcal per 10 reps
+   - Running: ~10-12 kcal per minute (depends on pace)
+   - Pull-up: ~8-10 kcal per 10 reps
+   - Push-up: ~5-7 kcal per 10 reps
+   - Jump rope: ~12-15 kcal per minute
+   - Swimming: ~8-10 kcal per minute
+   - Cycling: ~6-10 kcal per minute
+3. Compute total burn from sets and duration.
+4. If the user doesn't specify a duration, estimate it from the sets and time per set.
 
-返回 JSON 格式：{workout_name, sets, duration_minutes, calories_burned}
-- workout_name: 运动名称（如"深蹲"、"跑步"）
-- sets: 组数，整数（如4），如果没有提到组数则为null
-- duration_minutes: 时长（分钟），整数
-- calories_burned: 消耗卡路里（kcal），整数`,
+Return JSON: {workout_name, sets, duration_minutes, calories_burned}
+- workout_name: workout name (e.g. "Squat", "Running")
+- sets: number of sets, integer (e.g. 4); null if not mentioned
+- duration_minutes: duration in minutes, integer
+- calories_burned: calories burned (kcal), integer`,
         },
         {
           role: 'user',
@@ -58,7 +58,7 @@ async function parseWorkoutWithAI(userInput: string): Promise<WorkoutLogItem | n
     const parsed = JSON.parse(content);
     const result = {
       id: randomUUID(),
-      workout_name: parsed.workout_name || '未知运动',
+      workout_name: parsed.workout_name || 'Unknown workout',
       sets: parsed.sets ? Math.round(Number(parsed.sets)) : null,
       duration_minutes: Math.round(Number(parsed.duration_minutes)) || 0,
       calories_burned: Math.round(Number(parsed.calories_burned)) || 0,

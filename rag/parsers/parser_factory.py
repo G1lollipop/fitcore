@@ -1,6 +1,6 @@
 """
-文件解析器工厂
-自动选择合适的解析器
+File parser factory.
+Automatically selects the appropriate parser.
 """
 
 from typing import Optional, Dict, Any
@@ -13,9 +13,9 @@ from .html_parser import HtmlParser
 
 
 class FileParserFactory:
-    """文件解析器工厂类"""
+    """File parser factory class."""
 
-    # 注册所有可用的解析器
+    # Register all available parsers.
     _parsers: list[BaseFileParser] = [
         TxtParser(),
         PdfParser(),
@@ -29,14 +29,14 @@ class FileParserFactory:
         cls, filename: str, mime_type: Optional[str] = None
     ) -> Optional[BaseFileParser]:
         """
-        根据文件名和 MIME 类型获取合适的解析器
+        Get the appropriate parser based on file name and MIME type.
 
         Args:
-            filename: 文件名
-            mime_type: MIME 类型（可选）
+            filename: File name
+            mime_type: MIME type (optional)
 
         Returns:
-            解析器实例，如果找不到则返回 None
+            A parser instance, or None if none is found
         """
         for parser in cls._parsers:
             if parser.can_parse(filename, mime_type):
@@ -52,16 +52,16 @@ class FileParserFactory:
         **kwargs,
     ) -> Dict[str, Any]:
         """
-        解析文件，自动选择合适的解析器
+        Parse a file, automatically selecting the appropriate parser.
 
         Args:
-            file_content: 文件的二进制内容
-            filename: 文件名
-            mime_type: MIME 类型（可选）
-            **kwargs: 传递给解析器的额外参数
+            file_content: Binary content of the file
+            filename: File name
+            mime_type: MIME type (optional)
+            **kwargs: Extra arguments passed to the parser
 
         Returns:
-            解析结果字典（见 BaseFileParser.parse）
+            The parsing result dictionary (see BaseFileParser.parse)
         """
         parser = cls.get_parser(filename, mime_type)
 
@@ -70,7 +70,7 @@ class FileParserFactory:
                 "text": "",
                 "metadata": {"filename": filename},
                 "success": False,
-                "error": f"不支持的文件类型: {filename}",
+                "error": f"Unsupported file type: {filename}",
             }
 
         return parser.parse(file_content, filename, **kwargs)
@@ -78,24 +78,24 @@ class FileParserFactory:
     @classmethod
     def register_parser(cls, parser: BaseFileParser):
         """
-        注册新的解析器（用于扩展）
+        Register a new parser (for extensions).
 
         Args:
-            parser: 解析器实例
+            parser: Parser instance
         """
         cls._parsers.append(parser)
 
     @classmethod
     def get_supported_extensions(cls) -> list[str]:
         """
-        获取所有支持的文件扩展名
+        Get all supported file extensions.
 
         Returns:
-            扩展名列表（如 ['.txt', '.pdf', '.docx', ...]）
+            A list of extensions (e.g. ['.txt', '.pdf', '.docx', ...])
         """
         extensions = set()
         for parser in cls._parsers:
-            # 通过测试常见扩展名来判断支持的类型
+            # Probe common extensions to determine supported types.
             test_names = [
                 "test.txt",
                 "test.pdf",

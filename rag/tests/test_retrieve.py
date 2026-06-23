@@ -47,5 +47,5 @@ def test_retrieve_topk_zero_falls_back_to_adaptive(client, stub_rag):
 def test_retrieve_topk_above_range_falls_back_to_adaptive(client, stub_rag):
     """topK=99 fails the upper bound; adaptive picks based on query — short generic
     query falls into the medium tier (k=5)."""
-    client.post("/v1/retrieve", json={"query": "蛋白质", "topK": 99})
+    client.post("/v1/retrieve", json={"query": "protein", "topK": 99})
     assert stub_rag.retrieve_calls[-1]["k"] == 5

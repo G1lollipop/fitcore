@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from collections import defaultdict
 from pathlib import Path
 
@@ -49,7 +48,7 @@ def _quality(m: dict) -> float:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--target", type=int, default=250, help="目标文档总数")
+    ap.add_argument("--target", type=int, default=250, help="Target total number of documents")
     ap.add_argument("--out", default="data/cloud_keep.txt")
     args = ap.parse_args()
 
@@ -64,7 +63,7 @@ def main() -> int:
             anchors.add(rs["source"])
 
     keep: set[str] = set(core) | anchors
-    print(f"[prune] core={len(core)} + eval-anchors(union)={len(keep)} 必留")
+    print(f"[prune] core={len(core)} + eval-anchors(union)={len(keep)} must-keep")
 
     manifest = json.loads((DATA / "harvested_sources.json").read_text(encoding="utf-8"))
     by_tag: dict[str, list[dict]] = defaultdict(list)

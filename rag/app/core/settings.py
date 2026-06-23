@@ -111,9 +111,10 @@ class Settings(BaseSettings):
     )
 
     # ── Hybrid retrieval fusion ───────────────────────────────────────────
-    # EnsembleRetriever 里向量检索的权重（BM25 权重 = 1 - 该值）。默认 0.5/0.5。
-    # 注意：跨语言场景（如中文 query + 英文语料）下 BM25 词法匹配几乎失效，
-    # 离线评估显示等权重融合反而劣于纯向量；此时应调高向量权重（如 0.8~1.0）。
+    # Weight of vector retrieval inside the EnsembleRetriever (BM25 weight = 1 - this value). Default 0.5/0.5.
+    # Note: in cross-language scenarios (e.g. Chinese query + English corpus) BM25 lexical matching is
+    # nearly useless; offline evaluation shows equal-weight fusion underperforms pure vector search, so
+    # the vector weight should be raised (e.g. 0.8~1.0) in that case.
     retrieval_vector_weight: float = Field(
         default=0.5, alias="RETRIEVAL_VECTOR_WEIGHT", ge=0.0, le=1.0
     )
@@ -207,7 +208,7 @@ class Settings(BaseSettings):
 
     @property
     def ensemble_weights(self) -> list[float]:
-        """[向量权重, BM25 权重]，供 EnsembleRetriever 使用。"""
+        """[vector weight, BM25 weight], used by EnsembleRetriever."""
         v = self.retrieval_vector_weight
         return [v, 1.0 - v]
 
@@ -230,11 +231,11 @@ class Settings(BaseSettings):
         try:
             parsed = json.loads(raw)
         except Exception as exc:  # noqa: BLE001
-            print(f"[Settings] RERANKER_MODEL_KWARGS JSON 解析失败，已忽略: {exc}")
+            print(f"[Settings] Failed to parse RERANKER_MODEL_KWARGS JSON, ignoring: {exc}")
             return {}
         if isinstance(parsed, dict):
             return parsed
-        print(f"[Settings] RERANKER_MODEL_KWARGS 不是 JSON 对象，已忽略: {raw}")
+        print(f"[Settings] RERANKER_MODEL_KWARGS is not a JSON object, ignoring: {raw}")
         return {}
 
     def supabase_configured(self) -> bool:

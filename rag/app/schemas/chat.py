@@ -14,7 +14,7 @@ class ChatRequest(BaseModel):
     message: str | None = None
     sessionId: str = "anonymous"
     userContext: dict[str, Any] = Field(default_factory=dict)
-    topK: int | None = None  # None = 自适应；1-20 = 显式指定
+    topK: int | None = None  # None = adaptive; 1-20 = explicit
 
 
 class Citation(BaseModel):

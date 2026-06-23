@@ -2,7 +2,7 @@ services:
   - type: web
     name: fitcore-rag
     runtime: docker
-    # Monorepo: 后端代码位于 rag/ 子目录
+    # Monorepo: the backend code lives in the rag/ subdirectory
     rootDir: rag
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -20,7 +20,7 @@ services:
         value: "3600"
       - key: CACHE_EMBEDDING_TTL_SEC
         value: "86400"
-      # 以下 key 在 Render Dashboard 手动填写
+      # The keys below are entered manually in the Render Dashboard
       - key: GOOGLE_AI_STUDIO_API_KEY
         sync: false
       - key: SUPABASE_URL

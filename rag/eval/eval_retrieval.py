@@ -1,28 +1,36 @@
 """
-离线检索评估 Runner（大语料版）
-================================
+Offline retrieval evaluation Runner (large-corpus edition)
+==========================================================
 
-KB 已扩到 1000+ 篇后，「每题只标 1–3 个文件的精确 qrels」无法穷举标注，旧的
-nDCG/precision 会因大量「未标注但其实相关」的文档被当成不相关而系统性低估。本
-Runner 因此用两套互补口径：
+Once the KB grows to 1000+ documents, exhaustively labeling "precise qrels of
+1-3 files per question" is no longer feasible, and the old nDCG/precision would
+systematically underestimate quality because many "unlabeled but actually
+relevant" documents are treated as irrelevant. This Runner therefore uses two
+complementary measures:
 
-1) 锚点指标（确定性、零 LLM、CI 门禁用）——只问「这题必中的锚点文档是否仍被检索到」：
-   anchor_recall@k / anchor_hit@k / anchor_mrr@k（对 golden 的 relevant_sources）。
-   它是回归哨兵：抗 re-chunk、与语料规模无关，扩库后依然稳定可比。
+1) Anchor metrics (deterministic, zero LLM, used for CI gating) — they only ask
+   "is the must-hit anchor document for this question still retrieved?":
+   anchor_recall@k / anchor_hit@k / anchor_mrr@k (against the golden set's
+   relevant_sources). This is a regression sentinel: robust to re-chunking,
+   independent of corpus size, and remains stably comparable after the KB grows.
 
-2) 上下文相关性（LLM-as-judge、可选 --judge）——不依赖穷举标注，直接判「检索到的
-   每个 chunk 对该 query 是否相关」：context_precision@k / context_hit@k。这是大语料
-   下衡量检索「绝对质量」的口径（RAGAS context precision 思路）。
+2) Context relevance (LLM-as-judge, optional --judge) — does not rely on
+   exhaustive labeling and directly judges "is each retrieved chunk relevant to
+   this query?": context_precision@k / context_hit@k. This measures the
+   "absolute quality" of retrieval on a large corpus (RAGAS context-precision
+   approach).
 
-另外对 out-of-scope（abstention）query 统计 top-1 分数误召回率 false_retrieval_rate。
+It also computes the top-1 score false_retrieval_rate for out-of-scope
+(abstention) queries.
 
-两种取数模式：进程内（默认，import RagService）/ HTTP（--http，打 /v1/retrieve）。
+Two fetch modes: in-process (default, import RagService) / HTTP (--http, hits
+/v1/retrieve).
 
-运行（rag/，已激活 .venv，且已灌库）：
-    python eval/eval_retrieval.py                         # 仅锚点指标（快、无需 LLM）
-    python eval/eval_retrieval.py --judge                 # 加 LLM 裁判 context 相关性
-    python eval/eval_retrieval.py --variant all --tag cmp # bm25/vector/ensemble 对比
-    python eval/eval_retrieval.py --gate                  # 对照 baseline 回归门禁
+Run (from rag/, with .venv activated and the KB already ingested):
+    python eval/eval_retrieval.py                         # anchor metrics only (fast, no LLM)
+    python eval/eval_retrieval.py --judge                 # add LLM-judge context relevance
+    python eval/eval_retrieval.py --variant all --tag cmp # bm25/vector/ensemble comparison
+    python eval/eval_retrieval.py --gate                  # regression gate against baseline
 """
 
 from __future__ import annotations
@@ -51,7 +59,7 @@ DEFAULT_KS = [3, 5, 10]
 RETRIEVE_DEPTH_ENV = "EVAL_RETRIEVE_DEPTH"
 
 
-# ─── 取数：每条检索结果返回 chunk 列表 [{source, text, score}] ────────────────
+# ─── Fetch: each retrieval result returns a chunk list [{source, text, score}] ──
 
 
 def _chunks_from_docs(docs) -> list[dict]:
@@ -86,7 +94,7 @@ def _chunks_from_http(chunks: list[dict]) -> list[dict]:
 
 
 class ProcessInRetriever:
-    """进程内调用检索器；支持切换 bm25 / vector / ensemble / 加权变体做对照。"""
+    """In-process retriever invocation; supports switching bm25 / vector / ensemble / weighted variants for comparison."""
 
     def __init__(self, depth: int = 10) -> None:
         from app.services.rag_service import RagService  # noqa: WPS433
@@ -165,7 +173,7 @@ class ProcessInRetriever:
                 weights=[wv, 1.0 - wv],
             )
         else:
-            raise ValueError(f"未知检索变体: {variant}")
+            raise ValueError(f"Unknown retrieval variant: {variant}")
         self._variant_retrievers[variant] = retriever
         return retriever
 
@@ -216,7 +224,7 @@ class HttpRetriever:
         return {"mode": "http", "variant": "ensemble", "endpoint": f"{self.base}/v1/retrieve"}
 
 
-# ─── LLM 裁判：判断单个 chunk 对 query 是否相关 ──────────────────────────────
+# ─── LLM judge: decide whether a single chunk is relevant to the query ────────
 
 _JUDGE = None
 
@@ -231,7 +239,7 @@ def _get_judge():
 
     s = get_settings()
     if not s.llm_api_key:
-        raise RuntimeError("LLM API key 未配置，无法用 --judge")
+        raise RuntimeError("LLM API key is not configured; cannot use --judge")
     model = os.getenv("EVAL_JUDGE_MODEL") or s.rag_chat_model
     _JUDGE = ChatOpenAI(
         model=model, api_key=s.llm_api_key, base_url=s.llm_base_url, temperature=0
@@ -273,7 +281,7 @@ def judge_chunk_relevant(question: str, text: str) -> bool:
     return False
 
 
-# ─── 主流程 ─────────────────────────────────────────────────────────────────
+# ─── Main flow ────────────────────────────────────────────────────────────────
 
 
 def _eval_one_variant(
@@ -300,14 +308,25 @@ def _eval_one_variant(
         ranked = [c["source"] for c in chunks]
 
         metrics: dict[str, float] = {}
-        # 锚点指标（仅当该题标了锚点时才计入聚合）
+        # Anchor metrics (only counted in the aggregate when the question has anchors)
         has_anchor = bool(qrels)
         for k in ks:
             metrics[f"anchor_recall@{k}"] = rm.recall_at_k(ranked, qrels, k)
             metrics[f"anchor_hit@{k}"] = rm.hit_rate_at_k(ranked, qrels, k)
             metrics[f"anchor_mrr@{k}"] = rm.mrr_at_k(ranked, qrels, k)
 
-        # LLM 裁判 context 相关性（可选）
+        # Keyword coverage (deterministic content quality, NO LLM): how many of
+        # the question's expected_keywords appear in the top-k retrieved chunk
+        # texts. Stays meaningful as the corpus grows (doesn't care which doc).
+        kw_list = item.get("expected_keywords") or []
+        has_kw = bool(kw_list)
+        chunk_texts = [c["text"] for c in chunks]
+        for k in ks:
+            metrics[f"keyword_coverage@{k}"] = rm.keyword_coverage_at_k(
+                chunk_texts, kw_list, k
+            )
+
+        # LLM-judge context relevance (optional)
         judgments: list[bool] = []
         if use_judge:
             for c in chunks[:judge_k]:
@@ -319,9 +338,12 @@ def _eval_one_variant(
                     metrics[f"context_hit@{k}"] = rm.context_hit_at_k(judgments, k)
             judged_n += 1
 
-        # 聚合：锚点指标只在 has_anchor 时累计；context 指标只在 judged 时累计
+        # Aggregate: anchor metrics only when has_anchor; keyword metrics only
+        # when has_kw; context metrics only when judged.
         for key, val in metrics.items():
             if key.startswith("anchor_") and not has_anchor:
+                continue
+            if key.startswith("keyword_") and not has_kw:
                 continue
             agg[key] = agg.get(key, 0.0) + val
 
@@ -330,6 +352,7 @@ def _eval_one_variant(
                 "id": item["id"],
                 "topic": item.get("topic", ""),
                 "anchors": list(qrels.keys()),
+                "has_keywords": has_kw,
                 "retrieved": rm.dedup_keep_order(ranked)[:depth],
                 "judgments": judgments if use_judge else None,
                 "metrics": metrics,
@@ -340,21 +363,29 @@ def _eval_one_variant(
             cp_s = f" ctxP@{min(judge_k, ks[-1])}={cp:.2f}" if cp is not None else ""
             print(
                 f"{item['id']:<10} {item.get('topic',''):<18} "
-                f"aR@{ks[-1]}={metrics.get(f'anchor_recall@{ks[-1]}',0):.2f} "
-                f"aHit@{ks[-1]}={metrics.get(f'anchor_hit@{ks[-1]}',0):.0f}{cp_s}"
+                f"aHit@{ks[-1]}={metrics.get(f'anchor_hit@{ks[-1]}',0):.0f} "
+                f"kwCov@{ks[-1]}={metrics.get(f'keyword_coverage@{ks[-1]}',0):.2f}{cp_s}"
             )
         if not use_http:
             time.sleep(0.1)
 
-    # 分母：锚点指标按「有锚点的题数」；context 指标按「judged 题数」
+    # Denominators: anchor → # anchored questions; keyword → # questions with
+    # expected_keywords; context → # judged questions.
     n_anchor = max(len([p for p in per_query if p.get("anchors")]), 1)
+    n_kw = max(len([p for p in per_query if p.get("has_keywords")]), 1)
     n_judge = max(judged_n, 1)
     summary: dict[str, float] = {}
     for key, total in agg.items():
-        denom = n_judge if key.startswith("context_") else n_anchor
+        if key.startswith("context_"):
+            denom = n_judge
+        elif key.startswith("keyword_"):
+            denom = n_kw
+        else:
+            denom = n_anchor
         summary[key] = round(total / denom, 4)
     summary["_n_in_scope"] = len(in_scope)
     summary["_n_anchored"] = n_anchor
+    summary["_n_keyworded"] = n_kw
     summary["_n_judged"] = judged_n
 
     # abstention
@@ -399,22 +430,22 @@ def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
     if not baseline_path.is_absolute():
         baseline_path = _EVAL_DIR / baseline_path
     if not baseline_path.exists():
-        print(f"\n[gate] 基线文件不存在: {baseline_path}（跳过门禁）")
+        print(f"\n[gate] Baseline file not found: {baseline_path} (skipping gate)")
         return 0
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     thresholds: dict[str, float] = baseline.get("thresholds", {})
     if gate_variant not in results:
-        print(f"\n[gate] 变体 {gate_variant} 无结果，无法门禁")
+        print(f"\n[gate] Variant {gate_variant} has no results; cannot gate")
         return 1
 
     summary = results[gate_variant]["summary"]
     failures: list[str] = []
-    rows = ["", "## 检索回归门禁 — variant=" + gate_variant, "", "| 指标 | 实测 | 下限 | 状态 |", "|---|---|---|---|"]
-    print(f"\n=== 检索回归门禁（variant={gate_variant}，基线 {baseline_path.name}）===")
+    rows = ["", "## Retrieval regression gate — variant=" + gate_variant, "", "| Metric | Actual | Floor | Status |", "|---|---|---|---|"]
+    print(f"\n=== Retrieval regression gate (variant={gate_variant}, baseline {baseline_path.name}) ===")
     for metric, floor in thresholds.items():
         actual = float(summary.get(metric, 0.0))
         ok = actual + 1e-9 >= float(floor)
-        print(f"  {metric:<22} {actual:>7.3f}  下限 {float(floor):>6.3f}  [{'PASS' if ok else 'FAIL'}]")
+        print(f"  {metric:<22} {actual:>7.3f}  floor {float(floor):>6.3f}  [{'PASS' if ok else 'FAIL'}]")
         rows.append(f"| {metric} | {actual:.3f} | ≥ {float(floor)} | {'✅' if ok else '❌'} |")
         if not ok:
             failures.append(f"{metric} {actual:.3f} < {floor}")
@@ -424,19 +455,19 @@ def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
         frr = results[gate_variant]["abstention"]["false_retrieval_rate"]
         if frr is not None and frr >= 0:
             ok = frr <= float(max_frr) + 1e-9
-            print(f"  {'false_retrieval_rate':<22} {frr:>7.3f}  上限 {float(max_frr):>6.3f}  [{'PASS' if ok else 'FAIL'}]")
+            print(f"  {'false_retrieval_rate':<22} {frr:>7.3f}  cap {float(max_frr):>6.3f}  [{'PASS' if ok else 'FAIL'}]")
             rows.append(f"| false_retrieval_rate | {frr:.3f} | ≤ {float(max_frr)} | {'✅' if ok else '❌'} |")
             if not ok:
                 failures.append(f"false_retrieval_rate {frr:.3f} > {max_frr}")
 
     _emit_step_summary(rows)
     if failures:
-        msg = "检索指标回归: " + "; ".join(failures)
+        msg = "Retrieval metric regression: " + "; ".join(failures)
         print(f"\n[gate] FAIL — {msg}")
         if os.getenv("GITHUB_ACTIONS"):
             print(f"::error::{msg}")
         return 1
-    print("\n[gate] PASS — 所有检索指标达标")
+    print("\n[gate] PASS — all retrieval metrics meet their thresholds")
     return 0
 
 
@@ -464,13 +495,13 @@ def evaluate(
     else:
         variants = [variant_arg]
 
-    print("=== FitCore 检索评估（锚点确定性 + 可选 LLM 裁判 context 相关性）===")
-    print(f"数据集   : {ds_path.name}")
-    print(f"配置     : {json.dumps(retriever.config_label(), ensure_ascii=False)}")
+    print("=== FitCore retrieval evaluation (deterministic anchors + optional LLM-judge context relevance) ===")
+    print(f"Dataset   : {ds_path.name}")
+    print(f"Config    : {json.dumps(retriever.config_label(), ensure_ascii=False)}")
     print(
-        f"in-scope : {len(in_scope)} 条 | abstention : {len(abstain)} 条 | 候选深度 : {depth}"
+        f"in-scope : {len(in_scope)} items | abstention : {len(abstain)} items | candidate depth : {depth}"
     )
-    print(f"k 值     : {ks} | 变体 : {variants} | LLM 裁判 : {use_judge}（judge_k={judge_k}）")
+    print(f"k values  : {ks} | variants : {variants} | LLM judge : {use_judge} (judge_k={judge_k})")
 
     verbose = len(variants) == 1
     results: dict[str, dict] = {}
@@ -481,9 +512,13 @@ def evaluate(
         )
         results[v] = {"summary": summary, "per_query": per_query, "abstention": abst}
 
-    # ── 对比表 ──
-    print("\n=== 变体对比（in-scope 平均）===")
-    cmp_cols = [f"anchor_recall@{ks[-1]}", f"anchor_hit@{ks[-1]}", f"anchor_mrr@{ks[-1]}"]
+    # ── Comparison table ──
+    print("\n=== Variant comparison (in-scope average) ===")
+    cmp_cols = [
+        f"anchor_hit@{ks[-1]}",
+        f"anchor_recall@{ks[-1]}",
+        f"keyword_coverage@{ks[-1]}",
+    ]
     if use_judge:
         cmp_cols += [f"context_precision@{min(judge_k, ks[-1])}", f"context_hit@{min(judge_k, ks[-1])}"]
     cmp_header = f"{'variant':<12} " + " ".join(f"{c:>22}" for c in cmp_cols)
@@ -493,7 +528,7 @@ def evaluate(
         s = results[v]["summary"]
         print(f"{v:<12} " + " ".join(f"{s.get(c, 0):>22.3f}" for c in cmp_cols))
 
-    print("\n[abstention] out-of-scope top-1 误召回率（越低越好；-1=后端无可比分数）")
+    print("\n[abstention] out-of-scope top-1 false-retrieval rate (lower is better; -1 = backend has no comparable scores)")
     for v in variants:
         print(f"  {v:<12} false_retrieval_rate@{threshold}: {results[v]['abstention']['false_retrieval_rate']:.3f}")
 
@@ -512,7 +547,7 @@ def evaluate(
     }
     out_path = _EVAL_DIR / f"retrieval_report_{tag_part}{ts}.json"
     out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n报告已保存: {out_path}")
+    print(f"\nReport saved: {out_path}")
 
     if gate:
         return _run_gate(results, variants[0], Path(baseline_path))
@@ -520,18 +555,18 @@ def evaluate(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="离线检索评估（锚点召回 + LLM 裁判 context 相关性）")
-    parser.add_argument("--http", action="store_true", help="走 HTTP /v1/retrieve 而非进程内")
-    parser.add_argument("--k", nargs="+", type=int, default=DEFAULT_KS, help="k 值列表，如 --k 3 5 10")
-    parser.add_argument("--tag", default="", help="报告标签")
-    parser.add_argument("--threshold", type=float, default=0.8, help="abstention 误召回分数阈值")
+    parser = argparse.ArgumentParser(description="Offline retrieval evaluation (anchor recall + LLM-judge context relevance)")
+    parser.add_argument("--http", action="store_true", help="Use HTTP /v1/retrieve instead of in-process")
+    parser.add_argument("--k", nargs="+", type=int, default=DEFAULT_KS, help="List of k values, e.g. --k 3 5 10")
+    parser.add_argument("--tag", default="", help="Report tag")
+    parser.add_argument("--threshold", type=float, default=0.8, help="abstention false-retrieval score threshold")
     parser.add_argument("--variant", default="ensemble", choices=["ensemble", "vector", "bm25", "all"])
-    parser.add_argument("--sweep", nargs="*", type=float, help="向量权重扫描，如 --sweep 0 0.5 1.0")
-    parser.add_argument("--dataset", default=None, help="评测集（默认 golden_dataset_en.json）")
-    parser.add_argument("--judge", action="store_true", help="开启 LLM 裁判 context 相关性（需 LLM key）")
-    parser.add_argument("--judge-k", type=int, default=5, help="每题 LLM 裁判前 N 个 chunk（控成本）")
-    parser.add_argument("--limit", type=int, default=None, help="只评前 N 条 in-scope（控成本）")
-    parser.add_argument("--gate", action="store_true", help="回归门禁：对照 --baseline 阈值")
+    parser.add_argument("--sweep", nargs="*", type=float, help="Vector-weight sweep, e.g. --sweep 0 0.5 1.0")
+    parser.add_argument("--dataset", default=None, help="Evaluation set (default golden_dataset_en.json)")
+    parser.add_argument("--judge", action="store_true", help="Enable LLM-judge context relevance (requires an LLM key)")
+    parser.add_argument("--judge-k", type=int, default=5, help="LLM-judge the first N chunks per question (cost control)")
+    parser.add_argument("--limit", type=int, default=None, help="Evaluate only the first N in-scope items (cost control)")
+    parser.add_argument("--gate", action="store_true", help="Regression gate: compare against --baseline thresholds")
     parser.add_argument("--baseline", default="retrieval_baseline.json")
     args = parser.parse_args()
 

@@ -66,7 +66,7 @@ export type WeeklyActivityData = {
 
 export type WeeklyTrendDay = {
   dateIso: string;          // 'YYYY-MM-DD'
-  dayLabel: string;         // '一'..'日'
+  dayLabel: string;         // 'Mon'..'Sun'
   kcalIntake: number;
   kcalBurn: number;
   workoutMinutes: number;

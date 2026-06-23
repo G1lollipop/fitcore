@@ -1,5 +1,5 @@
 """
-Markdown 文件解析器
+Markdown file parser.
 """
 
 from typing import Dict, Any, Optional
@@ -7,27 +7,27 @@ from .base_parser import BaseFileParser
 
 
 class MarkdownParser(BaseFileParser):
-    """Markdown 文件解析器"""
+    """Markdown file parser."""
 
     def parse(self, file_content: bytes, filename: str, **kwargs) -> Dict[str, Any]:
-        """解析 Markdown 文件"""
+        """Parse a Markdown file."""
         try:
-            # Markdown 文件直接解码为文本
-            # 如果需要去除 Markdown 语法，可以使用 markdown 库
+            # Decode the Markdown file directly to text.
+            # Use the markdown library if you need to strip Markdown syntax.
             text = self._safe_decode(file_content)
 
-            # 可选：提取 Markdown 元数据（Front Matter）
+            # Optional: extract Markdown metadata (front matter).
             metadata = self._extract_basic_metadata(filename)
             metadata["file_type"] = "text/markdown"
             metadata["character_count"] = len(text)
             metadata["line_count"] = len(text.splitlines())
 
-            # 尝试提取 YAML Front Matter
+            # Try to extract YAML front matter.
             front_matter = self._extract_front_matter(text)
             if front_matter:
                 metadata.update(front_matter)
 
-            # 统计 Markdown 元素
+            # Count Markdown elements.
             metadata["heading_count"] = text.count("#")
             metadata["code_block_count"] = text.count("```")
             metadata["link_count"] = text.count("](")
@@ -43,18 +43,18 @@ class MarkdownParser(BaseFileParser):
                 "text": "",
                 "metadata": self._extract_basic_metadata(filename),
                 "success": False,
-                "error": f"Markdown 解析失败: {str(e)}",
+                "error": f"Markdown parsing failed: {str(e)}",
             }
 
     def _extract_front_matter(self, text: str) -> Optional[Dict[str, Any]]:
         """
-        提取 YAML Front Matter（如果存在）
+        Extract YAML front matter (if present).
 
         Args:
-            text: Markdown 文本
+            text: Markdown text
 
         Returns:
-            Front Matter 字典或 None
+            Front matter dictionary or None
         """
         if not text.startswith("---"):
             return None
@@ -74,16 +74,16 @@ class MarkdownParser(BaseFileParser):
                     front_matter_text = "\n".join(lines[1:end_idx])
                     return yaml.safe_load(front_matter_text) or {}
         except ImportError:
-            # PyYAML 未安装，跳过 Front Matter 提取
+            # PyYAML is not installed; skip front matter extraction.
             pass
         except Exception:
-            # Front Matter 解析失败，忽略
+            # Front matter parsing failed; ignore.
             pass
 
         return None
 
     def can_parse(self, filename: str, mime_type: Optional[str] = None) -> bool:
-        """判断是否为 Markdown 文件"""
+        """Determine whether the file is a Markdown file."""
         if mime_type:
             return mime_type in ["text/markdown", "text/x-markdown"]
         return filename.lower().endswith((".md", ".markdown"))

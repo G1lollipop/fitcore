@@ -41,7 +41,7 @@ export async function getUserPlansLight() {
   if (!a.ok) return a.result;
   const userId = a.userId;
   try {
-    planLogger.info('获取用户创建的计划（轻量）', { userId });
+    planLogger.info('Fetching user-created plans (light)', { userId });
 
     const { data, error } = await supabase
       .from('workout_plans')
@@ -88,14 +88,14 @@ export async function getUserPlansLight() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      planLogger.error('获取用户计划失败', { error: error.message, userId });
+      planLogger.error('Failed to fetch user plans', { error: error.message, userId });
       throw new Error(error.message);
     }
 
-    planLogger.info('获取用户计划成功', { count: data?.length || 0, userId });
+    planLogger.info('Fetched user plans successfully', { count: data?.length || 0, userId });
     return { success: true, data };
   } catch (error) {
-    planLogger.error('获取用户计划异常', { error: String(error), userId });
+    planLogger.error('Error fetching user plans', { error: String(error), userId });
     return { success: false, error: String(error) };
   }
 }
@@ -105,7 +105,7 @@ export async function getSubscribedPlansLight() {
   if (!a.ok) return a.result;
   const userId = a.userId;
   try {
-    planLogger.info('获取用户订阅的计划（轻量）', { userId });
+    planLogger.info('Fetching user-subscribed plans (light)', { userId });
 
     const { data, error } = await supabase
       .from('workout_plans')
@@ -133,14 +133,14 @@ export async function getSubscribedPlansLight() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      planLogger.error('获取订阅计划失败', { error: error.message, userId });
+      planLogger.error('Failed to fetch subscribed plans', { error: error.message, userId });
       throw new Error(error.message);
     }
 
-    planLogger.info('获取订阅计划成功', { count: data?.length || 0, userId });
+    planLogger.info('Fetched subscribed plans successfully', { count: data?.length || 0, userId });
     return { success: true, data };
   } catch (error) {
-    planLogger.error('获取订阅计划异常', { error: String(error), userId });
+    planLogger.error('Error fetching subscribed plans', { error: String(error), userId });
     return { success: false, error: String(error) };
   }
 }
@@ -150,7 +150,7 @@ export async function getCurrentPlanLight() {
   if (!a.ok) return a.result;
   const userId = a.userId;
   try {
-    planLogger.info('获取用户当前计划（轻量）', { userId });
+    planLogger.info("Fetching user's current plan (light)", { userId });
 
     const { data: settingsWithPlan, error } = await supabase
       .from('user_settings')
@@ -179,7 +179,7 @@ export async function getCurrentPlanLight() {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      planLogger.warn('获取用户设置失败', { error: error.message });
+      planLogger.warn('Failed to fetch user settings', { error: error.message });
     }
 
     if (!settingsWithPlan?.current_plan_id || !settingsWithPlan?.workout_plans) {
@@ -194,14 +194,14 @@ export async function getCurrentPlanLight() {
       } 
     };
   } catch (error) {
-    planLogger.error('获取当前计划异常', { error: String(error) });
+    planLogger.error('Error fetching current plan', { error: String(error) });
     return { success: false, error: String(error) };
   }
 }
 
 export async function getSystemTemplatesLight() {
   try {
-    planLogger.info('获取系统模板（轻量）');
+    planLogger.info('Fetching system templates (light)');
 
     const { data, error } = await supabase
       .from('workout_plans')
@@ -225,21 +225,21 @@ export async function getSystemTemplatesLight() {
       .order('created_at', { ascending: true });
 
     if (error) {
-      planLogger.error('获取系统模板失败', { error: error.message });
+      planLogger.error('Failed to fetch system templates', { error: error.message });
       throw new Error(error.message);
     }
 
-    planLogger.info('获取系统模板成功', { count: data?.length || 0 });
+    planLogger.info('Fetched system templates successfully', { count: data?.length || 0 });
     return { success: true, data };
   } catch (error) {
-    planLogger.error('获取系统模板异常', { error: String(error) });
+    planLogger.error('Error fetching system templates', { error: String(error) });
     return { success: false, error: String(error) };
   }
 }
 
 export async function getSystemTemplates() {
   try {
-    planLogger.info('获取系统模板');
+    planLogger.info('Fetching system templates');
 
     const { data, error } = await supabase
       .from('workout_plans')
@@ -257,14 +257,14 @@ export async function getSystemTemplates() {
       .order('created_at', { ascending: true });
 
     if (error) {
-      planLogger.error('获取系统模板失败', { error: error.message });
+      planLogger.error('Failed to fetch system templates', { error: error.message });
       throw new Error(error.message);
     }
 
-    planLogger.info('获取系统模板成功', { count: data?.length || 0 });
+    planLogger.info('Fetched system templates successfully', { count: data?.length || 0 });
     return { success: true, data };
   } catch (error) {
-    planLogger.error('获取系统模板异常', { error: String(error) });
+    planLogger.error('Error fetching system templates', { error: String(error) });
     return { success: false, error: String(error) };
   }
 }
@@ -274,7 +274,7 @@ export async function getUserPlans() {
   if (!a.ok) return a.result;
   const userId = a.userId;
   try {
-    planLogger.info('获取用户创建的计划', { userId });
+    planLogger.info('Fetching user-created plans', { userId });
 
     const { data, error } = await supabase
       .from('workout_plans')
@@ -293,14 +293,14 @@ export async function getUserPlans() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      planLogger.error('获取用户计划失败', { error: error.message, userId });
+      planLogger.error('Failed to fetch user plans', { error: error.message, userId });
       throw new Error(error.message);
     }
 
-    planLogger.info('获取用户计划成功', { count: data?.length || 0, userId });
+    planLogger.info('Fetched user plans successfully', { count: data?.length || 0, userId });
     return { success: true, data };
   } catch (error) {
-    planLogger.error('获取用户计划异常', { error: String(error), userId });
+    planLogger.error('Error fetching user plans', { error: String(error), userId });
     return { success: false, error: String(error) };
   }
 }
@@ -310,7 +310,7 @@ export async function getSubscribedPlans() {
   if (!a.ok) return a.result;
   const userId = a.userId;
   try {
-    planLogger.info('获取用户订阅的计划', { userId });
+    planLogger.info('Fetching user-subscribed plans', { userId });
 
     const { data, error } = await supabase
       .from('workout_plans')
@@ -329,14 +329,14 @@ export async function getSubscribedPlans() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      planLogger.error('获取订阅计划失败', { error: error.message, userId });
+      planLogger.error('Failed to fetch subscribed plans', { error: error.message, userId });
       throw new Error(error.message);
     }
 
-    planLogger.info('获取订阅计划成功', { count: data?.length || 0, userId });
+    planLogger.info('Fetched subscribed plans successfully', { count: data?.length || 0, userId });
     return { success: true, data };
   } catch (error) {
-    planLogger.error('获取订阅计划异常', { error: String(error), userId });
+    planLogger.error('Error fetching subscribed plans', { error: String(error), userId });
     return { success: false, error: String(error) };
   }
 }
@@ -346,7 +346,7 @@ export async function getCurrentPlan() {
   if (!a.ok) return a.result;
   const userId = a.userId;
   try {
-    planLogger.info('获取用户当前计划', { userId });
+    planLogger.info("Fetching user's current plan", { userId });
 
     const { data: settingsWithPlan, error } = await supabase
       .from('user_settings')
@@ -368,7 +368,7 @@ export async function getCurrentPlan() {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      planLogger.warn('获取用户设置失败', { error: error.message });
+      planLogger.warn('Failed to fetch user settings', { error: error.message });
     }
 
     if (!settingsWithPlan?.current_plan_id || !settingsWithPlan?.workout_plans) {
@@ -383,7 +383,7 @@ export async function getCurrentPlan() {
       } 
     };
   } catch (error) {
-    planLogger.error('获取当前计划异常', { error: String(error) });
+    planLogger.error('Error fetching current plan', { error: String(error) });
     return { success: false, error: String(error) };
   }
 }
@@ -393,7 +393,7 @@ export async function getPlanById(planId: string) {
   if (!a.ok) return a.result;
   const userId = a.userId;
   try {
-    planLogger.info('获取计划详情', { planId, userId });
+    planLogger.info('Fetching plan details', { planId, userId });
 
     const { data, error } = await supabase
       .from('workout_plans')
@@ -411,19 +411,19 @@ export async function getPlanById(planId: string) {
       .single();
 
     if (error || !data) {
-      planLogger.error('获取计划详情失败', { error: error?.message, planId });
+      planLogger.error('Failed to fetch plan details', { error: error?.message, planId });
       return { success: false, error: ActionError.PLAN_NOT_FOUND };
     }
 
     // Allow the owner, or anyone for read-only system templates.
     if (data.creator_id !== userId && data.plan_type !== 'system_template') {
-      planLogger.warn('越权访问计划', { planId, userId });
+      planLogger.warn('Unauthorized plan access', { planId, userId });
       return { success: false, error: 'FORBIDDEN' };
     }
 
     return { success: true, data };
   } catch (error) {
-    planLogger.error('获取计划详情异常', { error: String(error), planId });
+    planLogger.error('Error fetching plan details', { error: String(error), planId });
     return { success: false, error: String(error) };
   }
 }
@@ -450,7 +450,7 @@ export async function createPlan(
   }
 
   try {
-    planLogger.info('创建计划', { userId, planName: plan.name });
+    planLogger.info('Creating plan', { userId, planName: plan.name });
 
     const { data, error } = await supabase
       .from('workout_plans')
@@ -463,14 +463,14 @@ export async function createPlan(
       .single();
 
     if (error) {
-      planLogger.error('创建计划失败', { error: error.message });
+      planLogger.error('Failed to create plan', { error: error.message });
       throw new Error(error.message);
     }
 
-    planLogger.info('创建计划成功', { planId: data.id });
+    planLogger.info('Created plan successfully', { planId: data.id });
     return { success: true, data };
   } catch (error) {
-    planLogger.error('创建计划异常', { error: String(error) });
+    planLogger.error('Error creating plan', { error: String(error) });
     return { success: false, error: String(error) };
   }
 }
@@ -484,7 +484,7 @@ export async function updatePlan(
   const ownerCheck = await assertPlanOwner(planId, a.userId);
   if (ownerCheck) return ownerCheck;
   try {
-    planLogger.info('更新计划', { planId, updates });
+    planLogger.info('Updating plan', { planId, updates });
 
     const { data, error } = await supabase
       .from('workout_plans')
@@ -497,14 +497,14 @@ export async function updatePlan(
       .single();
 
     if (error) {
-      planLogger.error('更新计划失败', { error: error.message, planId });
+      planLogger.error('Failed to update plan', { error: error.message, planId });
       throw new Error(error.message);
     }
 
-    planLogger.info('更新计划成功', { planId });
+    planLogger.info('Updated plan successfully', { planId });
     return { success: true, data };
   } catch (error) {
-    planLogger.error('更新计划异常', { error: String(error), planId });
+    planLogger.error('Error updating plan', { error: String(error), planId });
     return { success: false, error: String(error) };
   }
 }
@@ -515,7 +515,7 @@ export async function deletePlan(planId: string) {
   const ownerCheck = await assertPlanOwner(planId, a.userId);
   if (ownerCheck) return ownerCheck;
   try {
-    planLogger.info('删除计划', { planId });
+    planLogger.info('Deleting plan', { planId });
 
     const { error } = await supabase
       .from('workout_plans')
@@ -523,14 +523,14 @@ export async function deletePlan(planId: string) {
       .eq('id', planId);
 
     if (error) {
-      planLogger.error('删除计划失败', { error: error.message, planId });
+      planLogger.error('Failed to delete plan', { error: error.message, planId });
       throw new Error(error.message);
     }
 
-    planLogger.info('删除计划成功', { planId });
+    planLogger.info('Deleted plan successfully', { planId });
     return { success: true };
   } catch (error) {
-    planLogger.error('删除计划异常', { error: String(error), planId });
+    planLogger.error('Error deleting plan', { error: String(error), planId });
     return { success: false, error: String(error) };
   }
 }
@@ -542,7 +542,7 @@ export async function setCurrentPlan(planId: string) {
   const ownerCheck = await assertPlanOwner(planId, userId);
   if (ownerCheck) return ownerCheck;
   try {
-    planLogger.info('设置当前计划', { userId, planId });
+    planLogger.info('Setting current plan', { userId, planId });
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -553,7 +553,7 @@ export async function setCurrentPlan(planId: string) {
       .single();
 
     if (fetchError && fetchError.code !== 'PGRST116') {
-      planLogger.error('获取用户设置失败', { error: fetchError.message });
+      planLogger.error('Failed to fetch user settings', { error: fetchError.message });
       throw new Error(fetchError.message);
     }
 
@@ -567,7 +567,7 @@ export async function setCurrentPlan(planId: string) {
         .eq('user_id', userId);
 
       if (updateError) {
-        planLogger.error('更新用户设置失败', { error: updateError.message });
+        planLogger.error('Failed to update user settings', { error: updateError.message });
         throw new Error(updateError.message);
       }
     } else {
@@ -584,15 +584,15 @@ export async function setCurrentPlan(planId: string) {
         });
 
       if (insertError) {
-        planLogger.error('创建用户设置失败', { error: insertError.message });
+        planLogger.error('Failed to create user settings', { error: insertError.message });
         throw new Error(insertError.message);
       }
     }
 
-    planLogger.info('设置当前计划成功', { userId, planId });
+    planLogger.info('Set current plan successfully', { userId, planId });
     return { success: true };
   } catch (error) {
-    planLogger.error('设置当前计划异常', { error: String(error) });
+    planLogger.error('Error setting current plan', { error: String(error) });
     return { success: false, error: String(error) };
   }
 }
@@ -605,7 +605,7 @@ export async function copyTemplateToUser(
   if (!a.ok) return a.result;
   const userId = a.userId;
   try {
-    planLogger.info('复制模板到用户计划', { templateId, userId });
+    planLogger.info('Copying template to user plan', { templateId, userId });
 
     const { data: template, error: fetchError } = await supabase
       .from('workout_plans')
@@ -614,7 +614,7 @@ export async function copyTemplateToUser(
       .single();
 
     if (fetchError || !template) {
-      planLogger.error('获取模板失败', { error: fetchError?.message, templateId });
+      planLogger.error('Failed to fetch template', { error: fetchError?.message, templateId });
       throw new Error(fetchError?.message || 'Template not found');
     }
 
@@ -638,7 +638,7 @@ export async function copyTemplateToUser(
       .single();
 
     if (createError) {
-      planLogger.error('复制计划失败', { error: createError.message });
+      planLogger.error('Failed to copy plan', { error: createError.message });
       throw new Error(createError.message);
     }
 
@@ -652,7 +652,7 @@ export async function copyTemplateToUser(
       .order('day_order');
 
     if (daysError) {
-      planLogger.warn('获取模板训练日失败', { error: daysError.message });
+      planLogger.warn('Failed to fetch template workout days', { error: daysError.message });
     }
 
     if (templateDays && templateDays.length > 0) {
@@ -671,7 +671,7 @@ export async function copyTemplateToUser(
         .select();
 
       if (batchInsertError) {
-        planLogger.warn('批量插入训练日失败', { error: batchInsertError.message });
+        planLogger.warn('Failed to bulk-insert workout days', { error: batchInsertError.message });
       } else if (insertedDays && insertedDays.length > 0) {
         const allExercises: PlanExerciseInsert[] = [];
 
@@ -700,7 +700,7 @@ export async function copyTemplateToUser(
             .insert(allExercises);
 
           if (exercisesError) {
-            planLogger.warn('批量插入训练动作失败', { error: exercisesError.message });
+            planLogger.warn('Failed to bulk-insert plan exercises', { error: exercisesError.message });
           }
         }
       }
@@ -708,7 +708,7 @@ export async function copyTemplateToUser(
 
     await setCurrentPlan(newPlan.id);
 
-    planLogger.info('复制模板成功', { newPlanId: newPlan.id });
+    planLogger.info('Copied template successfully', { newPlanId: newPlan.id });
     
     const { data: fullPlan, error: fullPlanError } = await supabase
       .from('workout_plans')
@@ -726,13 +726,13 @@ export async function copyTemplateToUser(
       .single();
     
     if (fullPlanError) {
-      planLogger.warn('获取完整计划数据失败', { error: fullPlanError.message });
+      planLogger.warn('Failed to fetch full plan data', { error: fullPlanError.message });
       return { success: true, data: newPlan };
     }
     
     return { success: true, data: fullPlan || newPlan };
   } catch (error) {
-    planLogger.error('复制模板异常', { error: String(error), templateId, userId });
+    planLogger.error('Error copying template', { error: String(error), templateId, userId });
     return { success: false, error: String(error) };
   }
 }
@@ -779,7 +779,7 @@ export async function createCustomPlan(
   }
 
   try {
-    planLogger.info('创建自定义计划', { userId, planName: planData.name });
+    planLogger.info('Creating custom plan', { userId, planName: planData.name });
 
     const restDays = planData.days
       .map((day, index) => (day.rest_day ? index + 1 : null))
@@ -806,7 +806,7 @@ export async function createCustomPlan(
       .single();
 
     if (createError) {
-      planLogger.error('创建计划失败', { error: createError.message });
+      planLogger.error('Failed to create plan', { error: createError.message });
       throw new Error(createError.message);
     }
 
@@ -815,7 +815,7 @@ export async function createCustomPlan(
 
     for (let i = 0; i < planData.days.length; i++) {
       const day = planData.days[i];
-      const actualDayOrder = i + 1;  // 1-7 对应周一到周日
+      const actualDayOrder = i + 1;  // 1-7 maps to Monday–Sunday
       
       if (day.rest_day) {
         continue;
@@ -824,9 +824,9 @@ export async function createCustomPlan(
       daysToInsert.push({
         plan_id: newPlan.id,
         name: day.name,
-        day_order: actualDayOrder,  // 保持与 rest_days 一致的顺序（1-7）
+        day_order: actualDayOrder,  // keep the same ordering as rest_days (1-7)
         focus_muscles: day.focus_muscles || [],
-        day_type: 'strength',  // 使用数据库允许的枚举值
+        day_type: 'strength',  // use an enum value allowed by the database
       });
 
       if (day.exercises && day.exercises.length > 0) {
@@ -842,7 +842,7 @@ export async function createCustomPlan(
     }
 
     if (daysToInsert.length > 0) {
-      planLogger.info('准备插入训练日', { count: daysToInsert.length, days: daysToInsert.map(d => ({ name: d.name, day_order: d.day_order })) });
+      planLogger.info('Preparing to insert workout days', { count: daysToInsert.length, days: daysToInsert.map(d => ({ name: d.name, day_order: d.day_order })) });
       
       const { data: insertedDays, error: batchInsertError } = await supabase
         .from('workout_days')
@@ -850,9 +850,9 @@ export async function createCustomPlan(
         .select();
 
       if (batchInsertError) {
-        planLogger.error('批量创建训练日失败', { error: batchInsertError.message });
+        planLogger.error('Failed to bulk-create workout days', { error: batchInsertError.message });
       } else {
-        planLogger.info('训练日插入成功', { count: insertedDays?.length, insertedDays: insertedDays?.map((d) => ({ id: d.id, name: d.name, day_order: d.day_order })) });
+        planLogger.info('Workout days inserted successfully', { count: insertedDays?.length, insertedDays: insertedDays?.map((d) => ({ id: d.id, name: d.name, day_order: d.day_order })) });
         
         if (insertedDays && insertedDays.length > 0) {
           const allExercises: PlanExerciseInsert[] = [];
@@ -860,7 +860,7 @@ export async function createCustomPlan(
           insertedDays.forEach((insertedDay) => {
             const exercises = dayExercisesMap.get(insertedDay.day_order);
             if (exercises) {
-              planLogger.info('为训练日添加动作', { dayId: insertedDay.id, day_order: insertedDay.day_order, exerciseCount: exercises.length });
+              planLogger.info('Adding exercises to workout day', { dayId: insertedDay.id, day_order: insertedDay.day_order, exerciseCount: exercises.length });
               exercises.forEach((ex) => {
                 allExercises.push({
                   day_id: insertedDay.id,
@@ -868,27 +868,27 @@ export async function createCustomPlan(
                 });
               });
             } else {
-              planLogger.warn('训练日未找到对应动作', { dayId: insertedDay.id, day_order: insertedDay.day_order, availableDayOrders: Array.from(dayExercisesMap.keys()) });
+              planLogger.warn('No matching exercises found for workout day', { dayId: insertedDay.id, day_order: insertedDay.day_order, availableDayOrders: Array.from(dayExercisesMap.keys()) });
             }
           });
 
           if (allExercises.length > 0) {
-            planLogger.info('准备插入动作', { count: allExercises.length });
+            planLogger.info('Preparing to insert exercises', { count: allExercises.length });
             const { error: exercisesError } = await supabase
               .from('plan_exercises')
               .insert(allExercises);
 
             if (exercisesError) {
-              planLogger.error('批量添加动作失败', { error: exercisesError.message });
+              planLogger.error('Failed to bulk-add exercises', { error: exercisesError.message });
             } else {
-              planLogger.info('批量添加动作成功', { count: allExercises.length });
+              planLogger.info('Bulk-added exercises successfully', { count: allExercises.length });
             }
           }
         }
       }
     }
 
-    planLogger.info('创建自定义计划成功', { planId: newPlan.id, dayCount: planData.days.length });
+    planLogger.info('Created custom plan successfully', { planId: newPlan.id, dayCount: planData.days.length });
     
     const { data: fullPlan, error: fullPlanError } = await supabase
       .from('workout_plans')
@@ -906,13 +906,13 @@ export async function createCustomPlan(
       .single();
     
     if (fullPlanError) {
-      planLogger.warn('获取完整计划数据失败', { error: fullPlanError.message });
+      planLogger.warn('Failed to fetch full plan data', { error: fullPlanError.message });
       return { success: true, data: newPlan };
     }
     
     return { success: true, data: fullPlan || newPlan };
   } catch (error) {
-    planLogger.error('创建自定义计划异常', { error: String(error) });
+    planLogger.error('Error creating custom plan', { error: String(error) });
     return { success: false, error: String(error) };
   }
 }
@@ -922,7 +922,7 @@ export async function getTodayWorkout() {
   if (!a.ok) return a.result;
   const userId = a.userId;
   try {
-    planLogger.info('获取今日训练', { userId });
+    planLogger.info("Fetching today's workout", { userId });
 
     const { data: settingsWithPlan, error } = await supabase
       .from('user_settings')
@@ -960,11 +960,11 @@ export async function getTodayWorkout() {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      planLogger.warn('获取用户设置失败', { error: error.message });
+      planLogger.warn('Failed to fetch user settings', { error: error.message });
     }
 
     if (!settingsWithPlan?.workout_plans) {
-      planLogger.info('用户无当前计划', { userId });
+      planLogger.info('User has no current plan', { userId });
       return { success: true, data: null };
     }
 
@@ -988,7 +988,7 @@ export async function getTodayWorkout() {
     const isRestDay = result?.isRestDay ?? false;
     const exercises = result?.exercises ?? [];
 
-    planLogger.info('获取今日训练成功', {
+    planLogger.info("Fetched today's workout successfully", {
       planId: plan.id,
       dayName: todayDay?.name,
       exerciseCount: exercises.length,
@@ -1005,7 +1005,7 @@ export async function getTodayWorkout() {
         },
         todayDay: {
           id: todayDay?.id,
-          name: isRestDay ? '休息日' : todayDay?.name,
+          name: isRestDay ? 'Rest day' : todayDay?.name,
           dayOrder: todayDay?.day_order,
           isRestDay: isRestDay,
           focusMuscles: todayDay?.focus_muscles,
@@ -1016,7 +1016,7 @@ export async function getTodayWorkout() {
       },
     };
   } catch (error) {
-    planLogger.error('获取今日训练异常', { error: String(error) });
+    planLogger.error("Error fetching today's workout", { error: String(error) });
     return { success: false, error: String(error) };
   }
 }

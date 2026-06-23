@@ -1,6 +1,6 @@
 # FitCore — AI-Powered Fitness Coaching Platform
 
-> 基于 RAG + Agent Tool Calling 的全栈 AI 健身教练平台
+> A full-stack AI fitness coaching platform built on RAG + Agent Tool Calling
 
 **Live Demo:** [fitcore-web-eight.vercel.app](https://fitcore-web-eight.vercel.app/)
 
@@ -10,52 +10,52 @@
 
 ```mermaid
 flowchart TD
-    User(["👤 用户"])
+    User(["👤 User"])
 
-    subgraph Frontend ["前端 · Next.js 15 (Vercel)"]
-        Widget["AI Chat Widget\n流式 SSE 消费"]
+    subgraph Frontend ["Frontend · Next.js 15 (Vercel)"]
+        Widget["AI Chat Widget\nstreaming SSE consumer"]
         Route["POST /api/ai/chat\nReadableStream"]
         Agent["Agent Core\nTool Calling Loop"]
     end
 
-    subgraph Tools ["Agent 工具层"]
-        T1["set_retrieval_params\n声明 k 值（LLM 决策）"]
-        T2["query_knowledge_base\n调 /v1/retrieve"]
-        T3["get_user_stats\n读 Supabase 用户数据"]
+    subgraph Tools ["Agent tool layer"]
+        T1["set_retrieval_params\ndeclare k value (LLM decision)"]
+        T2["query_knowledge_base\ncalls /v1/retrieve"]
+        T3["get_user_stats\nreads Supabase user data"]
     end
 
-    subgraph RAG ["RAG 后端 · FastAPI (Python)"]
-        Retrieve["/v1/retrieve\n纯检索端点"]
-        Chat["/v1/chat\n检索 + 生成"]
+    subgraph RAG ["RAG backend · FastAPI (Python)"]
+        Retrieve["/v1/retrieve\nretrieval-only endpoint"]
+        Chat["/v1/chat\nretrieval + generation"]
         Pipeline["Retrieval Pipeline"]
     end
 
-    subgraph Pipeline ["检索 Pipeline"]
-        Vec["向量检索\nGemini Embeddings\ngemini-embedding-001"]
-        BM25["BM25 关键词检索"]
-        Ensemble["Ensemble Retriever\n权重 50/50"]
-        Rerank["CrossEncoder 重排序\nbge-reranker-base"]
-        Trim["动态裁剪\nk ∈ {3, 5, 8}"]
+    subgraph Pipeline ["Retrieval Pipeline"]
+        Vec["vector retrieval\nGemini Embeddings\ngemini-embedding-001"]
+        BM25["BM25 keyword retrieval"]
+        Ensemble["Ensemble Retriever\nweights 50/50"]
+        Rerank["CrossEncoder rerank\nbge-reranker-base"]
+        Trim["dynamic trimming\nk ∈ {3, 5, 8}"]
     end
 
-    subgraph Storage ["存储层"]
+    subgraph Storage ["Storage layer"]
         Supabase[("Supabase\nPostgreSQL + pgvector")]
-        Chroma[("Chroma\n本地向量库")]
+        Chroma[("Chroma\nlocal vector store")]
     end
 
     subgraph LLM ["LLM · Google Gemini"]
-        Qwen1["gemini-2.5-flash\nAgent 规划（低温度）"]
-        Qwen2["gemini-2.5-flash\n流式生成（高温度）"]
+        Qwen1["gemini-2.5-flash\nAgent planning (low temperature)"]
+        Qwen2["gemini-2.5-flash\nstreaming generation (high temperature)"]
     end
 
-    User -->|"输入消息"| Widget
+    User -->|"send message"| Widget
     Widget -->|"SSE fetch"| Route
     Route --> Agent
 
-    Agent -->|"Step 1: 规划\ntool_choice=auto"| Qwen1
-    Qwen1 -->|"并行 tool_calls"| T1 & T2 & T3
+    Agent -->|"Step 1: planning\ntool_choice=auto"| Qwen1
+    Qwen1 -->|"parallel tool_calls"| T1 & T2 & T3
 
-    T1 -->|"k 值写入上下文"| Agent
+    T1 -->|"k value written to context"| Agent
     T2 --> Retrieve
     T3 --> Supabase
 
@@ -63,85 +63,85 @@ flowchart TD
     Vec & BM25 --> Ensemble --> Rerank --> Trim
     Trim -->|"top-k chunks"| T2
 
-    Vec <-->|"向量搜索"| Supabase
-    Vec <-->|"向量搜索"| Chroma
-    BM25 <-->|"全量文档"| Supabase
+    Vec <-->|"vector search"| Supabase
+    Vec <-->|"vector search"| Chroma
+    BM25 <-->|"full document set"| Supabase
 
-    Agent -->|"Step 3: 流式生成"| Qwen2
+    Agent -->|"Step 3: streaming generation"| Qwen2
     Qwen2 -->|"token stream"| Route
     Route -->|"SSE data: {type:'token'}"| Widget
-    Widget -->|"实时追加"| User
+    Widget -->|"append in real time"| User
 ```
 
 ---
 
 ## Tech Stack
 
-| 层级 | 技术 |
+| Layer | Technology |
 |---|---|
-| **前端框架** | Next.js 15 · React 19 · TypeScript |
-| **UI / 样式** | Tailwind CSS 4 · Radix UI · shadcn/ui |
-| **认证** | Supabase Auth（Google OAuth + 邮箱密码） |
-| **后端框架** | FastAPI · Uvicorn (Python) |
-| **RAG 框架** | LangChain 1.2 · LangChain Community |
-| **向量数据库** | Supabase pgvector（生产）· Chroma（本地） |
-| **Embedding 模型** | Gemini gemini-embedding-001（默认 768 维，可调 EMBEDDING_DIM） |
-| **Chat 模型** | Google Gemini (默认 gemini-2.5-flash，可通过环境变量切换) via OpenAI 兼容端点 |
-| **重排序** | HuggingFace CrossEncoder (bge-reranker-base) |
-| **数据库** | Supabase PostgreSQL |
-| **部署** | Vercel（前端）· 自有服务器（RAG 后端） |
+| **Frontend framework** | Next.js 15 · React 19 · TypeScript |
+| **UI / styling** | Tailwind CSS 4 · Radix UI · shadcn/ui |
+| **Authentication** | Supabase Auth (Google OAuth + email/password) |
+| **Backend framework** | FastAPI · Uvicorn (Python) |
+| **RAG framework** | LangChain 1.2 · LangChain Community |
+| **Vector database** | Supabase pgvector (production) · Chroma (local) |
+| **Embedding model** | Gemini gemini-embedding-001 (default 768 dims, tunable via EMBEDDING_DIM) |
+| **Chat model** | Google Gemini (default gemini-2.5-flash, switchable via environment variable) through an OpenAI-compatible endpoint |
+| **Reranking** | HuggingFace CrossEncoder (bge-reranker-base) |
+| **Database** | Supabase PostgreSQL |
+| **Deployment** | Vercel (frontend) · self-hosted server (RAG backend) |
 
 ---
 
 ## Key Features
 
 ### 🤖 Agent + Tool Calling
-放弃传统关键词规则分类，改用 LLM 自主决策工具调用：
+Instead of traditional keyword/rule-based classification, the LLM autonomously decides which tools to call:
 
-- `set_retrieval_params` — LLM 根据问题复杂度声明召回数量 k（3 / 5 / 8）
-- `query_knowledge_base` — 调用 RAG 检索端点获取专业健身知识
-- `get_user_stats` — 读取用户今日饮食 / 运动 / 目标数据
+- `set_retrieval_params` — the LLM declares how many results to retrieve, k (3 / 5 / 8), based on question complexity
+- `query_knowledge_base` — calls the RAG retrieval endpoint to fetch professional fitness knowledge
+- `get_user_stats` — reads the user's nutrition / workout / goal data for today
 
-复杂问题（"深蹲和硬拉的区别及如何搭配训练计划"）→ LLM 同时调用三个工具，全程只有 2 次 LLM API 调用。
+Complex questions (e.g. "the difference between squats and deadlifts and how to combine them into a training plan") → the LLM calls all three tools at once, with only 2 LLM API calls in total.
 
-### ⚡ 流式输出 (SSE)
-API 路由返回 `ReadableStream`，Chat Widget 逐 token 追加，首字响应时间 < 1s。
+### ⚡ Streaming output (SSE)
+The API route returns a `ReadableStream`, and the Chat Widget appends tokens one by one, with a time-to-first-token under 1s.
 
-### 📚 混合检索 RAG Pipeline
+### 📚 Hybrid retrieval RAG pipeline
 ```
-向量检索 (k=10)  +  BM25 关键词检索 (k=10)
+vector retrieval (k=10)  +  BM25 keyword retrieval (k=10)
           ↓ Ensemble (50/50)
-     CrossEncoder 重排序
-          ↓ 动态裁剪（k 由 LLM 决定）
-       最终上下文 chunks
+     CrossEncoder rerank
+          ↓ dynamic trimming (k decided by the LLM)
+       final context chunks
 ```
 
-### 📊 RAG 评估体系
-15 条覆盖不同难度和主题的黄金测试集，使用 LLM-as-Judge 方法评估：
-- **相关性 (Relevance)** — 回答是否切题
-- **完整性 (Completeness)** — 是否涵盖关键信息
-- **准确性 (Accuracy)** — 内容是否符合专业知识
+### 📊 RAG evaluation framework
+A golden test set of 15 questions covering different difficulty levels and topics, evaluated with the LLM-as-Judge method:
+- **Relevance** — whether the answer is on topic
+- **Completeness** — whether it covers the key information
+- **Accuracy** — whether the content matches professional knowledge
 
-### 💾 数据追踪
-- 每日热量 / 蛋白质 / 碳水 / 脂肪 / 饮水记录
-- 训练计划管理（拖拽排序）
-- 多轮对话历史持久化
+### 💾 Data tracking
+- Daily calories / protein / carbs / fat / water logging
+- Training plan management (drag-and-drop ordering)
+- Persisted multi-turn conversation history
 
 ---
 
 ## RAG Evaluation Results
 
-> 运行方式：`cd Rag && python eval/evaluate.py`（需先启动 RAG 后端）
+> How to run: `cd Rag && python eval/evaluate.py` (start the RAG backend first)
 
-| 指标 | 得分 |
+| Metric | Score |
 |---|---|
-| **平均相关性** | `1.000` |
-| **平均完整性** | `0.853` |
-| **平均准确性** | `1.000` |
-| **平均延迟** | `17586 ms` |
-| **平均引用条数** | `3.0` |
+| **Average relevance** | `1.000` |
+| **Average completeness** | `0.853` |
+| **Average accuracy** | `1.000` |
+| **Average latency** | `17586 ms` |
+| **Average number of citations** | `3.0` |
 
-*跑完评估后将 `eval/eval_report_*.json` 中 summary 的数值填入上表。*
+*After running the evaluation, fill the table above with the summary values from `eval/eval_report_*.json`.*
 
 ---
 
@@ -149,89 +149,89 @@ API 路由返回 `ReadableStream`，Chat Widget 逐 token 追加，首字响应�
 
 ```
 Fitcore/
-├── fitcore-web/                # Next.js 前端
+├── fitcore-web/                # Next.js frontend
 │   ├── app/
-│   │   └── api/ai/chat/        # SSE 流式 API 路由
+│   │   └── api/ai/chat/        # SSE streaming API route
 │   ├── components/
-│   │   └── ai-chat-widget.tsx  # 流式 Chat UI
+│   │   └── ai-chat-widget.tsx  # streaming Chat UI
 │   └── lib/ai/
-│       ├── agent.ts            # Agent 核心（Tool Calling Loop）
-│       ├── rag-client.ts       # RAG 服务客户端
-│       └── types.ts            # 类型定义
+│       ├── agent.ts            # Agent core (Tool Calling Loop)
+│       ├── rag-client.ts       # RAG service client
+│       └── types.ts            # type definitions
 │
-└── Rag/                        # Python RAG 后端
-    ├── backend_api.py          # FastAPI 路由（/v1/chat · /v1/retrieve）
+└── Rag/                        # Python RAG backend
+    ├── backend_api.py          # FastAPI routes (/v1/chat · /v1/retrieve)
     ├── rag.py                  # RagService + compute_retrieval_k
-    ├── vector_stores.py        # Chroma 混合检索
+    ├── vector_stores.py        # Chroma hybrid retrieval
     ├── vector_stores_supabase.py
-    ├── knowledge_base.py       # 知识库管理
+    ├── knowledge_base.py       # knowledge base management
     └── eval/
-        ├── golden_dataset.json # 15 条评估测试集
-        └── evaluate.py         # LLM-as-Judge 评估脚本
+        ├── golden_dataset.json # 15-question evaluation test set
+        └── evaluate.py         # LLM-as-Judge evaluation script
 ```
 
 ---
 
 ## Quick Start
 
-### 前端
+### Frontend
 
 ```bash
 cd fitcore-web
-cp .env.local.example .env.local   # 填写 Supabase / Gemini key
+cp .env.local.example .env.local   # fill in Supabase / Gemini key
 npm install
 npm run dev
 ```
 
-### RAG 后端
+### RAG backend
 
 ```bash
 cd Rag
-cp .env.example .env               # 填写 GOOGLE_AI_STUDIO_API_KEY 等
+cp .env.example .env               # fill in GOOGLE_AI_STUDIO_API_KEY, etc.
 pip install -r requirements.txt
-python backend_api.py              # 启动在 :8000
+python backend_api.py              # starts on :8000
 ```
 
-### 运行 RAG 评估
+### Running the RAG evaluation
 
 ```bash
-# 后端启动后：
+# after the backend is started:
 cd Rag
 python eval/evaluate.py
-# 输出 eval/eval_report_<timestamp>.json
+# outputs eval/eval_report_<timestamp>.json
 ```
 
 ---
 
 ## Environment Variables
 
-### 前端 (`fitcore-web/.env.local`)
+### Frontend (`fitcore-web/.env.local`)
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=   # 公开 key，cookie 会话客户端（登录/注册/Google OAuth）使用
-SUPABASE_SERVICE_ROLE_KEY=   # 服务端专用（server action + middleware），绕过 RLS，禁止暴露到浏览器
-GOOGLE_AI_STUDIO_API_KEY=    # 一个 Gemini key 覆盖对话/解析/视觉全部 AI 功能
+NEXT_PUBLIC_SUPABASE_ANON_KEY=   # public key, used by the cookie session client (sign-in/sign-up/Google OAuth)
+SUPABASE_SERVICE_ROLE_KEY=   # server-side only (server actions + middleware), bypasses RLS, must never be exposed to the browser
+GOOGLE_AI_STUDIO_API_KEY=    # a single Gemini key covers all AI features: chat / parsing / vision
 AI_CHAT_MODEL=gemini-2.5-flash
 AI_FAST_MODEL=gemini-2.5-flash
 GEMINI_VISION_MODEL=gemini-2.5-flash
 RAG_SERVICE_URL=http://your-rag-server:8000
-# 可选：指向其他 OpenAI 兼容供应商（设置后覆盖 Gemini 默认）
+# Optional: point at another OpenAI-compatible provider (overrides the Gemini default when set)
 # OPENAI_API_KEY=
 # OPENAI_BASE_URL=
 ```
 
-### RAG 后端 (`Rag/.env`)
+### RAG backend (`Rag/.env`)
 
 ```env
-GOOGLE_AI_STUDIO_API_KEY=        # Gemini key（chat + embedding 共用）
+GOOGLE_AI_STUDIO_API_KEY=        # Gemini key (shared by chat + embedding)
 RAG_CHAT_MODEL=gemini-2.5-flash
 EMBEDDING_MODEL=models/gemini-embedding-001
-EMBEDDING_DIM=768                # 必须与 Supabase migration 的 vector(N) 一致
-VECTOR_BACKEND=supabase          # 或 chroma
+EMBEDDING_DIM=768                # must match the vector(N) in the Supabase migration
+VECTOR_BACKEND=supabase          # or chroma
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 RERANKER_ENABLED=true
-RERANKER_MODEL_NAME=             # HuggingFace model id，或留空用本地路径
+RERANKER_MODEL_NAME=             # HuggingFace model id, or leave empty to use a local path
 EVAL_JUDGE_MODEL=gemini-2.5-flash
 ```

@@ -2,7 +2,6 @@
 
 import { memo } from 'react'
 import { ThemeToggle } from './theme-toggle'
-import { LanguageToggle } from './language-toggle'
 import { QuickLogTriggerPill } from '@/components/log-form/quick-log-trigger'
 import { useT } from '@/lib/i18n/provider'
 
@@ -34,7 +33,6 @@ export const TopBar = memo(function TopBar({ pageTitle, greeting, userName }: To
 
         <div className="flex items-center gap-2 shrink-0">
           <QuickLogTriggerPill />
-          <LanguageToggle />
           <ThemeToggle />
         </div>
       </div>

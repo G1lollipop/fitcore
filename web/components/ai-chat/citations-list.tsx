@@ -4,7 +4,7 @@ import type { Citation } from '@/lib/ai/types'
 import { useT } from '@/lib/i18n/provider'
 import { isHttpUrl } from './utils'
 
-/** Renders the small "引用" card under an assistant message. Returns null when empty. */
+/** Renders the small "Citations" card under an assistant message. Returns null when empty. */
 export function CitationsList({ citations }: { citations: Citation[] }) {
   const t = useT()
   if (citations.length === 0) return null

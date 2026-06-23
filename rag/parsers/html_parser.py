@@ -1,5 +1,5 @@
 """
-HTML 文件解析器
+HTML file parser.
 """
 
 from typing import Dict, Any, Optional
@@ -7,33 +7,33 @@ from .base_parser import BaseFileParser
 
 
 class HtmlParser(BaseFileParser):
-    """HTML 文件解析器"""
+    """HTML file parser."""
 
     def parse(self, file_content: bytes, filename: str, **kwargs) -> Dict[str, Any]:
-        """解析 HTML 文件"""
+        """Parse an HTML file."""
         try:
             from bs4 import BeautifulSoup
 
             html_text = self._safe_decode(file_content)
             soup = BeautifulSoup(html_text, "html.parser")
 
-            # 移除 script 和 style 标签
+            # Remove script and style tags.
             for script in soup(["script", "style", "noscript"]):
                 script.decompose()
 
-            # 提取文本内容
+            # Extract text content.
             text = soup.get_text(separator="\n", strip=True)
 
-            # 提取元数据
+            # Extract metadata.
             metadata = self._extract_basic_metadata(filename)
             metadata["file_type"] = "text/html"
             metadata["character_count"] = len(text)
 
-            # HTML 文档元数据
+            # HTML document metadata.
             if soup.title:
                 metadata["title"] = soup.title.string
 
-            # Meta 标签
+            # Meta tags.
             meta_tags = soup.find_all("meta")
             for meta in meta_tags:
                 name = meta.get("name") or meta.get("property")
@@ -44,7 +44,7 @@ class HtmlParser(BaseFileParser):
                     elif name.startswith("og:"):
                         metadata[f"og_{name[3:]}"] = content
 
-            # 统计 HTML 元素
+            # Count HTML elements.
             metadata["link_count"] = len(soup.find_all("a"))
             metadata["image_count"] = len(soup.find_all("img"))
             metadata["heading_count"] = len(
@@ -62,18 +62,18 @@ class HtmlParser(BaseFileParser):
                 "text": "",
                 "metadata": self._extract_basic_metadata(filename),
                 "success": False,
-                "error": "beautifulsoup4 未安装，请运行: pip install beautifulsoup4",
+                "error": "beautifulsoup4 is not installed; please run: pip install beautifulsoup4",
             }
         except Exception as e:
             return {
                 "text": "",
                 "metadata": self._extract_basic_metadata(filename),
                 "success": False,
-                "error": f"HTML 解析失败: {str(e)}",
+                "error": f"HTML parsing failed: {str(e)}",
             }
 
     def can_parse(self, filename: str, mime_type: Optional[str] = None) -> bool:
-        """判断是否为 HTML 文件"""
+        """Determine whether the file is an HTML file."""
         if mime_type:
             return mime_type in ["text/html", "application/xhtml+xml"]
         return filename.lower().endswith((".html", ".htm", ".xhtml"))

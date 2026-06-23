@@ -8,15 +8,16 @@ function storageKey(userId: string): string {
   return `${STORAGE_PREFIX}:${userId}`
 }
 
-/** 防止串用户或乱写入 localStorage 的脏数据 */
+/** Guards against cross-user leakage or junk data written into localStorage. */
 function isValidStoredId(userId: string, value: string | null): value is string {
   if (!value || value.length < 12 || value.length > 512) return false
   return value.startsWith(`fitcore-${userId}-`)
 }
 
 /**
- * 读取本机持久化的 RAG session id；若无或无效则创建并写入。
- * 仅客户端可用；SSR 下返回新 id（不落盘，首屏 effect 会再跑一遍）。
+ * Reads the locally persisted RAG session id; creates and stores one if it is
+ * missing or invalid. Client-only; under SSR it returns a fresh id (not
+ * persisted — the first-paint effect runs this again).
  */
 export function loadOrCreateConversationId(userId: string): string {
   if (!userId) return createConversationId("anon")
@@ -31,14 +32,14 @@ export function loadOrCreateConversationId(userId: string): string {
       return raw
     }
   } catch {
-    // 隐私模式 / 配额等
+    // private mode / quota exceeded, etc.
   }
 
   const fresh = createConversationId(userId)
   try {
     window.localStorage.setItem(storageKey(userId), fresh)
   } catch {
-    // 仍返回 fresh，至少当前标签页内 RAG 会话连续
+    // still return fresh — at least the RAG session stays continuous within this tab
   }
   return fresh
 }

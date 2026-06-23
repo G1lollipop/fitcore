@@ -1,5 +1,5 @@
 """
-文件解析器抽象基类
+Abstract base class for file parsers.
 """
 
 from abc import ABC, abstractmethod
@@ -7,54 +7,54 @@ from typing import Dict, Optional, Any
 
 
 class BaseFileParser(ABC):
-    """文件解析器抽象基类"""
+    """Abstract base class for file parsers."""
 
     def __init__(self):
-        """初始化解析器"""
+        """Initialize the parser."""
         pass
 
     @abstractmethod
     def parse(self, file_content: bytes, filename: str, **kwargs) -> Dict[str, Any]:
         """
-        解析文件内容，提取文本和元数据
+        Parse file content, extracting text and metadata.
 
         Args:
-            file_content: 文件的二进制内容
-            filename: 文件名
-            **kwargs: 额外参数（如编码、提取图片等）
+            file_content: Binary content of the file
+            filename: File name
+            **kwargs: Extra arguments (e.g. encoding, image extraction)
 
         Returns:
-            Dict包含以下键：
-                - 'text': str, 提取的文本内容
-                - 'metadata': dict, 文件元数据（如作者、创建时间等）
-                - 'success': bool, 是否解析成功
-                - 'error': str, 错误信息（如果失败）
+            Dict with the following keys:
+                - 'text': str, extracted text content
+                - 'metadata': dict, file metadata (e.g. author, creation time)
+                - 'success': bool, whether parsing succeeded
+                - 'error': str, error message (if it failed)
         """
         pass
 
     @abstractmethod
     def can_parse(self, filename: str, mime_type: Optional[str] = None) -> bool:
         """
-        判断是否能解析该文件
+        Determine whether this parser can handle the file.
 
         Args:
-            filename: 文件名
-            mime_type: MIME类型（可选）
+            filename: File name
+            mime_type: MIME type (optional)
 
         Returns:
-            bool: 是否能解析
+            bool: whether the file can be parsed
         """
         pass
 
     def _extract_basic_metadata(self, filename: str) -> Dict[str, Any]:
         """
-        提取基础元数据（文件名、扩展名等）
+        Extract basic metadata (file name, extension, etc.).
 
         Args:
-            filename: 文件名
+            filename: File name
 
         Returns:
-            基础元数据字典
+            Basic metadata dictionary
         """
         from pathlib import Path
 
@@ -67,14 +67,14 @@ class BaseFileParser(ABC):
 
     def _safe_decode(self, content: bytes, encodings: list = None) -> str:
         """
-        安全解码字节内容，尝试多种编码
+        Safely decode byte content, trying multiple encodings.
 
         Args:
-            content: 字节内容
-            encodings: 编码列表，默认 ['utf-8', 'gbk', 'gb2312', 'latin-1']
+            content: Byte content
+            encodings: List of encodings, defaults to ['utf-8', 'gbk', 'gb2312', 'latin-1']
 
         Returns:
-            解码后的字符串
+            The decoded string
         """
         if encodings is None:
             encodings = ["utf-8", "gbk", "gb2312", "latin-1"]
@@ -85,5 +85,5 @@ class BaseFileParser(ABC):
             except UnicodeDecodeError:
                 continue
 
-        # 如果所有编码都失败，使用 errors='ignore' 强制解码
+        # If every encoding fails, force-decode with errors='ignore'.
         return content.decode("utf-8", errors="ignore")

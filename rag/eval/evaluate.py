@@ -1,27 +1,27 @@
 """
-RAG 评估 Pipeline
-=================
+RAG evaluation Pipeline
+=======================
 
-运行方式：
-    cd Rag
+How to run:
+    cd rag
     python eval/evaluate.py
 
-前置条件：
-    1. RAG 后端已启动（python backend_api.py）
-    2. 设置好 GOOGLE_AI_STUDIO_API_KEY 环境变量（或在 .env 里）
+Prerequisites:
+    1. The RAG backend is running (python backend_api.py)
+    2. GOOGLE_AI_STUDIO_API_KEY is set (in the environment or .env)
 
-评估维度（LLM-as-Judge，每项 1-5 分，最终归一化到 0-1）：
-    - relevance     : 回答是否切题
-    - completeness  : 是否涵盖关键信息
-    - accuracy      : 内容是否准确可靠
+Evaluation dimensions (LLM-as-Judge, 1-5 each, finally normalized to 0-1):
+    - relevance     : whether the answer is on topic
+    - completeness  : whether it covers the key information
+    - accuracy      : whether the content is accurate and reliable
 
-附加指标（不需要 LLM）：
-    - citation_count: 返回的引用条数
-    - latency_ms    : 请求延迟（毫秒）
+Additional metrics (no LLM required):
+    - citation_count: number of citations returned
+    - latency_ms    : request latency (milliseconds)
 
-报告输出：
-    - 控制台摘要表格
-    - eval/eval_report_<timestamp>.json（详细结果）
+Report output:
+    - console summary table
+    - eval/eval_report_<timestamp>.json (detailed results)
 """
 
 import json
@@ -35,11 +35,11 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-# 加载 Rag/.env
+# Load rag/.env
 _ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(_ROOT / ".env")
 
-# 让本脚本能 import app.* (复用主后端的 settings)
+# Allow this script to import app.* (reusing the main backend's settings)
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
@@ -50,16 +50,16 @@ from app.core.settings import get_settings  # noqa: E402
 _settings = get_settings()
 
 RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://127.0.0.1:8000")
-# 评判模型默认与主后端一致；EVAL_JUDGE_MODEL 仍可单独覆盖。
+# The judge model defaults to the main backend's; EVAL_JUDGE_MODEL can still override it.
 JUDGE_MODEL = os.getenv("EVAL_JUDGE_MODEL") or _settings.rag_chat_model
 DATASET_PATH = Path(__file__).parent / "golden_dataset_en.json"
 
 
 def _build_judge_llm() -> ChatOpenAI:
-    """与 RagService 一致：走 Gemini 的 OpenAI 兼容端点。"""
+    """Same as RagService: use Gemini's OpenAI-compatible endpoint."""
     if not _settings.llm_api_key:
         raise RuntimeError(
-            "LLM API key 未配置 (GOOGLE_AI_STUDIO_API_KEY)；评判器无法调用 LLM"
+            "LLM API key is not configured (GOOGLE_AI_STUDIO_API_KEY); the judge cannot call the LLM"
         )
     return ChatOpenAI(
         model=JUDGE_MODEL,
@@ -79,11 +79,11 @@ def _get_judge_llm() -> ChatOpenAI:
     return _JUDGE_LLM
 
 
-# ─── 调用 RAG 服务 ──────────────────────────────────────────────────────────
+# ─── Call the RAG service ───────────────────────────────────────────────────
 
 
 def call_rag(question: str, session_id: str) -> dict:
-    """调用 /v1/chat，返回回答、引用和延迟。"""
+    """Call /v1/chat and return the answer, citations, and latency."""
     start = time.time()
     try:
         resp = requests.post(
@@ -112,53 +112,53 @@ def call_rag(question: str, session_id: str) -> dict:
     }
 
 
-# ─── LLM 评判 ──────────────────────────────────────────────────────────────
+# ─── LLM judging ────────────────────────────────────────────────────────────
 
 
 def judge_answer(question: str, answer: str, expected_keywords: list[str]) -> dict:
     """
-    用 Gemini 作为评判 LLM，对回答质量打分。
-    每项满分 5 分，最终归一化到 [0, 1]。
+    Use Gemini as the judge LLM to score answer quality.
+    Each dimension is out of 5 and finally normalized to [0, 1].
     """
     if not answer.strip():
         return {
             "relevance": 0.0,
             "completeness": 0.0,
             "accuracy": 0.0,
-            "comment": "回答为空",
+            "comment": "Empty answer",
         }
 
-    kw_list = "、".join(expected_keywords) if expected_keywords else "（无）"
+    kw_list = ", ".join(expected_keywords) if expected_keywords else "(none)"
 
-    prompt = f"""你是一个 RAG 系统质量评估专家。请评估以下健身问答的质量。
+    prompt = f"""You are a quality-evaluation expert for RAG systems. Evaluate the quality of the following fitness Q&A.
 
-【用户问题】
+[User question]
 {question}
 
-【系统回答】
+[System answer]
 {answer}
 
-【参考关键信息（评估完整性用）】
+[Reference key information (for assessing completeness)]
 {kw_list}
 
-请从以下三个维度打分（每项 1-5 分整数）：
-1. relevance（相关性）：回答是否直接回应了问题
-2. completeness（完整性）：回答是否涵盖了参考关键信息中的要点
-3. accuracy（准确性）：回答内容是否符合健身领域的专业知识
+Score the answer on the following three dimensions (each an integer from 1 to 5):
+1. relevance: does the answer directly address the question
+2. completeness: does the answer cover the points in the reference key information
+3. accuracy: is the answer consistent with professional knowledge in the fitness domain
 
-只输出 JSON，格式：
-{{"relevance": <1-5>, "completeness": <1-5>, "accuracy": <1-5>, "comment": "<不超过30字的评语>"}}"""
+Output JSON only, in the format:
+{{"relevance": <1-5>, "completeness": <1-5>, "accuracy": <1-5>, "comment": "<comment of at most 30 words>"}}"""
 
     try:
         llm = _get_judge_llm()
         response = llm.invoke(prompt)
         content: str = (response.content or "").strip() if response is not None else ""
         if not content:
-            raise ValueError("评判模型返回了空内容")
-        # 提取 JSON（模型可能在 JSON 前后加解释性文字）
+            raise ValueError("The judge model returned empty content")
+        # Extract JSON (the model may add explanatory text before/after the JSON)
         m = re.search(r"\{[^{}]+\}", content, re.DOTALL)
         if not m:
-            raise ValueError(f"无法从模型输出中提取 JSON：{content[:200]}")
+            raise ValueError(f"Could not extract JSON from the model output: {content[:200]}")
         scores = json.loads(m.group())
         return {
             "relevance": round(scores.get("relevance", 0) / 5, 3),
@@ -167,28 +167,28 @@ def judge_answer(question: str, answer: str, expected_keywords: list[str]) -> di
             "comment": scores.get("comment", ""),
         }
     except Exception as exc:
-        print(f"  [判断器错误] {exc}")
+        print(f"  [judge error] {exc}")
         return {
             "relevance": 0.0,
             "completeness": 0.0,
             "accuracy": 0.0,
-            "comment": f"评估失败: {exc}",
+            "comment": f"Evaluation failed: {exc}",
         }
 
 
-# ─── 主评估流程 ─────────────────────────────────────────────────────────────
+# ─── Main evaluation flow ─────────────────────────────────────────────────────
 
 
 def evaluate():
     dataset: list[dict] = json.loads(DATASET_PATH.read_text(encoding="utf-8"))
     results: list[dict] = []
 
-    print("=== FitCore RAG 评估 Pipeline ===")
-    print(f"服务地址 : {RAG_SERVICE_URL}")
-    print(f"评判模型 : {JUDGE_MODEL}")
-    print(f"测试用例 : {len(dataset)} 条\n")
+    print("=== FitCore RAG evaluation Pipeline ===")
+    print(f"Service URL : {RAG_SERVICE_URL}")
+    print(f"Judge model : {JUDGE_MODEL}")
+    print(f"Test cases  : {len(dataset)}\n")
     print(
-        f"{'ID':<12} {'问题':<22} {'相关性':>6} {'完整性':>6} {'准确性':>6} {'引用':>4} {'延迟(ms)':>9}"
+        f"{'ID':<12} {'Question':<22} {'Relev':>6} {'Compl':>6} {'Accur':>6} {'Cite':>4} {'Lat(ms)':>9}"
     )
     print("-" * 75)
 
@@ -196,7 +196,7 @@ def evaluate():
         q = item["question"]
         session_id = f"eval_{item['id']}_{int(time.time())}"
 
-        # 调用 RAG
+        # Call RAG
         rag_result = call_rag(q, session_id)
 
         if rag_result["error"]:
@@ -206,7 +206,7 @@ def evaluate():
             )
             continue
 
-        # LLM 评判
+        # LLM judging
         scores = judge_answer(
             q, rag_result["answer"], item.get("expected_keywords", [])
         )
@@ -229,13 +229,13 @@ def evaluate():
             f"{rag_result['retrieved_count']:>4} {rag_result['latency_ms']:>9}"
         )
 
-        # 避免 API 限速
+        # Avoid API rate limiting
         time.sleep(0.5)
 
-    # ── 汇总 ──────────────────────────────────────────────────────────────
+    # ── Summary ───────────────────────────────────────────────────────────
     valid = [r for r in results if "error" not in r]
     if not valid:
-        print("\n没有有效结果，请检查 RAG 服务是否启动。")
+        print("\nNo valid results. Check whether the RAG service is running.")
         return
 
     avg_rel = sum(r["relevance"] for r in valid) / len(valid)
@@ -246,7 +246,7 @@ def evaluate():
 
     print("-" * 75)
     print(
-        f"{'平均':>34} {avg_rel:>6.3f} {avg_com:>6.3f} {avg_acc:>6.3f} "
+        f"{'Average':>34} {avg_rel:>6.3f} {avg_com:>6.3f} {avg_acc:>6.3f} "
         f"{avg_cit:>4.1f} {avg_lat:>9.0f}"
     )
 
@@ -272,9 +272,9 @@ def evaluate():
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
-    print(f"\n报告已保存至: {report_path}")
+    print(f"\nReport saved to: {report_path}")
     print(
-        f"\n【汇总】相关性 {avg_rel:.3f} | 完整性 {avg_com:.3f} | 准确性 {avg_acc:.3f} | 平均延迟 {avg_lat:.0f}ms"
+        f"\n[Summary] relevance {avg_rel:.3f} | completeness {avg_com:.3f} | accuracy {avg_acc:.3f} | avg latency {avg_lat:.0f}ms"
     )
 
 
