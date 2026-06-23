@@ -187,7 +187,11 @@ def main() -> int:
     parser.add_argument("--tag", default="")
     args = parser.parse_args()
 
-    ds = _EVAL_DIR / args.dataset if not Path(args.dataset).is_absolute() else Path(args.dataset)
+    ds = (
+        _EVAL_DIR / args.dataset
+        if not Path(args.dataset).is_absolute()
+        else Path(args.dataset)
+    )
     return evaluate_abstention(
         dataset_path=ds,
         use_http=args.http,

@@ -60,16 +60,22 @@ def build_compression_retriever(
     """
     settings = get_settings()
     if not settings.reranker_enabled:
-        print("[RagService] Reranker disabled via environment variable; using base retrieval")
+        print(
+            "[RagService] Reranker disabled via environment variable; using base retrieval"
+        )
         return None
 
     model_ref = settings.reranker_model_ref
     if not model_ref:
-        print("[RagService] No Reranker model reference configured; falling back to base retrieval")
+        print(
+            "[RagService] No Reranker model reference configured; falling back to base retrieval"
+        )
         return None
 
     if is_probable_local_path(model_ref) and not os.path.exists(model_ref):
-        print(f"[RagService] Reranker local path does not exist; falling back to base retrieval: {model_ref}")
+        print(
+            f"[RagService] Reranker local path does not exist; falling back to base retrieval: {model_ref}"
+        )
         return None
 
     # Lazy import: torch / sentence-transformers are only imported when
@@ -95,7 +101,9 @@ def build_compression_retriever(
         compressor = CrossEncoderReranker(model=model, top_n=10)
         print(f"[RagService] Reranker enabled: {model_ref} model_kwargs={model_kwargs}")
     except Exception as exc:  # noqa: BLE001 (startup path)
-        print(f"[RagService] Reranker initialization failed; falling back to base retrieval: {exc}")
+        print(
+            f"[RagService] Reranker initialization failed; falling back to base retrieval: {exc}"
+        )
         return None
 
     return CachedCompressionRetriever(

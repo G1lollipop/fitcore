@@ -208,7 +208,12 @@ class HttpRetriever:
 
         resp = requests.post(
             f"{self.base}/v1/retrieve",
-            json={"query": query, "sessionId": "eval", "userContext": {}, "topK": depth},
+            json={
+                "query": query,
+                "sessionId": "eval",
+                "userContext": {},
+                "topK": depth,
+            },
             timeout=90,
         )
         resp.raise_for_status()
@@ -221,7 +226,11 @@ class HttpRetriever:
         return None
 
     def config_label(self) -> dict:
-        return {"mode": "http", "variant": "ensemble", "endpoint": f"{self.base}/v1/retrieve"}
+        return {
+            "mode": "http",
+            "variant": "ensemble",
+            "endpoint": f"{self.base}/v1/retrieve",
+        }
 
 
 # ─── LLM judge: decide whether a single chunk is relevant to the query ────────
@@ -270,10 +279,14 @@ def judge_chunk_relevant(question: str, text: str) -> bool:
             return t.startswith("y")
         except Exception as exc:  # noqa: BLE001
             msg = str(exc)
-            is_quota = "RESOURCE_EXHAUSTED" in msg or "429" in msg or "quota" in msg.lower()
+            is_quota = (
+                "RESOURCE_EXHAUSTED" in msg or "429" in msg or "quota" in msg.lower()
+            )
             if is_quota and attempt < _JUDGE_MAX_RETRIES - 1:
                 wait = 20 * (attempt + 1)
-                print(f"  [judge] rate-limited; waiting {wait}s then retry ({attempt + 1})...")
+                print(
+                    f"  [judge] rate-limited; waiting {wait}s then retry ({attempt + 1})..."
+                )
                 time.sleep(wait)
                 continue
             print(f"  [judge error] {exc}")
@@ -285,8 +298,17 @@ def judge_chunk_relevant(question: str, text: str) -> bool:
 
 
 def _eval_one_variant(
-    retriever, variant, in_scope, abstain, ks, depth, threshold, use_judge, judge_k,
-    use_http, verbose,
+    retriever,
+    variant,
+    in_scope,
+    abstain,
+    ks,
+    depth,
+    threshold,
+    use_judge,
+    judge_k,
+    use_http,
+    verbose,
 ):
     retriever.set_variant(variant)
     per_query: list[dict] = []
@@ -334,7 +356,9 @@ def _eval_one_variant(
                 time.sleep(_JUDGE_SLEEP)
             for k in ks:
                 if k <= judge_k:
-                    metrics[f"context_precision@{k}"] = rm.context_precision_at_k(judgments, k)
+                    metrics[f"context_precision@{k}"] = rm.context_precision_at_k(
+                        judgments, k
+                    )
                     metrics[f"context_hit@{k}"] = rm.context_hit_at_k(judgments, k)
             judged_n += 1
 
@@ -362,9 +386,9 @@ def _eval_one_variant(
             cp = metrics.get(f"context_precision@{min(judge_k, ks[-1])}")
             cp_s = f" ctxP@{min(judge_k, ks[-1])}={cp:.2f}" if cp is not None else ""
             print(
-                f"{item['id']:<10} {item.get('topic',''):<18} "
-                f"aHit@{ks[-1]}={metrics.get(f'anchor_hit@{ks[-1]}',0):.0f} "
-                f"kwCov@{ks[-1]}={metrics.get(f'keyword_coverage@{ks[-1]}',0):.2f}{cp_s}"
+                f"{item['id']:<10} {item.get('topic', ''):<18} "
+                f"aHit@{ks[-1]}={metrics.get(f'anchor_hit@{ks[-1]}', 0):.0f} "
+                f"kwCov@{ks[-1]}={metrics.get(f'keyword_coverage@{ks[-1]}', 0):.2f}{cp_s}"
             )
         if not use_http:
             time.sleep(0.1)
@@ -440,13 +464,25 @@ def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
 
     summary = results[gate_variant]["summary"]
     failures: list[str] = []
-    rows = ["", "## Retrieval regression gate — variant=" + gate_variant, "", "| Metric | Actual | Floor | Status |", "|---|---|---|---|"]
-    print(f"\n=== Retrieval regression gate (variant={gate_variant}, baseline {baseline_path.name}) ===")
+    rows = [
+        "",
+        "## Retrieval regression gate — variant=" + gate_variant,
+        "",
+        "| Metric | Actual | Floor | Status |",
+        "|---|---|---|---|",
+    ]
+    print(
+        f"\n=== Retrieval regression gate (variant={gate_variant}, baseline {baseline_path.name}) ==="
+    )
     for metric, floor in thresholds.items():
         actual = float(summary.get(metric, 0.0))
         ok = actual + 1e-9 >= float(floor)
-        print(f"  {metric:<22} {actual:>7.3f}  floor {float(floor):>6.3f}  [{'PASS' if ok else 'FAIL'}]")
-        rows.append(f"| {metric} | {actual:.3f} | ≥ {float(floor)} | {'✅' if ok else '❌'} |")
+        print(
+            f"  {metric:<22} {actual:>7.3f}  floor {float(floor):>6.3f}  [{'PASS' if ok else 'FAIL'}]"
+        )
+        rows.append(
+            f"| {metric} | {actual:.3f} | ≥ {float(floor)} | {'✅' if ok else '❌'} |"
+        )
         if not ok:
             failures.append(f"{metric} {actual:.3f} < {floor}")
 
@@ -455,8 +491,12 @@ def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
         frr = results[gate_variant]["abstention"]["false_retrieval_rate"]
         if frr is not None and frr >= 0:
             ok = frr <= float(max_frr) + 1e-9
-            print(f"  {'false_retrieval_rate':<22} {frr:>7.3f}  cap {float(max_frr):>6.3f}  [{'PASS' if ok else 'FAIL'}]")
-            rows.append(f"| false_retrieval_rate | {frr:.3f} | ≤ {float(max_frr)} | {'✅' if ok else '❌'} |")
+            print(
+                f"  {'false_retrieval_rate':<22} {frr:>7.3f}  cap {float(max_frr):>6.3f}  [{'PASS' if ok else 'FAIL'}]"
+            )
+            rows.append(
+                f"| false_retrieval_rate | {frr:.3f} | ≤ {float(max_frr)} | {'✅' if ok else '❌'} |"
+            )
             if not ok:
                 failures.append(f"false_retrieval_rate {frr:.3f} > {max_frr}")
 
@@ -472,9 +512,18 @@ def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
 
 
 def evaluate(
-    ks, use_http, tag, threshold, variant_arg, sweep=None, dataset_path=None,
-    gate=False, baseline_path="retrieval_baseline.json", use_judge=False,
-    judge_k=5, limit=None,
+    ks,
+    use_http,
+    tag,
+    threshold,
+    variant_arg,
+    sweep=None,
+    dataset_path=None,
+    gate=False,
+    baseline_path="retrieval_baseline.json",
+    use_judge=False,
+    judge_k=5,
+    limit=None,
 ) -> int:
     ds_path = Path(dataset_path) if dataset_path else DATASET_PATH
     if not ds_path.is_absolute():
@@ -495,20 +544,33 @@ def evaluate(
     else:
         variants = [variant_arg]
 
-    print("=== FitCore retrieval evaluation (deterministic anchors + optional LLM-judge context relevance) ===")
+    print(
+        "=== FitCore retrieval evaluation (deterministic anchors + optional LLM-judge context relevance) ==="
+    )
     print(f"Dataset   : {ds_path.name}")
     print(f"Config    : {json.dumps(retriever.config_label(), ensure_ascii=False)}")
     print(
         f"in-scope : {len(in_scope)} items | abstention : {len(abstain)} items | candidate depth : {depth}"
     )
-    print(f"k values  : {ks} | variants : {variants} | LLM judge : {use_judge} (judge_k={judge_k})")
+    print(
+        f"k values  : {ks} | variants : {variants} | LLM judge : {use_judge} (judge_k={judge_k})"
+    )
 
     verbose = len(variants) == 1
     results: dict[str, dict] = {}
     for v in variants:
         summary, per_query, abst = _eval_one_variant(
-            retriever, v, in_scope, abstain, ks, depth, threshold, use_judge,
-            judge_k, use_http, verbose,
+            retriever,
+            v,
+            in_scope,
+            abstain,
+            ks,
+            depth,
+            threshold,
+            use_judge,
+            judge_k,
+            use_http,
+            verbose,
         )
         results[v] = {"summary": summary, "per_query": per_query, "abstention": abst}
 
@@ -520,7 +582,10 @@ def evaluate(
         f"keyword_coverage@{ks[-1]}",
     ]
     if use_judge:
-        cmp_cols += [f"context_precision@{min(judge_k, ks[-1])}", f"context_hit@{min(judge_k, ks[-1])}"]
+        cmp_cols += [
+            f"context_precision@{min(judge_k, ks[-1])}",
+            f"context_hit@{min(judge_k, ks[-1])}",
+        ]
     cmp_header = f"{'variant':<12} " + " ".join(f"{c:>22}" for c in cmp_cols)
     print(cmp_header)
     print("-" * len(cmp_header))
@@ -528,9 +593,13 @@ def evaluate(
         s = results[v]["summary"]
         print(f"{v:<12} " + " ".join(f"{s.get(c, 0):>22.3f}" for c in cmp_cols))
 
-    print("\n[abstention] out-of-scope top-1 false-retrieval rate (lower is better; -1 = backend has no comparable scores)")
+    print(
+        "\n[abstention] out-of-scope top-1 false-retrieval rate (lower is better; -1 = backend has no comparable scores)"
+    )
     for v in variants:
-        print(f"  {v:<12} false_retrieval_rate@{threshold}: {results[v]['abstention']['false_retrieval_rate']:.3f}")
+        print(
+            f"  {v:<12} false_retrieval_rate@{threshold}: {results[v]['abstention']['false_retrieval_rate']:.3f}"
+        )
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     tag_part = f"{tag}_" if tag else ""
@@ -546,7 +615,9 @@ def evaluate(
         "results": results,
     }
     out_path = _EVAL_DIR / f"retrieval_report_{tag_part}{ts}.json"
-    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    out_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print(f"\nReport saved: {out_path}")
 
     if gate:
@@ -555,18 +626,64 @@ def evaluate(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Offline retrieval evaluation (anchor recall + LLM-judge context relevance)")
-    parser.add_argument("--http", action="store_true", help="Use HTTP /v1/retrieve instead of in-process")
-    parser.add_argument("--k", nargs="+", type=int, default=DEFAULT_KS, help="List of k values, e.g. --k 3 5 10")
+    parser = argparse.ArgumentParser(
+        description="Offline retrieval evaluation (anchor recall + LLM-judge context relevance)"
+    )
+    parser.add_argument(
+        "--http",
+        action="store_true",
+        help="Use HTTP /v1/retrieve instead of in-process",
+    )
+    parser.add_argument(
+        "--k",
+        nargs="+",
+        type=int,
+        default=DEFAULT_KS,
+        help="List of k values, e.g. --k 3 5 10",
+    )
     parser.add_argument("--tag", default="", help="Report tag")
-    parser.add_argument("--threshold", type=float, default=0.8, help="abstention false-retrieval score threshold")
-    parser.add_argument("--variant", default="ensemble", choices=["ensemble", "vector", "bm25", "all"])
-    parser.add_argument("--sweep", nargs="*", type=float, help="Vector-weight sweep, e.g. --sweep 0 0.5 1.0")
-    parser.add_argument("--dataset", default=None, help="Evaluation set (default golden_dataset_en.json)")
-    parser.add_argument("--judge", action="store_true", help="Enable LLM-judge context relevance (requires an LLM key)")
-    parser.add_argument("--judge-k", type=int, default=5, help="LLM-judge the first N chunks per question (cost control)")
-    parser.add_argument("--limit", type=int, default=None, help="Evaluate only the first N in-scope items (cost control)")
-    parser.add_argument("--gate", action="store_true", help="Regression gate: compare against --baseline thresholds")
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.8,
+        help="abstention false-retrieval score threshold",
+    )
+    parser.add_argument(
+        "--variant", default="ensemble", choices=["ensemble", "vector", "bm25", "all"]
+    )
+    parser.add_argument(
+        "--sweep",
+        nargs="*",
+        type=float,
+        help="Vector-weight sweep, e.g. --sweep 0 0.5 1.0",
+    )
+    parser.add_argument(
+        "--dataset",
+        default=None,
+        help="Evaluation set (default golden_dataset_en.json)",
+    )
+    parser.add_argument(
+        "--judge",
+        action="store_true",
+        help="Enable LLM-judge context relevance (requires an LLM key)",
+    )
+    parser.add_argument(
+        "--judge-k",
+        type=int,
+        default=5,
+        help="LLM-judge the first N chunks per question (cost control)",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Evaluate only the first N in-scope items (cost control)",
+    )
+    parser.add_argument(
+        "--gate",
+        action="store_true",
+        help="Regression gate: compare against --baseline thresholds",
+    )
     parser.add_argument("--baseline", default="retrieval_baseline.json")
     args = parser.parse_args()
 
@@ -575,8 +692,17 @@ def main() -> int:
         sweep = args.sweep or [0.0, 0.2, 0.5, 0.8, 1.0]
 
     return evaluate(
-        sorted(set(args.k)), args.http, args.tag, args.threshold, args.variant,
-        sweep, args.dataset, args.gate, args.baseline, args.judge, args.judge_k,
+        sorted(set(args.k)),
+        args.http,
+        args.tag,
+        args.threshold,
+        args.variant,
+        sweep,
+        args.dataset,
+        args.gate,
+        args.baseline,
+        args.judge,
+        args.judge_k,
         args.limit,
     )
 

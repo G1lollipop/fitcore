@@ -102,9 +102,13 @@ def test_keyword_coverage_at_k():
     # all three keywords present across top-3
     assert rm.keyword_coverage_at_k(chunks, ["g/kg", "leucine", "3-4 hours"], 3) == 1.0
     # only the first chunk counts at k=1 → just "g/kg"
-    assert rm.keyword_coverage_at_k(chunks, ["g/kg", "leucine"], 1) == pytest_approx(0.5)
+    assert rm.keyword_coverage_at_k(chunks, ["g/kg", "leucine"], 1) == pytest_approx(
+        0.5
+    )
     # case-insensitive; missing keyword lowers coverage
-    assert rm.keyword_coverage_at_k(chunks, ["LEUCINE", "creatine"], 3) == pytest_approx(0.5)
+    assert rm.keyword_coverage_at_k(
+        chunks, ["LEUCINE", "creatine"], 3
+    ) == pytest_approx(0.5)
     # empty keywords → vacuous 1.0
     assert rm.keyword_coverage_at_k(chunks, [], 3) == 1.0
 

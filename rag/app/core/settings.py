@@ -231,7 +231,9 @@ class Settings(BaseSettings):
         try:
             parsed = json.loads(raw)
         except Exception as exc:  # noqa: BLE001
-            print(f"[Settings] Failed to parse RERANKER_MODEL_KWARGS JSON, ignoring: {exc}")
+            print(
+                f"[Settings] Failed to parse RERANKER_MODEL_KWARGS JSON, ignoring: {exc}"
+            )
             return {}
         if isinstance(parsed, dict):
             return parsed

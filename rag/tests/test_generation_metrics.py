@@ -22,7 +22,9 @@ def test_is_abstention_response_en():
 
 
 def test_is_abstention_response_negative():
-    assert not gm.is_abstention_response("Creatine helps replenish ATP during training.")
+    assert not gm.is_abstention_response(
+        "Creatine helps replenish ATP during training."
+    )
     assert not gm.is_abstention_response("")
 
 

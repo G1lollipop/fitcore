@@ -158,7 +158,9 @@ Output JSON only, in the format:
         # Extract JSON (the model may add explanatory text before/after the JSON)
         m = re.search(r"\{[^{}]+\}", content, re.DOTALL)
         if not m:
-            raise ValueError(f"Could not extract JSON from the model output: {content[:200]}")
+            raise ValueError(
+                f"Could not extract JSON from the model output: {content[:200]}"
+            )
         scores = json.loads(m.group())
         return {
             "relevance": round(scores.get("relevance", 0) / 5, 3),

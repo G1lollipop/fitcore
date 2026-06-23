@@ -226,7 +226,11 @@ def evaluate_faithfulness(
     report_path = _EVAL_DIR / f"faithfulness_report_{tag + '_' if tag else ''}{ts}.json"
     report_path.write_text(
         json.dumps(
-            {"evaluated_at": datetime.now().isoformat(), "summary": summary, "results": results},
+            {
+                "evaluated_at": datetime.now().isoformat(),
+                "summary": summary,
+                "results": results,
+            },
             ensure_ascii=False,
             indent=2,
         ),
@@ -272,7 +276,11 @@ def main() -> int:
     parser.add_argument("--tag", default="")
     args = parser.parse_args()
 
-    ds = _EVAL_DIR / args.dataset if not Path(args.dataset).is_absolute() else Path(args.dataset)
+    ds = (
+        _EVAL_DIR / args.dataset
+        if not Path(args.dataset).is_absolute()
+        else Path(args.dataset)
+    )
     return evaluate_faithfulness(
         dataset_path=ds,
         use_http=args.http,

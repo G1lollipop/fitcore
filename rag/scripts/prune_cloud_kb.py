@@ -14,6 +14,7 @@ Then ingest the subset to the cloud store:
   EMBEDDING_PROVIDER=gemini VECTOR_BACKEND=supabase CHUNK_SIZE=3500 \
     ./.venv/Scripts/python scripts/ingest_seed_kb.py --keep-list data/cloud_keep.txt --force
 """
+
 from __future__ import annotations
 
 import argparse
@@ -26,8 +27,15 @@ DATA = RAG_ROOT / "data"
 EVAL = RAG_ROOT / "eval"
 
 _HIGH_EVIDENCE = (
-    "systematic review", "meta-analysis", "meta analysis", "umbrella review",
-    "position stand", "consensus", "guideline", "scoping review", "narrative review",
+    "systematic review",
+    "meta-analysis",
+    "meta analysis",
+    "umbrella review",
+    "position stand",
+    "consensus",
+    "guideline",
+    "scoping review",
+    "narrative review",
 )
 
 
@@ -48,7 +56,9 @@ def _quality(m: dict) -> float:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--target", type=int, default=250, help="Target total number of documents")
+    ap.add_argument(
+        "--target", type=int, default=250, help="Target total number of documents"
+    )
     ap.add_argument("--out", default="data/cloud_keep.txt")
     args = ap.parse_args()
 
@@ -99,7 +109,9 @@ def main() -> int:
     for f in keep_existing:
         dist[tag_of.get(f, "core/curated")] += 1
     print(f"[prune] wrote {out_path} with {len(keep_existing)} docs")
-    print(f"[prune] core/curated kept: {sum(1 for f in keep_existing if not f.startswith('auto_epmc_'))}")
+    print(
+        f"[prune] core/curated kept: {sum(1 for f in keep_existing if not f.startswith('auto_epmc_'))}"
+    )
     top = sorted(dist.items(), key=lambda kv: -kv[1])[:15]
     print("[prune] top topics:", ", ".join(f"{k}:{v}" for k, v in top))
     return 0
