@@ -1,4 +1,5 @@
-# CI ingest dependencies (.github/workflows/rag-supabase-ingest.yml runs ingest_seed_kb.py).
+# Ingest dependencies for running scripts/fetch_sources.py + scripts/ingest_seed_kb.py
+# (e.g. when (re)ingesting the knowledge base into Supabase).
 #
 # Reuses requirements-prod.txt directly to keep LangChain / parsers / vector store
 # versions exactly consistent with production (previously this pinned langchain to

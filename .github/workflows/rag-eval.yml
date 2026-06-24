@@ -1,0 +1,400 @@
+# Consolidated evaluation suite (merges the former retrieval, agent,
+# answer-level, and generation eval workflows into one file).
+#
+# Jobs:
+#   - changes        : detect which areas a PR touched (path filter).
+#   - retrieval-gate : offline retrieval metrics vs baseline (reads Supabase).
+#   - agent-gate     : agent Step-1 tool-selection golden set vs baseline (Node).
+#   - answer-eval    : boots the backend once and runs the answer-level
+#                      LLM-judge + faithfulness + abstention evals
+#                      (nightly / manual only).
+#
+# Triggers: one nightly schedule + manual + PRs. On a PR the retrieval and
+# agent gates run only when their own paths changed, so a web-only PR doesn't
+# burn the retrieval quota and a backend-only PR doesn't burn the agent quota.
+#
+# Lives at the REPO ROOT (GitHub Actions only runs root workflows); steps run
+# inside rag/ or web/ via defaults.run.working-directory.
+#
+# Required repo secrets:
+#   GOOGLE_AI_STUDIO_API_KEY · SUPABASE_URL · SUPABASE_SERVICE_ROLE_KEY
+name: RAG Eval
+
+on:
+  schedule:
+    # Single nightly run at 03:30 UTC for the whole suite.
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+    inputs:
+      relevance_threshold:
+        description: 'Answer-level: min average relevance (0-1)'
+        default: '0.95'
+      completeness_threshold:
+        description: 'Answer-level: min average completeness (0-1)'
+        default: '0.80'
+      accuracy_threshold:
+        description: 'Answer-level: min average accuracy (0-1)'
+        default: '0.95'
+      retrieval_min_score:
+        description: 'Generation: RETRIEVAL_MIN_SCORE for abstention (0=disabled)'
+        default: '0.35'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'rag/eval/**'
+      - 'rag/data/**'
+      - 'rag/app/services/retrieval/**'
+      - 'rag/app/services/rag_service.py'
+      - 'rag/app/core/settings.py'
+      - 'web/lib/ai/**'
+      - 'web/package.json'
+      - '.github/workflows/rag-eval.yml'
+
+concurrency:
+  group: rag-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    outputs:
+      retrieval: ${{ steps.filter.outputs.retrieval }}
+      agent: ${{ steps.filter.outputs.agent }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            retrieval:
+              - 'rag/eval/**'
+              - 'rag/data/**'
+              - 'rag/app/services/retrieval/**'
+              - 'rag/app/services/rag_service.py'
+              - 'rag/app/core/settings.py'
+              - '.github/workflows/rag-eval.yml'
+            agent:
+              - 'web/lib/ai/**'
+              - 'web/package.json'
+              - '.github/workflows/rag-eval.yml'
+
+  # ── Retrieval-layer regression gate (Recall/nDCG/MRR + abstention) ──────────
+  # Reads the already-populated Supabase pgvector store (re-ingesting in CI would
+  # blow the Gemini embedding free-tier quota). PRs run it only when retrieval
+  # code/data/eval changed.
+  retrieval-gate:
+    name: Retrieval regression gate
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.retrieval == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+    defaults:
+      run:
+        working-directory: rag
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: rag/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run retrieval eval + gate (English dataset, prod weight)
+        env:
+          GOOGLE_AI_STUDIO_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VECTOR_BACKEND: supabase
+          # Mirror prod: vector-dominant hybrid; reranker off; cold (no cache).
+          RETRIEVAL_VECTOR_WEIGHT: '0.8'
+          RERANKER_ENABLED: 'false'
+          CACHE_BACKEND: memory
+        run: |
+          python eval/eval_retrieval.py \
+            --dataset golden_dataset_en.json \
+            --variant ensemble \
+            --gate \
+            --tag ci
+
+      - name: Upload retrieval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-retrieval-report-${{ github.run_id }}
+          path: rag/eval/retrieval_report_*.json
+          retention-days: 90
+
+      - name: Open issue on nightly regression
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().slice(0, 10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[rag-retrieval] Nightly retrieval regression — ${today}`,
+              body: [
+                `The nightly retrieval eval gate failed on ${today}.`,
+                ``,
+                `Metrics dropped below rag/eval/retrieval_baseline.json.`,
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                ``,
+                `Download the \`rag-retrieval-report-${context.runId}\` artifact for the per-query breakdown.`,
+              ].join('\n'),
+              labels: ['rag-eval', 'regression'],
+            });
+
+  # ── Agent Step-1 tool-selection regression gate (Node + Gemini) ─────────────
+  # PRs run it only when agent code changed.
+  agent-gate:
+    name: Agent tool-selection gate
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.agent == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      issues: write
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run agent eval + gate
+        env:
+          GOOGLE_AI_STUDIO_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_API_KEY }}
+        run: npm run eval:agent -- --gate --tag ci
+
+      - name: Upload agent eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-eval-report-${{ github.run_id }}
+          path: web/lib/ai/eval/agent_eval_report_*.json
+          retention-days: 90
+
+      - name: Open issue on nightly regression
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().slice(0, 10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[agent-eval] Nightly tool-selection regression — ${today}`,
+              body: [
+                `The nightly agent tool-selection eval gate failed on ${today}.`,
+                ``,
+                `Metrics dropped below web/lib/ai/eval/agent-baseline.json.`,
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              ].join('\n'),
+              labels: ['rag-eval', 'regression'],
+            });
+
+  # ── Answer-level (end-to-end) evals: LLM-judge relevance/completeness/accuracy
+  # + faithfulness (RAGAS-style) + abstention, all against a single booted
+  # backend. Nightly / manual only — each run consumes Gemini quota for chat +
+  # judging, so it never runs on PRs.
+  answer-eval:
+    name: Answer-level + faithfulness + abstention
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      issues: write
+    defaults:
+      run:
+        working-directory: rag
+    env:
+      RELEVANCE_THRESHOLD: ${{ inputs.relevance_threshold || '0.95' }}
+      COMPLETENESS_THRESHOLD: ${{ inputs.completeness_threshold || '0.80' }}
+      ACCURACY_THRESHOLD: ${{ inputs.accuracy_threshold || '0.95' }}
+      RETRIEVAL_MIN_SCORE: ${{ inputs.retrieval_min_score || '0.35' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: rag/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Start RAG backend
+        env:
+          GOOGLE_AI_STUDIO_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VECTOR_BACKEND: supabase
+          RETRIEVAL_VECTOR_WEIGHT: '0.8'
+          RERANKER_ENABLED: 'false'
+          CACHE_BACKEND: memory
+          RAG_CHAT_MODEL: gemini-2.5-flash
+          EVAL_JUDGE_MODEL: gemini-2.5-flash
+        run: |
+          nohup uvicorn backend_api:app --host 127.0.0.1 --port 8000 > backend.log 2>&1 &
+          echo $! > backend.pid
+
+      - name: Wait for /v1/health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/v1/health > /dev/null 2>&1; then
+              echo "Backend ready after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend failed to start. Logs:"; cat backend.log; exit 1
+
+      - name: Run answer-level evaluation
+        env:
+          GOOGLE_AI_STUDIO_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RAG_SERVICE_URL: http://127.0.0.1:8000
+          EVAL_JUDGE_MODEL: gemini-2.5-flash
+        run: python eval/evaluate.py
+
+      - name: Enforce answer-level thresholds
+        id: answer_gate
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import glob, json, os, sys
+          reports = sorted(glob.glob('eval/eval_report_*.json'))
+          if not reports:
+              print('::error::No eval report produced.'); sys.exit(1)
+          with open(reports[-1]) as f:
+              report = json.load(f)
+          summary = report.get('summary', {})
+          rel = float(summary.get('avg_relevance', 0))
+          comp = float(summary.get('avg_completeness', 0))
+          acc = float(summary.get('avg_accuracy', 0))
+          lat = float(summary.get('avg_latency_ms', 0))
+
+          rel_t = float(os.environ['RELEVANCE_THRESHOLD'])
+          comp_t = float(os.environ['COMPLETENESS_THRESHOLD'])
+          acc_t = float(os.environ['ACCURACY_THRESHOLD'])
+
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as s:
+              s.write('## RAG Eval — answer-level\n\n')
+              s.write('| Metric | Value | Threshold |\n|---|---|---|\n')
+              s.write(f'| Avg relevance | {rel:.3f} | >= {rel_t} |\n')
+              s.write(f'| Avg completeness | {comp:.3f} | >= {comp_t} |\n')
+              s.write(f'| Avg accuracy | {acc:.3f} | >= {acc_t} |\n')
+              s.write(f'| Avg latency (ms) | {lat:.0f} | — |\n')
+
+          failed = []
+          if rel < rel_t: failed.append(f'relevance {rel:.3f} < {rel_t}')
+          if comp < comp_t: failed.append(f'completeness {comp:.3f} < {comp_t}')
+          if acc < acc_t: failed.append(f'accuracy {acc:.3f} < {acc_t}')
+          if failed:
+              print('::error::Thresholds breached: ' + '; '.join(failed))
+              sys.exit(1)
+          print('All answer-level thresholds met.')
+          PY
+
+      - name: Run faithfulness eval + gate
+        id: faithfulness_gate
+        continue-on-error: true
+        env:
+          GOOGLE_AI_STUDIO_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RAG_SERVICE_URL: http://127.0.0.1:8000
+          EVAL_JUDGE_MODEL: gemini-2.5-flash
+        run: python eval/eval_faithfulness.py --http --gate --tag nightly
+
+      - name: Run abstention eval + gate
+        id: abstention_gate
+        continue-on-error: true
+        env:
+          GOOGLE_AI_STUDIO_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RAG_SERVICE_URL: http://127.0.0.1:8000
+        run: python eval/eval_abstention.py --http --gate --tag nightly
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-answer-reports-${{ github.run_id }}
+          path: |
+            rag/eval/eval_report_*.json
+            rag/eval/faithfulness_report_*.json
+            rag/eval/abstention_report_*.json
+          retention-days: 90
+
+      - name: Upload backend log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-backend-log-${{ github.run_id }}
+          path: rag/backend.log
+          retention-days: 7
+
+      - name: Fail if any answer-level gate breached
+        if: >-
+          steps.answer_gate.outcome == 'failure' ||
+          steps.faithfulness_gate.outcome == 'failure' ||
+          steps.abstention_gate.outcome == 'failure'
+        run: |
+          echo "::error::One or more answer-level gates failed (answer=${{ steps.answer_gate.outcome }}, faithfulness=${{ steps.faithfulness_gate.outcome }}, abstention=${{ steps.abstention_gate.outcome }})"
+          exit 1
+
+      - name: Open issue on nightly regression
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().slice(0, 10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[rag-eval] Nightly answer-level regression — ${today}`,
+              body: [
+                `The nightly answer-level / faithfulness / abstention eval failed on ${today}.`,
+                ``,
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                ``,
+                `Download the \`rag-answer-reports-${context.runId}\` artifact for the per-question breakdown.`,
+              ].join('\n'),
+              labels: ['rag-eval', 'regression'],
+            });
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [[ -f backend.pid ]]; then
+            kill "$(cat backend.pid)" 2>/dev/null || true
+          fi

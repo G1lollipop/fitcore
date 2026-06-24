@@ -146,13 +146,13 @@ measured values after the expanded KB is ingested:
 
 ### CI wiring (repo root `.github/workflows/`)
 
-- `rag-ci.yml` — runs `ruff check` + `pytest` (including this directory's metric unit tests) on every PR/push. No external API calls.
-- `rag-retrieval-eval.yml` — **retrieval regression gate**: nightly + manual + triggered by PRs touching `eval/`, `data/`, or `services/retrieval/`. Reads the **already-ingested Supabase** (only embeds queries, does not re-ingest in CI to avoid blowing the free quota), and runs the `--gate` above.
-- `rag-nightly-eval.yml` — answer-layer LLM-as-Judge nightly gate (`evaluate.py`).
-- `rag-generation-eval.yml` — **generation-layer** faithfulness + abstention nightly gate (`eval_faithfulness.py` + `eval_abstention.py`).
-- `agent-eval.yml` — **Agent tool selection** nightly + PR gate (`web/lib/ai/eval/eval-agent.ts`).
+- `rag-ci.yml` — runs `ruff check` + `ruff format --check` + `pytest` (including this directory's metric unit tests) on every PR/push touching `rag/`. No external API calls.
+- `rag-eval.yml` — the consolidated evaluation suite. One nightly run + manual + path-filtered PR gates, with three jobs:
+  - **retrieval-gate** — retrieval regression gate; runs on PRs touching `eval/`, `data/`, or `services/retrieval/`. Reads the **already-ingested Supabase** (only embeds queries, does not re-ingest in CI to avoid blowing the free quota) and runs the `--gate` above.
+  - **agent-gate** — Agent Step-1 tool-selection gate (`web/lib/ai/eval/eval-agent.ts`); runs on PRs touching `web/lib/ai/`.
+  - **answer-eval** — nightly/manual only: boots the backend once and runs the answer-level LLM-as-Judge (`evaluate.py`) + faithfulness (`eval_faithfulness.py`) + abstention (`eval_abstention.py`) gates.
 
-> After changing the KB, run the manual workflow "RAG KB ingest (Supabase)" first to ingest the new documents, or the retrieval gate won't see them.
+> After changing the KB, re-ingest the new documents into Supabase (run `python scripts/ingest_seed_kb.py --force` locally with the Supabase env set), or the retrieval gate won't see them.
 
 ---
 

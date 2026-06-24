@@ -351,6 +351,6 @@ The frontend and backend deploy independently.
 | Backend startup reports missing reranker deps | Normal graceful-degradation notice; for local reranking `pip install torch sentence-transformers`, keep `RERANKER_ENABLED=false` in the cloud |
 | Ingestion keeps "skipping" | After switching the vector backend, use `ingest_seed_kb.py --force` |
 | Supabase retrieval is empty | Did you run the migration? Does the dimension match (`print_embedding_dim.py`)? Did you ingest? |
-| Ingestion DNS/network failures | Configure `HTTPS_PROXY`/`HTTP_PROXY`, or ingest in CI via `.github/workflows/rag-supabase-ingest.yml` |
+| Ingestion DNS/network failures | Configure `HTTPS_PROXY`/`HTTP_PROXY`, then re-run `python scripts/ingest_seed_kb.py --force` |
 | Stuck redirecting to onboarding after login | Does the user have a `user_settings` record in Supabase? |
 | Meal photo recognition fails | Is `GOOGLE_AI_STUDIO_API_KEY` configured? |
