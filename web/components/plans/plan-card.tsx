@@ -6,21 +6,19 @@ import { useMemo } from 'react'
 import { useT } from '@/lib/i18n/provider'
 import { tLabel } from '@/lib/i18n'
 import type { Dictionary } from '@/lib/i18n'
-import {
-  buildWeekStrip,
-  findTodayCell,
-  type WeekStripCell,
-  type WeekStripPlanInput,
-} from '@/lib/plans/week-strip'
+import { buildWeekStrip, findTodayCell, type WeekStripCell } from '@/lib/plans/week-strip'
 import { cn } from '@/lib/utils'
 
-export interface PlanCardData extends WeekStripPlanInput {
+export interface PlanCardData {
   id: string
   name: string
   description?: string | null
   goal?: string | null
   experience_level?: string | null
   duration_weeks?: number | null
+  frequency_per_week?: number | null
+  /** JSON plan body (`workout_plans.structure`). */
+  structure?: unknown
 }
 
 interface PlanCardProps {
@@ -34,9 +32,8 @@ interface PlanCardProps {
 }
 
 /**
- * Visual plan card with a Mon-Sun week strip across the bottom. The card
- * is enlarged to `min-h-[14rem]` so the strip has room to breathe; an
- * "Today" pill highlights the current weekday's session.
+ * Visual plan card with a Mon-Sun week strip across the bottom, driven by the
+ * plan's JSON structure. An "Today" pill highlights the current weekday.
  */
 export function PlanCard({
   plan,
@@ -48,7 +45,7 @@ export function PlanCard({
   className,
 }: PlanCardProps) {
   const t = useT()
-  const cells = useMemo(() => buildWeekStrip(plan), [plan])
+  const cells = useMemo(() => buildWeekStrip(plan.structure), [plan.structure])
   const todayCell = useMemo(() => findTodayCell(cells), [cells])
 
   const goalLabel = tLabel(t.labels.goals, plan.goal)
@@ -134,11 +131,11 @@ export function PlanCard({
           <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {t.plans.card.weekRhythm}
           </span>
-          {todayCell?.workoutDay && (
+          {todayCell && (
             <span className="text-[11px] text-muted-foreground">
               {t.plans.card.todayPrefix} ·{' '}
               <span className="font-medium text-primary">
-                {todayCell.workoutDay.name ?? t.plans.card.trainingDayDefault}
+                {todayCell.day.name || t.plans.card.trainingDayDefault}
               </span>
             </span>
           )}
@@ -166,11 +163,7 @@ interface WeekStripProps {
   t: Dictionary
 }
 
-/**
- * Mon-Sun strip: each cell shows its weekday letter, marks rest/off vs.
- * workout, and pops a pill on today's slot. Workout cells preview the day
- * label (or first focus muscle) under the letter when there's room.
- */
+/** Mon-Sun strip: each cell shows its weekday letter and marks rest vs workout. */
 export function WeekStrip({ cells, t }: WeekStripProps) {
   return (
     <ol className="grid grid-cols-7 gap-1.5">
@@ -186,12 +179,9 @@ function WeekCell({ cell, t }: { cell: WeekStripCell; t: Dictionary }) {
   const isRest = cell.kind === 'rest'
 
   const subLabel = useMemo(() => {
-    if (!isWorkout || !cell.workoutDay) return null
-    const muscles = cell.workoutDay.focus_muscles ?? []
-    if (muscles.length > 0) return abbreviateMuscle(muscles[0]!, t)
-    if (cell.workoutDay.name) return abbreviateName(cell.workoutDay.name)
-    return null
-  }, [cell.workoutDay, isWorkout, t])
+    if (!isWorkout) return null
+    return cell.day.name ? abbreviateName(cell.day.name) : null
+  }, [cell.day.name, isWorkout])
 
   return (
     <li
@@ -199,7 +189,6 @@ function WeekCell({ cell, t }: { cell: WeekStripCell; t: Dictionary }) {
         'relative flex aspect-[3/4] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-center transition-colors',
         isWorkout && 'bg-primary/15 text-primary',
         isRest && 'bg-secondary/60 text-muted-foreground',
-        cell.kind === 'off' && 'bg-secondary/30 text-muted-foreground/60',
         cell.isToday && 'outline outline-2 outline-offset-[-2px] outline-primary'
       )}
     >
@@ -212,7 +201,7 @@ function WeekCell({ cell, t }: { cell: WeekStripCell; t: Dictionary }) {
           isWorkout ? 'font-semibold' : 'font-normal opacity-70'
         )}
       >
-        {isRest ? t.plans.card.rest : isWorkout ? subLabel ?? '✓' : '·'}
+        {isRest ? t.plans.card.rest : subLabel ?? '✓'}
       </span>
       {cell.isToday && (
         <span
@@ -241,28 +230,7 @@ function Pill({
   )
 }
 
-/**
- * Squeeze a long muscle name down to a short hint for the cell, localized.
- * Falls back to the first character when no rule matches.
- */
-function abbreviateMuscle(name: string, t: Dictionary): string {
-  const lc = name.toLowerCase()
-  const abbr = t.plans.card.muscleAbbr
-  if (lc.includes('chest') || lc.includes('胸')) return abbr.chest
-  if (lc.includes('back') || lc.includes('背')) return abbr.back
-  if (lc.includes('leg') || lc.includes('腿') || lc.includes('quad') || lc.includes('hamstring'))
-    return abbr.legs
-  if (lc.includes('shoulder') || lc.includes('肩') || lc.includes('delt')) return abbr.shoulders
-  if (lc.includes('arm') || lc.includes('臂') || lc.includes('bicep') || lc.includes('tricep'))
-    return abbr.arms
-  if (lc.includes('core') || lc.includes('abs') || lc.includes('腹') || lc.includes('核心'))
-    return abbr.core
-  if (lc.includes('cardio') || lc.includes('有氧')) return abbr.cardio
-  return name.slice(0, 1)
-}
-
 function abbreviateName(name: string): string {
-  // Keep first 2 chars (CJK) or first letter (latin).
   const stripped = name.trim()
   if (!stripped) return '✓'
   return /[一-鿿]/.test(stripped) ? stripped.slice(0, 2) : stripped[0]!.toUpperCase()

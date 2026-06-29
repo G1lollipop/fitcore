@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState, useTransition } from 'react'
 import {
   getUserPlansLight,
   getCurrentPlanLight,
-  getSystemTemplatesLight,
   setCurrentPlan,
   deletePlan,
 } from '@/app/actions/plans'
@@ -14,107 +13,63 @@ import { batchLogWorkouts } from '@/app/actions/logWorkout'
 import { useToast } from '@/hooks/use-toast'
 import { calculateTodayWorkout, type TodayWorkoutResult } from '@/lib/plans/today-workout'
 import { useT } from '@/lib/i18n/provider'
-import { tError, localizedName } from '@/lib/i18n'
+import { tError } from '@/lib/i18n'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { Database } from '@/lib/database.types'
-import { ExerciseSelector, type SelectedExercise } from './exercise-selector'
 import { PlanCard, type PlanCardData } from './plan-card'
 import { PlanEditDialog, type EditablePlan } from './plan-edit-dialog'
-import { PlanWizard, type OpenPickerFn } from './plan-wizard'
+import { PlanEditor } from './plan-editor'
 import { PlanGeneratorCard } from './plan-generator-card'
-import { TemplateGrid } from './template-grid'
 import { TodayBanner } from './today-banner'
 
-type WorkoutPlan = Database['public']['Tables']['workout_plans']['Row']
-type WorkoutDay = Database['public']['Tables']['workout_days']['Row']
-type PlanExercise = Database['public']['Tables']['plan_exercises']['Row']
-type Exercise = Database['public']['Tables']['exercises']['Row']
-
-interface PlanWithDays extends WorkoutPlan {
-  workout_days?: (WorkoutDay & {
-    plan_exercises?: (PlanExercise & { exercises?: Exercise })[]
-  })[]
+/** Loose shape for a plan row (body lives in `structure`). */
+interface PlanRow {
+  id: string
+  name: string
+  description?: string | null
+  goal?: string | null
+  experience_level?: string | null
+  frequency_per_week?: number | null
+  duration_weeks?: number | null
+  structure?: unknown
 }
 
 export function MyPlans({ userId }: { userId?: string }) {
   const { toast } = useToast()
   const t = useT()
 
-  const [userPlans, setUserPlans] = useState<PlanWithDays[]>([])
-  const [currentPlan, setCurrentPlanData] = useState<PlanWithDays | null>(null)
-  const [templates, setTemplates] = useState<WorkoutPlan[]>([])
+  const [userPlans, setUserPlans] = useState<PlanRow[]>([])
+  const [currentPlan, setCurrentPlanData] = useState<PlanRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null)
   const [todayResult, setTodayResult] = useState<TodayWorkoutResult | null>(null)
   const [isLogging, startLogging] = useTransition()
-  const [wizardOpen, setWizardOpen] = useState(false)
+  const [editorOpen, setEditorOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<EditablePlan | null>(null)
 
-  /**
-   * Picker hoisted out of `PlanWizard` so we never have two Radix Dialog
-   * `DismissableLayer`s open at once.
-   *
-   * The previous architecture mounted both the wizard's Sheet *and* the
-   * `ExerciseSelector`'s Dialog as concurrent siblings. Radix tracks layer
-   * stacking via DOM containment + a React-tree pointer-down ref; because
-   * the picker portal isn't a React-tree descendant of the Sheet, the
-   * Sheet's `onPointerDownCapture` never fires for clicks inside the
-   * picker. The Sheet's document-level handler then sees the click as
-   * "outside" — and the layer-index guard that's supposed to suppress the
-   * lower layer races against the just-mounted upper layer. End result:
-   * the first click anywhere inside the picker dismissed both modals.
-   *
-   * Fix: only ever run one Radix Dialog at a time. While the picker is
-   * open, the Sheet is closed (`open={wizardOpen && !pickerRequest}`) and
-   * the wizard is told to suspend its reset timer so its in-flight state
-   * survives the round trip.
-   */
-  const [pickerRequest, setPickerRequest] = useState<{
-    initial: SelectedExercise[]
-    onConfirm: (next: SelectedExercise[]) => void
-  } | null>(null)
-
-  const handleOpenPicker = useCallback<OpenPickerFn>((_position, initial, onConfirm) => {
-    setPickerRequest({ initial, onConfirm })
-  }, [])
-
-  const handleClosePicker = useCallback(() => {
-    setPickerRequest(null)
-  }, [])
-
-  const refreshTodayWorkout = useCallback((plan: PlanWithDays | null) => {
-    if (!plan) {
-      setTodayResult(null)
-      return
-    }
-    const result = calculateTodayWorkout(plan)
-    setTodayResult(result)
+  const refreshTodayWorkout = useCallback((plan: PlanRow | null) => {
+    setTodayResult(plan ? calculateTodayWorkout(plan.structure) : null)
   }, [])
 
   const loadData = useCallback(async () => {
     if (!userId) return
     setLoading(true)
     try {
-      const [userPlansRes, currentPlanRes, templatesRes] = await Promise.all([
+      const [userPlansRes, currentPlanRes] = await Promise.all([
         getUserPlansLight(),
         getCurrentPlanLight(),
-        getSystemTemplatesLight(),
       ])
 
       if (userPlansRes.success && userPlansRes.data) {
-        setUserPlans(userPlansRes.data as PlanWithDays[])
+        setUserPlans(userPlansRes.data as PlanRow[])
       }
       if (currentPlanRes.success && currentPlanRes.data) {
-        const plan = currentPlanRes.data.plan as PlanWithDays
+        const plan = currentPlanRes.data.plan as PlanRow
         setCurrentPlanData(plan)
         refreshTodayWorkout(plan)
       } else {
         setCurrentPlanData(null)
         setTodayResult(null)
-      }
-      if (templatesRes.success && templatesRes.data) {
-        setTemplates(templatesRes.data as unknown as WorkoutPlan[])
       }
     } catch (error) {
       console.error('Failed to load plans:', error)
@@ -137,10 +92,7 @@ export function MyPlans({ userId }: { userId?: string }) {
           const newCurrent = userPlans.find((p) => p.id === planId) ?? null
           setCurrentPlanData(newCurrent)
           refreshTodayWorkout(newCurrent)
-          toast({
-            title: t.plans.list.setSuccess,
-            description: t.plans.list.setSuccessDesc,
-          })
+          toast({ title: t.plans.list.setSuccess, description: t.plans.list.setSuccessDesc })
         } else {
           toast({
             variant: 'destructive',
@@ -187,9 +139,7 @@ export function MyPlans({ userId }: { userId?: string }) {
     if (!userId || !todayResult || todayResult.exercises.length === 0) return
     startLogging(async () => {
       const workouts = todayResult.exercises.map((e) => ({
-        name: e.exerciseName
-          ? localizedName(t, e.exerciseName, e.exerciseNameEn)
-          : t.plans.list.workoutDefaultName,
+        name: e.exerciseName || t.plans.list.workoutDefaultName,
         sets: e.sets ?? undefined,
         duration_minutes: 15,
         calories_burned: Math.round((e.sets ?? 3) * 8),
@@ -210,10 +160,6 @@ export function MyPlans({ userId }: { userId?: string }) {
     })
   }, [userId, todayResult, toast, t])
 
-  const handleWizardCreated = useCallback(() => {
-    loadData()
-  }, [loadData])
-
   if (loading) {
     return <PlansSkeleton />
   }
@@ -229,7 +175,7 @@ export function MyPlans({ userId }: { userId?: string }) {
         />
       )}
 
-      <PlanGeneratorCard onGenerated={loadData} onManual={() => setWizardOpen(true)} />
+      <PlanGeneratorCard onGenerated={loadData} onManual={() => setEditorOpen(true)} />
 
       <section className="space-y-4">
         <header className="flex items-center justify-between">
@@ -241,7 +187,7 @@ export function MyPlans({ userId }: { userId?: string }) {
           </div>
           <button
             type="button"
-            onClick={() => setWizardOpen(true)}
+            onClick={() => setEditorOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
           >
             <Plus size={12} />
@@ -257,11 +203,11 @@ export function MyPlans({ userId }: { userId?: string }) {
           >
             <button
               type="button"
-              onClick={() => setWizardOpen(true)}
+              onClick={() => setEditorOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md"
             >
               <Plus size={12} />
-              {t.plans.list.createWithWizard}
+              {t.plans.list.create}
             </button>
           </EmptyState>
         ) : (
@@ -301,35 +247,7 @@ export function MyPlans({ userId }: { userId?: string }) {
         )}
       </section>
 
-      <section className="space-y-3">
-        <header>
-          <h3 className="font-display text-base font-semibold text-foreground">{t.plans.list.templatesTitle}</h3>
-          <p className="text-[11px] text-muted-foreground">{t.plans.list.templatesHint}</p>
-        </header>
-        <TemplateGrid
-          templates={templates.slice(0, 6)}
-          userId={userId ?? undefined}
-          onCopied={loadData}
-        />
-      </section>
-
-      <PlanWizard
-        open={wizardOpen && pickerRequest === null}
-        onOpenChange={setWizardOpen}
-        userId={userId ?? undefined}
-        onCreated={handleWizardCreated}
-        onOpenPicker={handleOpenPicker}
-        suspended={pickerRequest !== null}
-      />
-
-      {pickerRequest && (
-        <ExerciseSelector
-          isOpen
-          onClose={handleClosePicker}
-          initialSelected={pickerRequest.initial}
-          onConfirm={pickerRequest.onConfirm}
-        />
-      )}
+      <PlanEditor open={editorOpen} onOpenChange={setEditorOpen} onCreated={loadData} />
 
       <PlanEditDialog
         plan={editingPlan}
@@ -342,7 +260,7 @@ export function MyPlans({ userId }: { userId?: string }) {
   )
 }
 
-function planToCardData(plan: PlanWithDays): PlanCardData {
+function planToCardData(plan: PlanRow): PlanCardData {
   return {
     id: plan.id,
     name: plan.name,
@@ -351,13 +269,7 @@ function planToCardData(plan: PlanWithDays): PlanCardData {
     experience_level: plan.experience_level,
     duration_weeks: plan.duration_weeks,
     frequency_per_week: plan.frequency_per_week,
-    rest_days: plan.rest_days,
-    workout_days: plan.workout_days?.map((d) => ({
-      id: d.id,
-      name: d.name,
-      day_order: d.day_order,
-      focus_muscles: d.focus_muscles,
-    })),
+    structure: plan.structure,
   }
 }
 

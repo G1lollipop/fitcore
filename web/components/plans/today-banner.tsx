@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Coffee, Flame, Play, Target } from 'lucide-react'
 import type { TodayWorkoutResult } from '@/lib/plans/today-workout'
 import { useT } from '@/lib/i18n/provider'
-import { localizedName } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 interface TodayBannerProps {
@@ -75,9 +74,7 @@ export function TodayBanner({
           </h2>
           <p className="text-xs text-muted-foreground">
             {planName}
-            {result.todayDay?.day_order
-              ? t.plans.banner.dayN(result.todayDay.day_order)
-              : ''}
+            {!isRest ? t.plans.banner.dayN(result.dayIndex) : ''}
           </p>
         </div>
 
@@ -136,9 +133,7 @@ export function TodayBanner({
                     {idx + 1}
                   </span>
                   <span className="flex-1 truncate text-sm text-foreground">
-                    {ex.exerciseName
-                      ? localizedName(t, ex.exerciseName, ex.exerciseNameEn)
-                      : ex.text}
+                    {ex.exerciseName || ex.text}
                   </span>
                   <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
                     <Target size={10} />

@@ -509,6 +509,7 @@ export type Database = {
           plan_type: string | null
           rest_days: number[] | null
           source_template_id: string | null
+          structure: Json
           time_per_session_minutes: number | null
           updated_at: string
         }
@@ -533,6 +534,7 @@ export type Database = {
           plan_type?: string | null
           rest_days?: number[] | null
           source_template_id?: string | null
+          structure?: Json
           time_per_session_minutes?: number | null
           updated_at?: string
         }
@@ -557,6 +559,7 @@ export type Database = {
           plan_type?: string | null
           rest_days?: number[] | null
           source_template_id?: string | null
+          structure?: Json
           time_per_session_minutes?: number | null
           updated_at?: string
         }

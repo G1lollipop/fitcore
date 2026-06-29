@@ -1,7 +1,6 @@
 'use server';
 
 import { openai } from '@/lib/openaiClient';
-import { supabase } from '@/lib/supabaseClient';
 import { AI_CHAT_MODEL } from '@/lib/ai/model';
 import { authedUserId } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
@@ -13,26 +12,16 @@ import {
   type CustomPlanDay,
 } from '@/app/actions/plans';
 
-/** A trimmed exercise row used to build the catalog the LLM picks from. */
-interface CatalogExercise {
-  id: string;
-  name: string;
-  name_en: string | null;
-  category: string | null;
-  muscle_groups: string[] | null;
-}
-
 interface GeneratedExercise {
-  idx?: number;
-  target_sets?: number;
-  target_reps_min?: number;
-  target_reps_max?: number;
+  name?: string;
+  sets?: number;
+  reps_min?: number;
+  reps_max?: number;
 }
 
 interface GeneratedDay {
   name?: string;
   rest_day?: boolean;
-  focus_muscles?: string[];
   exercises?: GeneratedExercise[];
 }
 
@@ -50,7 +39,7 @@ export interface GeneratePlanInput {
   goalText: string;
 }
 
-const SYSTEM_PROMPT = `You are FitCore's professional personal trainer. Based on the user's goal and the list of available exercises, design a structured weekly workout plan.
+const SYSTEM_PROMPT = `You are FitCore's professional personal trainer. Based on the user's goal, design a structured weekly workout plan with concrete, well-known exercises.
 
 Return JSON strictly:
 {
@@ -59,36 +48,23 @@ Return JSON strictly:
   "goal": "general" | "strength" | "muscle_gain" | "fat_loss" | "endurance",
   "experience_level": "beginner" | "intermediate" | "advanced",
   "duration_weeks": number,        // 4-12
-  "days": [                        // must be exactly 7 elements, Monday → Sunday
+  "days": [                        // EXACTLY 7 elements, Monday → Sunday
     {
-      "name": string,              // training-day name (e.g. "Chest/Triceps"); use "Rest" for rest days
+      "name": string,              // training-day name (e.g. "Chest & Triceps"); use "Rest" for rest days
       "rest_day": boolean,
-      "focus_muscles": string[],   // target muscle groups for the day (English, e.g. ["Chest","Triceps"]); [] on rest days
       "exercises": [               // [] on rest days; 4-6 on training days
-        { "idx": number, "target_sets": number, "target_reps_min": number, "target_reps_max": number }
+        { "name": string, "sets": number, "reps_min": number, "reps_max": number }
       ]
     }
   ]
 }
 
 Rules:
-1) exercises[].idx must be a number from the "available exercises" list below — never invent indices or exercises.
-2) Set a sensible training frequency and rest days for the goal (typically 3-5 days/week).
-3) target_sets 3-5; hypertrophy reps 8-12, strength 4-6, endurance 12-20.
-4) Don't repeat the same exercise within a day; prioritize that day's focus_muscles.
+1) Use concrete, widely-recognized exercise names (e.g. "Barbell Bench Press", "Romanian Deadlift", "Lat Pulldown").
+2) Choose a sensible training frequency and rest days for the goal (typically 3-5 training days/week).
+3) sets 3-5; hypertrophy reps 8-12, strength 4-6, endurance 12-20.
+4) Don't repeat the same exercise within a day.
 5) Output JSON only — no extra text.`;
-
-function buildCatalogText(catalog: CatalogExercise[]): string {
-  return catalog
-    .map((e, i) => {
-      const name = e.name_en?.trim() || e.name;
-      const muscles = (e.muscle_groups ?? []).join('/');
-      const cat = e.category ?? '';
-      const meta = [muscles, cat].filter(Boolean).join(' · ');
-      return `${i + 1}. ${name}${meta ? ` (${meta})` : ''}`;
-    })
-    .join('\n');
-}
 
 function safeParseJson(content: string): GeneratedPlan | null {
   try {
@@ -100,7 +76,6 @@ function safeParseJson(content: string): GeneratedPlan | null {
   }
 }
 
-/** Shape passed to `createCustomPlan`, produced by the LLM structure step. */
 interface BuiltPlanData {
   name: string;
   description?: string;
@@ -115,37 +90,25 @@ type BuildResult =
   | { ok: true; planData: BuiltPlanData }
   | { ok: false; error: string };
 
+const clampInt = (v: unknown, min: number, max: number, fallback: number): number => {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+};
+
 /**
- * Core LLM step shared by generate + adjust: load an exercise catalog, ask the
- * model to pick exercises *by index* (so every reference is a real `exercises`
- * row), then normalize into a 7-day `CustomPlanDay[]`. Does not persist.
+ * Core LLM step shared by generate + adjust: ask the model for a 7-day plan with
+ * free-text exercises, then normalize into `CustomPlanDay[]`. Does not persist.
+ * No exercise catalog — the app is AI-first and stores exercises as free text.
  */
 async function buildPlanStructureFromGoal(goalText: string): Promise<BuildResult> {
-  // Pull a catalog the model can choose from. Prefer system exercises (curated),
-  // ordered by popularity, capped so the prompt stays bounded.
-  const { data: catalogRows, error: catalogError } = await supabase
-    .from('exercises')
-    .select('id, name, name_en, category, muscle_groups')
-    .order('usage_count', { ascending: false })
-    .limit(150);
-
-  if (catalogError || !catalogRows || catalogRows.length === 0) {
-    return { ok: false, error: ActionError.DB_QUERY_FAILED };
-  }
-
-  const catalog = catalogRows as CatalogExercise[];
-  const catalogText = buildCatalogText(catalog);
-
   let generated: GeneratedPlan | null = null;
   try {
     const response = await openai.chat.completions.create({
       model: AI_CHAT_MODEL,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: `User goal: ${goalText}\n\nAvailable exercises (reference by index):\n${catalogText}`,
-        },
+        { role: 'user', content: `User goal: ${goalText}` },
       ],
       response_format: { type: 'json_object' },
       temperature: 0.4,
@@ -161,39 +124,34 @@ async function buildPlanStructureFromGoal(goalText: string): Promise<BuildResult
     return { ok: false, error: ActionError.AI_PARSE_EMPTY };
   }
 
-  // Normalize to exactly 7 day slots (Mon→Sun), mapping idx → exercise_id and
-  // dropping any out-of-range references the model may have produced.
   const rawDays = generated.days.slice(0, 7);
   const days: CustomPlanDay[] = rawDays.map((day, i) => {
-    const isRest = day.rest_day === true;
     const exercises = (day.exercises ?? [])
       .map((ex) => {
-        const idx = Number(ex.idx);
-        if (!Number.isInteger(idx) || idx < 1 || idx > catalog.length) return null;
-        const match = catalog[idx - 1];
-        const setsNum = Math.round(Number(ex.target_sets) || 3);
-        const repsMin = Math.round(Number(ex.target_reps_min) || 8);
-        const repsMax = Math.round(Number(ex.target_reps_max) || 12);
+        const name = typeof ex.name === 'string' ? ex.name.trim() : '';
+        if (!name) return null;
+        const repsMin = clampInt(ex.reps_min, 1, 50, 8);
+        const repsMax = clampInt(ex.reps_max, repsMin, 50, Math.max(repsMin, 12));
         return {
-          exercise_id: match.id,
-          target_sets: Math.min(8, Math.max(1, setsNum)),
-          target_reps_min: Math.min(50, Math.max(1, repsMin)),
-          target_reps_max: Math.min(50, Math.max(repsMin, repsMax)),
+          name,
+          sets: clampInt(ex.sets, 1, 8, 3),
+          reps_min: repsMin,
+          reps_max: repsMax,
         };
       })
       .filter((e): e is NonNullable<typeof e> => e !== null);
 
+    const isRest = day.rest_day === true || exercises.length === 0;
     return {
       name: day.name?.trim() || (isRest ? 'Rest' : `Training day ${i + 1}`),
-      focus_muscles: Array.isArray(day.focus_muscles) ? day.focus_muscles : [],
-      rest_day: isRest || exercises.length === 0,
+      rest_day: isRest,
       exercises,
     };
   });
 
   // Pad to 7 days so the weekly (Mon–Sun) mapping downstream stays consistent.
   while (days.length < 7) {
-    days.push({ name: 'Rest', focus_muscles: [], rest_day: true, exercises: [] });
+    days.push({ name: 'Rest', rest_day: true, exercises: [] });
   }
 
   const trainingDays = days.filter((d) => !d.rest_day).length;
@@ -220,7 +178,7 @@ async function buildPlanStructureFromGoal(goalText: string): Promise<BuildResult
 
 /**
  * Generate a structured workout plan from a natural-language goal and persist
- * it via `createCustomPlan` with AI provenance (`is_ai_generated`, etc.).
+ * it via `createCustomPlan` with AI provenance.
  */
 export async function generateWorkoutPlan(input: GeneratePlanInput) {
   const a = await authedUserId();
@@ -249,10 +207,9 @@ export interface AdjustPlanInput {
 }
 
 /**
- * Conversationally adjust the user's *current* plan. Because day/exercise rows
- * can't be patched piecemeal cleanly, we regenerate a fresh structure from the
- * original goal + the new instruction, set it as current, then retire the old
- * plan. Backs the coach's `adjust_plan` tool.
+ * Conversationally adjust the user's *current* plan: regenerate a fresh
+ * structure from the original goal + the new instruction, set it as current,
+ * then retire the old plan. Backs the coach's `adjust_plan` tool.
  */
 export async function adjustWorkoutPlan(input: AdjustPlanInput) {
   const a = await authedUserId();
@@ -302,8 +259,6 @@ export async function adjustWorkoutPlan(input: AdjustPlanInput) {
     return created;
   }
 
-  // Swap current → new, then retire the superseded plan. Failures here are
-  // non-fatal: the new plan already exists and is usable.
   await setCurrentPlan(created.data.id);
   if (current.id && current.id !== created.data.id) {
     await deletePlan(current.id);

@@ -6,7 +6,7 @@ import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
-import { calculateTodayWorkout, type PlanInput } from '@/lib/plans/today-workout';
+import { calculateTodayWorkout } from '@/lib/plans/today-workout';
 import type {
   DashboardData,
   DietLogItem,
@@ -19,10 +19,10 @@ import type {
   YesterdayWorkoutLog,
 } from './types';
 
-/** Shape of the nested `user_settings → workout_plans → days → exercises` join. */
+/** Shape of the `user_settings → workout_plans` join (plan body is JSON). */
 type TodaySettingsJoin = {
   current_plan_start_date: string | null;
-  workout_plans: (PlanInput & { id: string; name: string }) | null;
+  workout_plans: { id: string; name: string; structure: unknown } | null;
 };
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
@@ -69,29 +69,7 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
         workout_plans!current_plan_id (
           id,
           name,
-          frequency_per_week,
-          rest_days,
-          workout_days (
-            id,
-            name,
-            day_order,
-            day_type,
-            rest_day,
-            focus_muscles,
-            estimated_duration_minutes,
-            plan_exercises (
-              id,
-              target_sets,
-              target_reps_min,
-              target_reps_max,
-              target_weight_kg,
-              exercises (
-                id,
-                name,
-                category
-              )
-            )
-          )
+          structure
         )
       `)
       .eq('user_id', userId)
@@ -111,8 +89,8 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
     const plan = settingsWithPlan.workout_plans;
 
     // Single source of truth for the (rest-day aware) day-selection + exercise
-    // formatting logic — shared with plans.getTodayWorkout and my-plans.tsx.
-    const result = calculateTodayWorkout(plan);
+    // formatting logic — shared with my-plans.tsx.
+    const result = calculateTodayWorkout(plan.structure);
     if (!result) {
       return { plan: { id: plan.id, name: plan.name }, todayDay: null, exercises: [] };
     }
@@ -124,7 +102,7 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
       },
       todayDay: result.todayDay
         ? {
-            id: result.todayDay.id,
+            id: `today-${result.dayIndex}`,
             name: result.isRestDay ? 'Rest day' : result.todayDay.name ?? '',
             isRestDay: result.isRestDay,
           }
