@@ -87,6 +87,40 @@ export interface RagChatRequest {
   userContext: UserContextPayload
 }
 
+/**
+ * Retrieval internals surfaced by the backend `/v1/chat/stream` `sources`
+ * event. Drives the Knowledge Exploration Center's RAG transparency panel.
+ */
+export interface KnowledgeRetrievalMeta {
+  retrievedCount?: number
+  /** Final number of chunks fed to the LLM. */
+  k?: number
+  /** True when k was auto-chosen from query complexity (vs. an explicit topK). */
+  kAuto?: boolean
+  /** True when retrieval confidence fell below threshold and the model abstained. */
+  abstained?: boolean
+  /** Top-1 similarity score, when the backend exposes one (e.g. pgvector). */
+  topScore?: number | null
+  /** True when a CrossEncoder reranker was applied on top of vector + BM25. */
+  reranked?: boolean
+}
+
+/**
+ * SSE events streamed from `/api/knowledge/search` (which proxies the backend
+ * `/v1/chat/stream`). `sources` arrives first so the UI can paint citations +
+ * the transparency panel before the answer tokens flow in.
+ */
+export type KnowledgeSSEEvent =
+  | {
+      type: "sources"
+      citations: Citation[]
+      retrievalMeta: KnowledgeRetrievalMeta
+      retrievalBackend: VectorRetrievalBackend
+    }
+  | { type: "token"; content: string }
+  | { type: "done" }
+  | { type: "error"; message: string }
+
 export interface RagChatResponse {
   answer: string
   citations?: Citation[]

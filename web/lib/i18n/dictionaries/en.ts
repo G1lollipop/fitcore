@@ -115,7 +115,36 @@ export const en = {
 
   knowledge: {
     title: 'Knowledge Base',
-    comingSoon: 'Coming soon.',
+    subtitle: 'Evidence-based answers from peer-reviewed fitness science',
+    searchPlaceholder: 'Ask anything about training, nutrition, or supplements…',
+    search: 'Search',
+    searching: 'Searching…',
+    answerTitle: 'Answer',
+    sourcesTitle: 'Sources',
+    abstained:
+      'No strong evidence was found in the knowledge base for this question, so the answer below is intentionally cautious.',
+    error: 'Sorry, the knowledge search failed. Please try again.',
+    starters: {
+      title: 'Explore topics',
+      subtitle: 'Pick a topic, then tap a question to get started.',
+    },
+    history: {
+      title: 'Recent searches',
+      clear: 'Clear',
+    },
+    transparency: {
+      title: 'Retrieval details',
+      backend: 'Vector store',
+      k: 'Top-K',
+      kAuto: 'auto',
+      kManual: 'manual',
+      chunks: 'Chunks used',
+      reranked: 'Reranked',
+      abstained: 'Abstained',
+      topScore: 'Top score',
+      yes: 'Yes',
+      no: 'No',
+    },
   },
 
   sidebar: {

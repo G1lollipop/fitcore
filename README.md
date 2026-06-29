@@ -18,7 +18,7 @@ flowchart TD
     ChatAPI["/api/ai/chat (SSE)<br/>route.ts"]
     Supabase[("Supabase<br/>Auth + logs/plans/stats/chat")]
     LLM["Google Gemini<br/>(chat / parsing / vision / embedding)"]
-    RAG["RAG service FastAPI (rag/)<br/>/v1/retrieve · /v1/chat"]
+    RAG["RAG service FastAPI (rag/)<br/>/v1/retrieve · /v1/chat · /v1/chat/stream"]
 
     Browser -->|"protected routes"| Auth
     Browser -->|"data read/write<br/>(userId injected server-side via requireUserId())"| Actions

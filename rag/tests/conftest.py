@@ -70,6 +70,40 @@ class StubRagService:
             },
         }
 
+    def stream_chat(self, query, session_id, user_context=None, top_k=None):
+        self.chat_calls.append(
+            {
+                "query": query,
+                "session_id": session_id,
+                "user_context": user_context,
+                "top_k": top_k,
+                "stream": True,
+            }
+        )
+        citations = [
+            {
+                "id": "c1",
+                "title": "Stub doc",
+                "source": "stub.txt",
+                "snippet": "stubbed snippet",
+                "score": 0.9,
+            }
+        ]
+        retrieval_meta = {
+            "retrievedCount": 1,
+            "k": top_k if top_k is not None else 5,
+            "kAuto": top_k is None,
+            "abstained": False,
+            "topScore": 0.9,
+            "reranked": False,
+        }
+
+        def _tokens():
+            for tok in ("stub ", "answer ", f"for {query!r}"):
+                yield tok
+
+        return citations, retrieval_meta, _tokens()
+
     def retrieve(self, query, k):
         self.retrieve_calls.append({"query": query, "k": k})
         return [

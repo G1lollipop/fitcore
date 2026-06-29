@@ -13,6 +13,7 @@ import { TabActiveProvider } from '@/components/dashboard/tab-active-context'
 import { MyPlans } from '@/components/plans/my-plans'
 import { NutritionCenter } from '@/components/nutrition/nutrition-center'
 import { TrainingHistory } from '@/components/training/training-history'
+import { KnowledgeCenter } from '@/components/knowledge/knowledge-center'
 import { useDashboardData, useDashboardActions } from '@/lib/queries/dashboard'
 import type { DashboardData } from '@/app/actions/types'
 import { useT } from '@/lib/i18n/provider'
@@ -150,6 +151,10 @@ export function DashboardClient({
 
       <TabPanel active={activeNav === 'plans'}>
         <MyPlans userId={userId} />
+      </TabPanel>
+
+      <TabPanel active={activeNav === 'knowledge'}>
+        <KnowledgeCenter />
       </TabPanel>
     </AppShell>
   )

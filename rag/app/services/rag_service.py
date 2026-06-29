@@ -222,13 +222,18 @@ class RagService(object):
             return True, top_score
         return False, top_score
 
-    def chat(
-        self,
-        query: str,
-        session_id: str,
-        user_context: dict[str, Any] | None = None,
-        top_k: int | None = None,
-    ) -> dict[str, Any]:
+    def _prepare_context(
+        self, query: str, top_k: int | None
+    ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+        """
+        Shared retrieval + abstention + context assembly used by both the
+        blocking `chat()` and the streaming `stream_chat()` paths.
+
+        Returns ``(context, citations, retrieval_meta)`` where ``context`` is the
+        formatted reference block fed to the prompt, ``citations`` are the source
+        cards for the UI, and ``retrieval_meta`` captures the retrieval internals
+        (k, abstention, top score, reranker state) for the transparency panel.
+        """
         # Dynamically determine the final number of documents to use.
         # When top_k is None, compute it automatically from query complexity;
         # callers may also specify it explicitly.
@@ -238,7 +243,6 @@ class RagService(object):
             else compute_retrieval_k(query)
         )
 
-        session_config = {"configurable": {"session_id": session_id}}
         docs = self.retrieve(query, k)
 
         settings = get_settings()
@@ -259,6 +263,29 @@ class RagService(object):
             context = self._format_documents(docs)
             retrieved_count = len(citations)
 
+        retrieval_meta = {
+            "retrievedCount": retrieved_count,
+            "k": k,
+            "kAuto": top_k is None,
+            "abstained": abstained,
+            "topScore": top_score,
+            # Surfaced for the UI transparency panel; dropped by /v1/chat's
+            # RetrievalMeta response model (extra fields ignored), kept on the
+            # streaming endpoint which serializes the dict directly.
+            "reranked": self._get_compression_retriever() is not None,
+        }
+        return context, citations, retrieval_meta
+
+    def chat(
+        self,
+        query: str,
+        session_id: str,
+        user_context: dict[str, Any] | None = None,
+        top_k: int | None = None,
+    ) -> dict[str, Any]:
+        session_config = {"configurable": {"session_id": session_id}}
+        context, citations, retrieval_meta = self._prepare_context(query, top_k)
+
         answer = self.chain.invoke(
             {"input": query, "user_context": user_context or {}, "context": context},
             session_config,
@@ -266,11 +293,31 @@ class RagService(object):
         return {
             "answer": answer,
             "citations": citations,
-            "retrieval_meta": {
-                "retrievedCount": retrieved_count,
-                "k": k,
-                "kAuto": top_k is None,
-                "abstained": abstained,
-                "topScore": top_score,
-            },
+            "retrieval_meta": retrieval_meta,
         }
+
+    def stream_chat(
+        self,
+        query: str,
+        session_id: str,
+        user_context: dict[str, Any] | None = None,
+        top_k: int | None = None,
+    ):
+        """
+        Streaming variant of `chat()`.
+
+        Retrieval + citation assembly happen eagerly (so the caller can emit the
+        sources/transparency payload up front), while answer generation is
+        returned as a lazy token iterator from `chain.stream(...)`. The chain
+        ends in `StrOutputParser`, so each yielded item is a plain string chunk.
+
+        Returns ``(citations, retrieval_meta, token_iter)``.
+        """
+        session_config = {"configurable": {"session_id": session_id}}
+        context, citations, retrieval_meta = self._prepare_context(query, top_k)
+
+        token_iter = self.chain.stream(
+            {"input": query, "user_context": user_context or {}, "context": context},
+            session_config,
+        )
+        return citations, retrieval_meta, token_iter

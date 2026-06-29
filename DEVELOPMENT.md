@@ -199,6 +199,7 @@ Open http://localhost:3000. After your first login, if there's no `user_settings
 | `GET` | `/v1/health`, `/api/health` | Health check |
 | `POST` | `/v1/retrieve` | **Retrieval only** (used by the frontend Agent's tool), returns `chunks` |
 | `POST` | `/v1/chat` | Full RAG: retrieve → LLM generation, returns answer + citations + meta |
+| `POST` | `/v1/chat/stream` | Full RAG over **SSE** (used by the Knowledge Exploration Center): emits one `sources` event (citations + retrievalMeta + retrievalBackend), then `token` events, then `done` |
 | `POST` | `/api/chat` | Legacy slim wrapper, returns only `{ "response": answer }` |
 
 `/v1/retrieve` contract (`app/schemas/retrieve.py`, **LOCKED** — changes require front/back coordination):
@@ -264,7 +265,9 @@ python eval/evaluate.py      # requires the service running on :8000; LLM-as-Jud
 
 ### 7.1 App shape
 
-The home route `/` is a single-page app that switches between 5 modules via tab state (`components/layout/nav-items.ts`): Today / Nutrition / Training history / My plans / Knowledge base (in progress). File-based routes are only `/`, `/onboarding`, `/sign-in/*`, `/sign-up/*`.
+The home route `/` is a single-page app that switches between 5 modules via tab state (`components/layout/nav-items.ts`): Today / Nutrition / Training history / My plans / Knowledge base. File-based routes are only `/`, `/onboarding`, `/sign-in/*`, `/sign-up/*`.
+
+The **Knowledge Base** tab (`components/knowledge/`) is a Perplexity-style, explainable evidence-grounded Q&A surface over the RAG corpus: browser → `app/api/knowledge/search/route.ts` (SSE proxy, auth + `X-API-Key`) → backend `/v1/chat/stream`. It streams a cited Markdown answer plus a RAG transparency panel (vector store / top-K / reranking / abstention / top score), with topic starters and recent searches in the empty state.
 
 ### 7.2 Business data: Server Actions
 
