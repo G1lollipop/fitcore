@@ -10,6 +10,7 @@ import { getTodayDate, resolveLogTimestamp } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
 import { recomputeDailyStats } from '@/lib/stats/recompute-daily-stats';
+import { workoutLogInputSchema, firstZodError } from '@/lib/validation/schemas';
 import type { WorkoutLogItem, DailyWorkoutStatsData } from './types';
 
 type WorkoutLogInsert = Database['public']['Tables']['workout_logs']['Insert'];
@@ -163,6 +164,52 @@ export async function getDailyWorkoutStats(): Promise<DailyWorkoutStatsData | nu
     water_intake: row?.water_intake || 0,
     workout_logs: workoutLogs,
   };
+}
+
+/**
+ * Replaces an existing `workout_logs` row's fields in place, then recomputes
+ * the daily_stats aggregate cache for that row's date. Mirrors updateDietLog:
+ * a manual numeric edit (no AI re-parse), scoped to the owning user.
+ */
+export async function updateWorkoutLog(
+  originalId: string,
+  next: Pick<WorkoutLogItem, 'workout_name' | 'sets' | 'duration_minutes' | 'calories_burned'>
+): Promise<{ success: boolean; error?: string }> {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+  if (!originalId) return { success: false, error: ActionError.MISSING_ORIGINAL_ID };
+
+  const parsed = workoutLogInputSchema.safeParse(next);
+  if (!parsed.success) {
+    return { success: false, error: firstZodError(parsed.error) };
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from('workout_logs')
+    .update({
+      workout_name: parsed.data.workout_name,
+      sets: parsed.data.sets,
+      duration_minutes: parsed.data.duration_minutes,
+      calories_burned: parsed.data.calories_burned,
+    })
+    .eq('id', originalId)
+    .eq('user_id', userId)
+    .select('id, date');
+
+  if (updateError) {
+    console.error('[updateWorkoutLog] Update error:', updateError.message);
+    return { success: false, error: ActionError.DB_UPDATE_FAILED };
+  }
+
+  if (!updated || updated.length === 0) {
+    return { success: false, error: ActionError.ORIGINAL_RECORD_GONE };
+  }
+
+  await recomputeDailyStats(userId, updated[0].date);
+
+  revalidatePath('/');
+  return { success: true };
 }
 
 export async function deleteWorkoutLog(

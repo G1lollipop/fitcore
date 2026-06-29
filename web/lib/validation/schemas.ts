@@ -29,6 +29,22 @@ export const dietLogInputSchema = z.object({
   logged_at: z.string().max(64).optional(),
 });
 
+/** Non-negative integer with a generous sanity ceiling (sets/minutes/kcal). */
+const count = z.number().int().min(0).max(100_000);
+
+export const workoutLogInputSchema = z.object({
+  id: z.string().max(200).optional(),
+  workout_name: z
+    .string()
+    .trim()
+    .min(1, ActionError.WORKOUT_NAME_REQUIRED)
+    .max(200, ActionError.WORKOUT_NAME_TOO_LONG),
+  sets: count.nullable(),
+  duration_minutes: count,
+  calories_burned: count,
+  logged_at: z.string().max(64).optional(),
+});
+
 export const onboardingDataSchema = z.object({
   gender: z.enum(['male', 'female']),
   age: z

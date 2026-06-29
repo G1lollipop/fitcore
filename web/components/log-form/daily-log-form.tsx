@@ -1,10 +1,12 @@
 "use client"
 
 import { useState, useTransition, useEffect } from "react"
-import { UtensilsCrossed, Dumbbell, Plus, Check, X, ClipboardList, RotateCcw, Loader2, Calendar } from "lucide-react"
+import { UtensilsCrossed, Dumbbell, Plus, Check, X, Pencil, ClipboardList, RotateCcw, Loader2, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { logFood, deleteDietLog } from "@/app/actions/logFood"
 import { logWorkout, deleteWorkoutLog, batchLogWorkouts } from "@/app/actions/logWorkout"
+import { DietLogEditDialog } from "@/components/log-form/diet-log-edit-dialog"
+import { WorkoutLogEditDialog } from "@/components/log-form/workout-log-edit-dialog"
 import type { DietLogItem, WorkoutLogItem, YesterdayWorkoutLog } from "@/app/actions/types"
 import { useToast } from "@/hooks/use-toast"
 import { useT } from "@/lib/i18n/provider"
@@ -14,12 +16,34 @@ interface LogEntry {
   id: string
   text: string
   time: string
+  /** Full record, present when the entry maps to a real DB row (enables edit). */
+  diet?: DietLogItem
+  workout?: WorkoutLogItem
 }
 
-function TagBadge({ label, onRemove, t }: { label: string; onRemove: () => void; t: Dictionary }) {
+function TagBadge({
+  label,
+  onRemove,
+  onEdit,
+  t,
+}: {
+  label: string
+  onRemove: () => void
+  onEdit?: () => void
+  t: Dictionary
+}) {
   return (
     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary text-xs text-foreground border border-border">
       {label}
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          className="text-muted-foreground hover:text-primary transition-colors"
+          aria-label={t.logForm.daily.editTag(label)}
+        >
+          <Pencil size={10} />
+        </button>
+      )}
       <button
         onClick={onRemove}
         className="text-muted-foreground hover:text-destructive transition-colors"
@@ -38,6 +62,7 @@ interface LogSectionProps {
   entries: LogEntry[]
   onAdd: (text: string) => void
   onRemove: (id: string) => void
+  onEdit?: (entry: LogEntry) => void
   showWorkoutActions?: boolean
   onCopyYesterday?: () => void
   onImportPlan?: () => void
@@ -60,6 +85,7 @@ function LogSection({
   entries,
   onAdd,
   onRemove,
+  onEdit,
   showWorkoutActions = false,
   onCopyYesterday,
   onImportPlan,
@@ -183,7 +209,12 @@ function LogSection({
         <div className="flex flex-wrap gap-1.5">
           {entries.map((e) => (
             <div key={e.id} className="flex items-center gap-1">
-              <TagBadge label={e.text} onRemove={() => onRemove(e.id)} t={t} />
+              <TagBadge
+                label={e.text}
+                onRemove={() => onRemove(e.id)}
+                onEdit={onEdit && (e.diet || e.workout) ? () => onEdit(e) : undefined}
+                t={t}
+              />
               <span className="text-[10px] text-muted-foreground">{e.time}</span>
             </div>
           ))}
@@ -230,12 +261,15 @@ export function DailyLogForm({
 
   const [dietEntries, setDietEntries] = useState<LogEntry[]>([])
   const [workoutEntries, setWorkoutEntries] = useState<LogEntry[]>([])
+  const [editingDiet, setEditingDiet] = useState<DietLogItem | null>(null)
+  const [editingWorkout, setEditingWorkout] = useState<WorkoutLogItem | null>(null)
 
   useEffect(() => {
     setDietEntries(initialDietLogs.map((log) => ({
       id: log.id || `legacy-diet-${log.logged_at}`,
       text: log.food_name,
       time: new Date(log.logged_at).toLocaleTimeString(t.common.locale, { hour: "2-digit", minute: "2-digit" }),
+      diet: log,
     })))
   }, [initialDietLogs, t])
 
@@ -244,15 +278,22 @@ export function DailyLogForm({
       id: log.id || `legacy-workout-${log.logged_at}`,
       text: log.workout_name,
       time: new Date(log.logged_at).toLocaleTimeString(t.common.locale, { hour: "2-digit", minute: "2-digit" }),
+      workout: log,
     })))
   }, [initialWorkoutLogs, t])
+
+  const handleEditEntry = (entry: LogEntry) => {
+    if (entry.diet) setEditingDiet(entry.diet)
+    else if (entry.workout) setEditingWorkout(entry.workout)
+  }
 
   const addDiet = (text: string) => {
     if (!userId) return
     startDietTransition(async () => {
       const result = await logFood(text)
       if (result.success && result.data) {
-        setDietEntries((prev) => [...prev, { id: Date.now().toString(), text: result.data!.food_name, time: now() }])
+        const item = result.data
+        setDietEntries((prev) => [...prev, { id: item.id, text: item.food_name, time: now(), diet: item }])
         onLogSuccess?.()
         toast({ title: t.logForm.daily.logged, description: `${result.data.food_name} (${result.data.calories} kcal)` })
       } else {
@@ -266,7 +307,8 @@ export function DailyLogForm({
     startWorkoutTransition(async () => {
       const result = await logWorkout(text)
       if (result.success && result.data) {
-        setWorkoutEntries((prev) => [...prev, { id: Date.now().toString(), text: result.data!.workout_name, time: now() }])
+        const item = result.data
+        setWorkoutEntries((prev) => [...prev, { id: item.id, text: item.workout_name, time: now(), workout: item }])
         onLogSuccess?.()
         toast({ title: t.logForm.daily.logged, description: `${result.data.workout_name} (${result.data.calories_burned} kcal)` })
       } else {
@@ -365,6 +407,7 @@ export function DailyLogForm({
         entries={dietEntries}
         onAdd={addDiet}
         onRemove={removeDiet}
+        onEdit={handleEditEntry}
         isSubmitting={isDietPending}
         t={t}
       />
@@ -375,6 +418,7 @@ export function DailyLogForm({
         entries={workoutEntries}
         onAdd={addWorkout}
         onRemove={removeWorkout}
+        onEdit={handleEditEntry}
         showWorkoutActions
         onCopyYesterday={handleCopyYesterday}
         onImportPlan={handleImportPlan}
@@ -387,6 +431,17 @@ export function DailyLogForm({
         } : null}
         hasYesterdayWorkout={yesterdayWorkout && yesterdayWorkout.length > 0}
         t={t}
+      />
+
+      <DietLogEditDialog
+        log={editingDiet}
+        onClose={() => setEditingDiet(null)}
+        onSuccess={onLogSuccess}
+      />
+      <WorkoutLogEditDialog
+        log={editingWorkout}
+        onClose={() => setEditingWorkout(null)}
+        onSuccess={onLogSuccess}
       />
     </div>
   )

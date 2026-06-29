@@ -1,9 +1,10 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { Activity, Clock, Dumbbell, Flame, Sparkles, Target, Trash2 } from 'lucide-react'
+import { Activity, Clock, Dumbbell, Flame, Pencil, Sparkles, Target, Trash2 } from 'lucide-react'
 import { useMemo, useState, useTransition } from 'react'
 import { logWorkout, deleteWorkoutLog } from '@/app/actions/logWorkout'
+import { WorkoutLogEditDialog } from '@/components/log-form/workout-log-edit-dialog'
 import {
   Sheet,
   SheetContent,
@@ -80,6 +81,7 @@ export function DailyLogDrawer({
   const t = useT()
   const [inputText, setInputText] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editing, setEditing] = useState<WorkoutLogItem | null>(null)
 
   const isToday = dateStr === TODAY_ISO
   const isFuture = !!dateStr && dateStr > TODAY_ISO
@@ -204,6 +206,7 @@ export function DailyLogDrawer({
                     canDelete={canEdit}
                     userId={userId}
                     onChange={onChange}
+                    onEdit={canEdit ? setEditing : undefined}
                   />
                 ))}
               </AnimatePresence>
@@ -211,6 +214,12 @@ export function DailyLogDrawer({
           )}
         </div>
       </SheetContent>
+
+      <WorkoutLogEditDialog
+        log={editing}
+        onClose={() => setEditing(null)}
+        onSuccess={onChange}
+      />
     </Sheet>
   )
 }
@@ -242,9 +251,10 @@ interface WorkoutRowProps {
   canDelete: boolean
   userId?: string
   onChange?: () => void
+  onEdit?: (log: WorkoutLogItem) => void
 }
 
-function WorkoutRow({ log, canDelete, userId, onChange }: WorkoutRowProps) {
+function WorkoutRow({ log, canDelete, userId, onChange, onEdit }: WorkoutRowProps) {
   const { toast } = useToast()
   const t = useT()
   const [isPending, startTransition] = useTransition()
@@ -335,6 +345,19 @@ function WorkoutRow({ log, canDelete, userId, onChange }: WorkoutRowProps) {
           )}
         </div>
       </div>
+      {canDelete && onEdit && (
+        <button
+          type="button"
+          onClick={() => onEdit(log)}
+          disabled={isPending}
+          aria-label={t.training.drawer.editAria(log.workout_name)}
+          className={cn(
+            'flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50'
+          )}
+        >
+          <Pencil size={14} />
+        </button>
+      )}
       {canDelete && (
         <button
           type="button"

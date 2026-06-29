@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { Coffee, Salad, UtensilsCrossed, Cookie, Moon, Trash2 } from 'lucide-react'
+import { Coffee, Salad, UtensilsCrossed, Cookie, Moon, Pencil, Trash2 } from 'lucide-react'
 import { useMemo, useState, useTransition, type ComponentType } from 'react'
 import { deleteDietLog } from '@/app/actions/logFood'
 import { useToast } from '@/hooks/use-toast'
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
 import { EmptyState } from '@/components/ui/empty-state'
+import { DietLogEditDialog } from '@/components/log-form/diet-log-edit-dialog'
 import type { DietLogItem } from '@/app/actions/types'
 
 type MealSlot = 'breakfast' | 'lunch' | 'snack' | 'dinner' | 'lateNight'
@@ -79,6 +80,7 @@ interface MealTimelineProps {
  */
 export function MealTimeline({ logs, userId, onChange, className }: MealTimelineProps) {
   const t = useT()
+  const [editing, setEditing] = useState<DietLogItem | null>(null)
   const groups = useMemo(() => {
     const buckets: Record<MealSlot, DietLogItem[]> = {
       breakfast: [],
@@ -113,20 +115,28 @@ export function MealTimeline({ logs, userId, onChange, className }: MealTimeline
   }
 
   return (
-    <ol className={cn('relative space-y-6', className)}>
-      <AnimatePresence initial={false}>
-        {populated.map((slot, idx) => (
-          <MealSection
-            key={slot}
-            config={MEAL_CONFIG[slot]}
-            logs={groups[slot]}
-            userId={userId}
-            onChange={onChange}
-            isLast={idx === populated.length - 1}
-          />
-        ))}
-      </AnimatePresence>
-    </ol>
+    <>
+      <ol className={cn('relative space-y-6', className)}>
+        <AnimatePresence initial={false}>
+          {populated.map((slot, idx) => (
+            <MealSection
+              key={slot}
+              config={MEAL_CONFIG[slot]}
+              logs={groups[slot]}
+              userId={userId}
+              onChange={onChange}
+              onEdit={setEditing}
+              isLast={idx === populated.length - 1}
+            />
+          ))}
+        </AnimatePresence>
+      </ol>
+      <DietLogEditDialog
+        log={editing}
+        onClose={() => setEditing(null)}
+        onSuccess={onChange}
+      />
+    </>
   )
 }
 
@@ -135,10 +145,11 @@ interface MealSectionProps {
   logs: DietLogItem[]
   userId?: string
   onChange?: () => void
+  onEdit: (log: DietLogItem) => void
   isLast: boolean
 }
 
-function MealSection({ config, logs, userId, onChange, isLast }: MealSectionProps) {
+function MealSection({ config, logs, userId, onChange, onEdit, isLast }: MealSectionProps) {
   const t = useT()
   const totals = useMemo(() => sumMacros(logs), [logs])
   const Icon = config.icon
@@ -193,6 +204,7 @@ function MealSection({ config, logs, userId, onChange, isLast }: MealSectionProp
               log={log}
               userId={userId}
               onChange={onChange}
+              onEdit={onEdit}
               accent={config.accent}
             />
           ))}
@@ -206,10 +218,11 @@ interface MealRowProps {
   log: DietLogItem
   userId?: string
   onChange?: () => void
+  onEdit: (log: DietLogItem) => void
   accent: string
 }
 
-function MealRow({ log, userId, onChange, accent }: MealRowProps) {
+function MealRow({ log, userId, onChange, onEdit, accent }: MealRowProps) {
   const { toast } = useToast()
   const t = useT()
   const [isPending, startTransition] = useTransition()
@@ -262,6 +275,15 @@ function MealRow({ log, userId, onChange, accent }: MealRowProps) {
           </p>
         )}
       </div>
+      <button
+        type="button"
+        onClick={() => onEdit(log)}
+        disabled={!userId || isPending || log.pending}
+        aria-label={t.nutrition.editAria(log.food_name)}
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Pencil size={14} />
+      </button>
       <button
         type="button"
         onClick={handleDelete}
