@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 import { Droplets, Plus } from 'lucide-react'
-import { useEffect, useId, useRef, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { logWater } from '@/app/actions/dashboard'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
@@ -173,12 +173,19 @@ interface WaterGlassProps {
  * two SVG wave layers riding the top edge of the fill so the surface
  * appears to oscillate.
  */
+// Stable, hydration-safe SVG ids. There's a single WaterGlass on the page and
+// these only need to be unique within this SVG, so a constant avoids the
+// `useId()` server/client mismatch (its value depends on tree position, which
+// drifts with ssr:false overlays and conditional siblings).
+const GRAD_ID = 'water-glass-grad'
+const WAVE1_ID = 'water-glass-wave1'
+const WAVE2_ID = 'water-glass-wave2'
+
 function WaterGlass({ pct, reachedGoal }: WaterGlassProps) {
-  const id = useId()
   const active = useTabActive()
-  const gradId = `${id}-grad`
-  const wave1Id = `${id}-wave1`
-  const wave2Id = `${id}-wave2`
+  const gradId = GRAD_ID
+  const wave1Id = WAVE1_ID
+  const wave2Id = WAVE2_ID
 
   return (
     <div className="relative h-44 w-32 overflow-hidden rounded-[1.5rem] border border-border/60 bg-secondary/40">
