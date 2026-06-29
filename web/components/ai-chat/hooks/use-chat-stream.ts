@@ -69,6 +69,7 @@ function applyEvent(
               mode: event.mode,
               citations: event.citations ?? [],
               toolsUsed: event.toolsUsed ?? [],
+              serverMessageId: event.meta?.assistantMessageId,
             }
           : m
       )

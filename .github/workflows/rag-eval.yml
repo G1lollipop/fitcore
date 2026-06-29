@@ -4,6 +4,9 @@
 # Jobs:
 #   - changes        : detect which areas a PR touched (path filter).
 #   - retrieval-gate : offline retrieval metrics vs baseline (reads Supabase).
+#   - reranker-gate  : same gate over the live CrossEncoder reranking path
+#                      (--variant reranker); base MiniLM by default, or the
+#                      fine-tuned model via the RERANKER_MODEL_REF repo variable.
 #   - agent-gate     : agent Step-1 tool-selection golden set vs baseline (Node).
 #   - answer-eval    : boots the backend once and runs the answer-level
 #                      LLM-judge + faithfulness + abstention evals
@@ -43,6 +46,7 @@ on:
     paths:
       - 'rag/eval/**'
       - 'rag/data/**'
+      - 'rag/training/**'
       - 'rag/app/services/retrieval/**'
       - 'rag/app/services/rag_service.py'
       - 'rag/app/core/settings.py'
@@ -60,6 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       retrieval: ${{ steps.filter.outputs.retrieval }}
+      reranker: ${{ steps.filter.outputs.reranker }}
       agent: ${{ steps.filter.outputs.agent }}
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +75,13 @@ jobs:
             retrieval:
               - 'rag/eval/**'
               - 'rag/data/**'
+              - 'rag/app/services/retrieval/**'
+              - 'rag/app/services/rag_service.py'
+              - 'rag/app/core/settings.py'
+              - '.github/workflows/rag-eval.yml'
+            reranker:
+              - 'rag/eval/**'
+              - 'rag/training/**'
               - 'rag/app/services/retrieval/**'
               - 'rag/app/services/rag_service.py'
               - 'rag/app/core/settings.py'
@@ -152,6 +164,91 @@ jobs:
                 `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
                 ``,
                 `Download the \`rag-retrieval-report-${context.runId}\` artifact for the per-query breakdown.`,
+              ].join('\n'),
+              labels: ['rag-eval', 'regression'],
+            });
+
+  # ── Reranker regression gate (live CrossEncoder path) ──────────────────────
+  # Runs the same anchor/keyword gate but through RagService's reranking path
+  # (--variant reranker). Needs torch + sentence-transformers (CPU build in CI).
+  # By default it gates the off-the-shelf MiniLM (auto-downloaded from HF);
+  # point the RERANKER_MODEL_REF repo variable at the fine-tuned model (e.g. a
+  # Hugging Face Hub repo id) to gate the fine-tuned reranker instead — since
+  # the local models/ artifact is gitignored and not present in CI.
+  reranker-gate:
+    name: Reranker regression gate
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.reranker == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    defaults:
+      run:
+        working-directory: rag
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: rag/requirements-dev.txt
+
+      - name: Install dependencies (+ CPU torch for reranking)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "sentence-transformers>=2.7.0,<4.0.0"
+
+      - name: Run reranker eval + gate (--variant reranker)
+        env:
+          GOOGLE_AI_STUDIO_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VECTOR_BACKEND: supabase
+          RETRIEVAL_VECTOR_WEIGHT: '0.8'
+          RERANKER_ENABLED: 'true'
+          # Default: off-the-shelf MiniLM (auto-downloaded). Set the
+          # RERANKER_MODEL_REF repo variable to a fine-tuned model id (e.g. on
+          # the HF Hub) to gate the fine-tuned reranker.
+          RERANKER_MODEL_NAME: ${{ vars.RERANKER_MODEL_REF || 'cross-encoder/ms-marco-MiniLM-L-6-v2' }}
+          CACHE_BACKEND: memory
+        run: |
+          python eval/eval_retrieval.py \
+            --dataset golden_dataset_en.json \
+            --variant reranker \
+            --gate \
+            --tag ci-reranker
+
+      - name: Upload reranker report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-reranker-report-${{ github.run_id }}
+          path: rag/eval/retrieval_report_*.json
+          retention-days: 90
+
+      - name: Open issue on nightly regression
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().slice(0, 10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[rag-reranker] Nightly reranker regression — ${today}`,
+              body: [
+                `The nightly reranker eval gate failed on ${today}.`,
+                ``,
+                `Metrics dropped below rag/eval/retrieval_baseline.json on the --variant reranker path.`,
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                ``,
+                `Download the \`rag-reranker-report-${context.runId}\` artifact for the per-query breakdown.`,
               ].join('\n'),
               labels: ['rag-eval', 'regression'],
             });

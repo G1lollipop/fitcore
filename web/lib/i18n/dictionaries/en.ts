@@ -804,6 +804,11 @@ export const en = {
       hybrid: 'Hybrid',
       direct: 'Direct',
     } as Record<string, string>,
+    feedback: {
+      helpful: 'Helpful',
+      notHelpful: 'Not helpful',
+      thanks: 'Thanks for the feedback',
+    },
     suggested: [
       'What should I eat to build muscle?',
       'Help me plan this week’s workouts',

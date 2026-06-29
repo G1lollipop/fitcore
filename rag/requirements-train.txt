@@ -1,0 +1,17 @@
+# Reranker fine-tuning dependencies (training/train_reranker.py).
+#
+# NOT part of the production image (requirements-prod.txt) or the test image
+# (requirements-dev.txt) — install only in your training environment
+# (local GPU box / Colab / Kaggle), so the deployed API stays slim.
+#
+# GPU note (RTX 50-series / Blackwell, e.g. RTX 5060): install a CUDA 12.8
+# torch build FIRST, then this file:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+#   pip install -r requirements-train.txt
+# CPU-only training also works (use a smaller --batch-size; it is just slower).
+
+torch>=2.3
+# Pinned <4 to keep the classic CrossEncoder.fit(train_dataloader=...) API that
+# train_reranker.py uses.
+sentence-transformers>=2.7.0,<4.0.0
+accelerate>=0.30

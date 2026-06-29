@@ -107,13 +107,53 @@ Once the optimal weight is decided, set `RETRIEVAL_VECTOR_WEIGHT=<value>` in `.e
 > Equal-weight ensemble (0.5/0.5) gave nDCG@10≈0.82, **worse than pure vector's 0.99** — because BM25 dragged down the fusion.
 > Therefore this project should raise `RETRIEVAL_VECTOR_WEIGHT` (close to 1.0), or use `--sweep` to find the optimum.
 
-Add CrossEncoder reranking (locally needs torch + sentence-transformers):
+Add CrossEncoder reranking (locally needs torch + sentence-transformers). Use
+`--variant reranker` so the eval actually runs candidates through the live
+CrossEncoder compression path (the plain `ensemble` variant does NOT rerank):
 
 ```bash
-RERANKER_ENABLED=true python eval/eval_retrieval.py --tag reranker_on
+RERANKER_ENABLED=true RERANKER_MODEL_NAME=cross-encoder/ms-marco-MiniLM-L-6-v2 \
+  python eval/eval_retrieval.py --variant reranker --tag reranker_base
 ```
 
 > Comparisons that require re-ingesting the KB (chunking strategy, embedding dimension, ensemble weights) are P3 and out of scope for this round.
+
+### Fine-tuned domain reranker (training/)
+
+A domain CrossEncoder is fine-tuned on synthetic `(query, positive)` pairs plus
+mined hard negatives, then compared against the off-the-shelf MiniLM with the
+same harness. The fine-tuned model drops into production through
+`LOCAL_RERANKER_MODEL_PATH` with **no code change** (see
+`app/services/retrieval/compression.py`).
+
+Pipeline (from `rag/`):
+
+```bash
+# 1) Generate (query, positive) pairs (Gemini; bounded by free-tier quota).
+#    The eval golden set is held out, NOT used for training.
+python training/generate_pairs.py --max-per-source 3
+
+# 2) Mine hard negatives + build a document-level train/val split.
+python training/mine_hard_negatives.py --neg-per-pos 4          # BM25 negatives
+# python training/mine_hard_negatives.py --use-rag --neg-per-pos 4  # + vector negatives
+
+# 3) Fine-tune (GPU box / Colab; install training deps first).
+pip install -r requirements-train.txt
+python training/train_reranker.py --epochs 2 --batch-size 16    # → models/reranker-ft/
+```
+
+Measure the lift (base vs fine-tuned), with the LLM judge for context relevance:
+
+```bash
+RERANKER_ENABLED=true RERANKER_MODEL_NAME=cross-encoder/ms-marco-MiniLM-L-6-v2 \
+  python eval/eval_retrieval.py --variant reranker --judge --tag reranker_base
+RERANKER_ENABLED=true LOCAL_RERANKER_MODEL_PATH=./models/reranker-ft \
+  python eval/eval_retrieval.py --variant reranker --judge --tag reranker_ft
+```
+
+Backfill the before/after numbers into `retrieval_baseline.json` →
+`_reranker_ft_reference` so the gain is documented, and (optionally) tighten the
+gate floors to the fine-tuned reranker's measured level.
 
 ### Evaluating the live endpoint
 

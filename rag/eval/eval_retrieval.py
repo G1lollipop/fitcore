@@ -160,6 +160,16 @@ class ProcessInRetriever:
             return self._variant_retrievers[variant]
         if variant == "ensemble":
             retriever = self.rag.base_retriever
+        elif variant == "reranker":
+            # Exercises the live reranking path: RagService's compression
+            # retriever (CrossEncoder over the ensemble candidates). Honors
+            # RERANKER_ENABLED + the configured model (RERANKER_MODEL_NAME or
+            # LOCAL_RERANKER_MODEL_PATH), so a base vs fine-tuned comparison is
+            # just two runs with different model env vars. Falls back to the
+            # base ensemble when the reranker is disabled/unavailable.
+            retriever = (
+                self.rag._get_compression_retriever() or self.rag.base_retriever
+            )
         elif variant == "vector":
             retriever = self._vector_only_retriever()
         elif variant == "bm25":
@@ -649,7 +659,11 @@ def main() -> int:
         help="abstention false-retrieval score threshold",
     )
     parser.add_argument(
-        "--variant", default="ensemble", choices=["ensemble", "vector", "bm25", "all"]
+        "--variant",
+        default="ensemble",
+        choices=["ensemble", "reranker", "vector", "bm25", "all"],
+        help="'reranker' exercises the live CrossEncoder path (needs "
+        "RERANKER_ENABLED=true + torch); used for base-vs-fine-tuned comparison",
     )
     parser.add_argument(
         "--sweep",

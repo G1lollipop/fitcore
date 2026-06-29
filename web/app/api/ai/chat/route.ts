@@ -3,8 +3,42 @@ import { getUserIdOrNull } from "@/lib/auth/require-user"
 import { z } from "zod"
 
 import type { AgentSSEEvent, CoachChatMessage } from "@/lib/ai/types"
-import { runAgent } from "@/lib/ai/agent"
+import { runAgent, type AgentResult } from "@/lib/ai/agent"
 import { buildUserContext } from "@/lib/ai/user-context"
+
+/**
+ * Persist a lightweight per-turn observability trace (stage latencies + token
+ * estimate). Best-effort: failures are logged and swallowed so they never
+ * affect the user's answer.
+ */
+async function saveTrace(
+  userId: string,
+  messageId: string | null,
+  conversationId: string,
+  result: AgentResult,
+  latencyMs: number
+): Promise<void> {
+  try {
+    const { error } = await supabase.from("chat_trace").insert({
+      user_id: userId,
+      message_id: messageId,
+      conversation_id: conversationId,
+      mode: result.mode,
+      tools_used: result.toolsUsed,
+      retrieval_k: result.retrievalK ?? null,
+      latency_ms: latencyMs,
+      plan_ms: result.timings?.planMs ?? null,
+      tools_ms: result.timings?.toolsMs ?? null,
+      generation_ms: result.timings?.generationMs ?? null,
+      prompt_chars_approx: result.usage?.promptCharsApprox ?? null,
+      completion_chars: result.usage?.completionChars ?? null,
+      completion_tokens_approx: result.usage?.completionTokensApprox ?? null,
+    })
+    if (error) console.error("[/api/ai/chat] saveTrace error:", error)
+  } catch (err) {
+    console.error("[/api/ai/chat] saveTrace exception:", err)
+  }
+}
 
 const requestSchema = z.object({
   message: z.string().trim().min(1, "message is required"),
@@ -16,18 +50,22 @@ async function saveMessage(
   role: "user" | "assistant",
   content: string,
   conversationId: string
-): Promise<boolean> {
-  const { error } = await supabase.from("chat_messages").insert({
-    user_id: userId,
-    role,
-    content,
-    conversation_id: conversationId,
-  })
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .insert({
+      user_id: userId,
+      role,
+      content,
+      conversation_id: conversationId,
+    })
+    .select("id")
+    .single()
   if (error) {
     console.error("[/api/ai/chat] saveMessage error:", error)
-    return false
+    return null
   }
-  return true
+  return data?.id ?? null
 }
 
 async function loadRecentMessages(
@@ -108,11 +146,14 @@ export async function POST(request: Request) {
         // Persist before sending `done` so the stream doesn't finish ahead of
         // the DB write and drop history; write failures don't affect this
         // answer and are surfaced honestly via meta.persisted.
-        const [userSaved, assistantSaved] = await Promise.all([
+        const [userMessageId, assistantMessageId] = await Promise.all([
           saveMessage(userId, "user", message, effectiveConversationId),
           saveMessage(userId, "assistant", result.answer, effectiveConversationId),
         ])
-        const persisted = userSaved && assistantSaved
+        const persisted = Boolean(userMessageId) && Boolean(assistantMessageId)
+
+        // Best-effort observability trace (never blocks/affects the reply).
+        void saveTrace(userId, assistantMessageId, effectiveConversationId, result, Date.now() - startedAt)
 
         // done event: citations, mode, tool list, k value (for debugging).
         controller.enqueue(
@@ -128,6 +169,7 @@ export async function POST(request: Request) {
               retrievalKReason: result.retrievalKReason,
               persisted,
               loggedActivity: result.loggedActivity,
+              assistantMessageId: assistantMessageId ?? undefined,
             },
           })
         )

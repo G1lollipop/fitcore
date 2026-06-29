@@ -39,6 +39,112 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_trace: {
+        Row: {
+          completion_chars: number | null
+          completion_tokens_approx: number | null
+          conversation_id: string | null
+          created_at: string
+          generation_ms: number | null
+          id: string
+          latency_ms: number | null
+          message_id: string | null
+          mode: string | null
+          plan_ms: number | null
+          prompt_chars_approx: number | null
+          retrieval_k: number | null
+          tools_ms: number | null
+          tools_used: string[]
+          user_id: string
+        }
+        Insert: {
+          completion_chars?: number | null
+          completion_tokens_approx?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          generation_ms?: number | null
+          id?: string
+          latency_ms?: number | null
+          message_id?: string | null
+          mode?: string | null
+          plan_ms?: number | null
+          prompt_chars_approx?: number | null
+          retrieval_k?: number | null
+          tools_ms?: number | null
+          tools_used?: string[]
+          user_id: string
+        }
+        Update: {
+          completion_chars?: number | null
+          completion_tokens_approx?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          generation_ms?: number | null
+          id?: string
+          latency_ms?: number | null
+          message_id?: string | null
+          mode?: string | null
+          plan_ms?: number | null
+          prompt_chars_approx?: number | null
+          retrieval_k?: number | null
+          tools_ms?: number | null
+          tools_used?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_trace_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_message_feedback: {
+        Row: {
+          answer: string | null
+          citations: Json
+          conversation_id: string | null
+          created_at: string
+          id: string
+          message_id: string
+          query: string | null
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          answer?: string | null
+          citations?: Json
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          message_id: string
+          query?: string | null
+          rating: number
+          user_id: string
+        }
+        Update: {
+          answer?: string | null
+          citations?: Json
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          message_id?: string
+          query?: string | null
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_message_feedback_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string | null

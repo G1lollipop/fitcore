@@ -25,6 +25,7 @@ export interface AIChatMeta {
   retrievalKReason?: string  // the LLM's stated rationale
   persisted?: boolean        // whether the message was successfully written to the history store
   loggedActivity?: boolean   // whether this turn wrote diet/workout/water via a log_* tool
+  assistantMessageId?: string // chat_messages.id of the persisted assistant reply (for feedback)
 }
 
 export interface Citation {

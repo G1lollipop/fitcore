@@ -1,8 +1,10 @@
 'use client'
 
-import { Bot } from 'lucide-react'
+import { useState } from 'react'
+import { Bot, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n/provider'
+import { submitMessageFeedback } from '@/app/actions/chat'
 import { CitationsList } from './citations-list'
 import { type Message } from './types'
 
@@ -79,6 +81,73 @@ function AssistantMeta({ msg }: { msg: Message }) {
         </div>
       )}
       <CitationsList citations={msg.citations ?? []} />
+      <FeedbackButtons msg={msg} />
     </>
+  )
+}
+
+/**
+ * Thumbs up / down on an assistant reply. Only shown once the reply has been
+ * persisted (a `serverMessageId` exists) and streaming has finished. Records
+ * the rating via the `submitMessageFeedback` server action, which feeds the
+ * reranker training flywheel.
+ */
+function FeedbackButtons({ msg }: { msg: Message }) {
+  const t = useT()
+  const [rating, setRating] = useState<1 | -1 | null>(null)
+  const [pending, setPending] = useState(false)
+
+  if (!msg.serverMessageId || msg.isStreaming) return null
+
+  const send = async (value: 1 | -1) => {
+    if (pending || rating === value) return
+    setPending(true)
+    const previous = rating
+    setRating(value) // optimistic
+    const res = await submitMessageFeedback({
+      messageId: msg.serverMessageId!,
+      rating: value,
+      citations: msg.citations ?? [],
+    })
+    if (!res.success) setRating(previous)
+    setPending(false)
+  }
+
+  return (
+    <div className="flex items-center gap-1 px-1" aria-live="polite">
+      <button
+        type="button"
+        onClick={() => send(1)}
+        disabled={pending}
+        aria-pressed={rating === 1}
+        aria-label={t.aiChat.feedback.helpful}
+        title={t.aiChat.feedback.helpful}
+        className={cn(
+          'rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50',
+          rating === 1 && 'text-primary'
+        )}
+      >
+        <ThumbsUp size={12} />
+      </button>
+      <button
+        type="button"
+        onClick={() => send(-1)}
+        disabled={pending}
+        aria-pressed={rating === -1}
+        aria-label={t.aiChat.feedback.notHelpful}
+        title={t.aiChat.feedback.notHelpful}
+        className={cn(
+          'rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50',
+          rating === -1 && 'text-destructive'
+        )}
+      >
+        <ThumbsDown size={12} />
+      </button>
+      {rating !== null && (
+        <span className="text-[10px] text-muted-foreground">
+          {t.aiChat.feedback.thanks}
+        </span>
+      )}
+    </div>
   )
 }

@@ -62,6 +62,14 @@ export interface AgentResult {
   retrievalKReason?: string
   /** True if a log_* tool wrote to the DB — signals the client to refresh. */
   loggedActivity?: boolean
+  /** Per-stage latency (ms), for the observability trace. */
+  timings?: { planMs: number; toolsMs: number; generationMs: number }
+  /** Coarse token accounting (≈ chars/4), for cost/latency dashboards. */
+  usage?: {
+    promptCharsApprox: number
+    completionChars: number
+    completionTokensApprox: number
+  }
 }
 
 const LOG_TOOLS = new Set(["log_food", "log_workout", "log_water", "adjust_plan"])
@@ -75,20 +83,24 @@ export async function runAgent(params: {
 }): Promise<AgentResult> {
   const { message, sessionId, userContext, conversationHistory, onToken } = params
 
+  const planStart = Date.now()
   const { messages, planChoice, parsed } = await createAgentPlan({
     message,
     conversationHistory,
   })
+  const planMs = Date.now() - planStart
 
   const toolsUsed: string[] = []
   let citations: Citation[] = []
   const retrievalK = parsed.retrievalK
   const retrievalKReason = parsed.retrievalKReason
   let loggedActivity = false
+  let toolsMs = 0
 
   if (planChoice.finish_reason === "tool_calls" && planChoice.message.tool_calls?.length) {
     messages.push(planChoice.message)
 
+    const toolsStart = Date.now()
     const toolResults = await Promise.all(
       planChoice.message.tool_calls.map(async (toolCall) => {
         if (!("function" in toolCall)) {
@@ -211,8 +223,15 @@ export async function runAgent(params: {
     )
 
     messages.push(...toolResults)
+    toolsMs = Date.now() - toolsStart
   }
 
+  const promptCharsApprox = messages.reduce(
+    (n, m) => n + (typeof m.content === "string" ? m.content.length : 0),
+    0
+  )
+
+  const genStart = Date.now()
   const streamResponse = await openai.chat.completions.create({
     model: AI_CHAT_MODEL,
     messages,
@@ -229,11 +248,26 @@ export async function runAgent(params: {
       onToken(token)
     }
   }
+  const generationMs = Date.now() - genStart
 
   const hasKnowledge = toolsUsed.includes("query_knowledge_base")
   const hasPersonal = toolsUsed.includes("get_user_stats") || toolsUsed.some((tn) => LOG_TOOLS.has(tn))
   const mode: AgentMode =
     hasKnowledge && hasPersonal ? "hybrid" : hasKnowledge ? "knowledge" : hasPersonal ? "personal" : "direct"
 
-  return { answer: fullAnswer, citations, mode, toolsUsed, retrievalK, retrievalKReason, loggedActivity }
+  return {
+    answer: fullAnswer,
+    citations,
+    mode,
+    toolsUsed,
+    retrievalK,
+    retrievalKReason,
+    loggedActivity,
+    timings: { planMs, toolsMs, generationMs },
+    usage: {
+      promptCharsApprox,
+      completionChars: fullAnswer.length,
+      completionTokensApprox: Math.ceil(fullAnswer.length / 4),
+    },
+  }
 }

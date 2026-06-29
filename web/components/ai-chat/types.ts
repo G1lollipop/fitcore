@@ -13,6 +13,8 @@ export interface Message {
   toolsUsed?: string[]
   /** True while the SSE stream is still appending tokens. */
   isStreaming?: boolean
+  /** Persisted chat_messages.id of the assistant reply (enables feedback). */
+  serverMessageId?: string
 }
 
 /**

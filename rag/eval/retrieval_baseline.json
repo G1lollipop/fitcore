@@ -1,5 +1,5 @@
 {
-  "_comment": "Retrieval regression-gate baseline. eval_retrieval.py --gate reads the thresholds here; falling below the floor is treated as a regression (CI fail). After the KB grew to 1000+ documents, switch to 'anchor metrics' for deterministic gating: anchor_* = whether the golden set's relevant_sources (the must-hit representative documents) are still retrieved, which is robust to re-chunking and independent of corpus size. The LLM judge's context_precision/hit are quality measures (--judge) and do not enter the CI gate (to save API). The thresholds below are conservative floor placeholders and must be calibrated by backfilling the first `--variant ensemble` measured values after the expanded KB is ingested (recommended: set the floor ~0.1 below the measured value).",
+  "_comment": "Retrieval regression-gate baseline. eval_retrieval.py --gate reads the thresholds here; falling below the floor is treated as a regression (CI fail). After the KB grew to 1000+ documents, switch to 'anchor metrics' for deterministic gating: anchor_* = whether the golden set's relevant_sources (the must-hit representative documents) are still retrieved, which is robust to re-chunking and independent of corpus size. The LLM judge's context_precision/hit are quality measures (--judge) and do not enter the CI gate (to save API). The thresholds below are conservative floor placeholders and must be calibrated by backfilling the first `--variant ensemble` measured values after the expanded KB is ingested (recommended: set the floor ~0.1 below the measured value). The thresholds are variant-agnostic, so the same floors gate `--variant reranker` (the fine-tuned CrossEncoder path); the fine-tuned reranker should meet or beat them.",
   "dataset": "golden_dataset_en.json",
   "variant": "ensemble",
   "vector_weight": 0.8,
@@ -21,5 +21,22 @@
     "_comment": "The following are --judge quality measures, for observation only and not part of the gate; backfill after the first measurement.",
     "context_precision@5": null,
     "context_hit@5": null
+  },
+  "_reranker_ft_reference": {
+    "_comment": "Base-vs-fine-tuned reranker comparison. Reproduce after training (training/train_reranker.py) by running the two commands below from rag/ with torch installed; backfill the measured numbers so the gain is documented and the reranker CI gate floors can be tightened. base = off-the-shelf cross-encoder/ms-marco-MiniLM-L-6-v2; ft = ./models/reranker-ft.",
+    "_cmd_base": "RERANKER_ENABLED=true RERANKER_MODEL_NAME=cross-encoder/ms-marco-MiniLM-L-6-v2 python eval/eval_retrieval.py --variant reranker --judge --tag reranker_base",
+    "_cmd_ft": "RERANKER_ENABLED=true LOCAL_RERANKER_MODEL_PATH=./models/reranker-ft python eval/eval_retrieval.py --variant reranker --judge --tag reranker_ft",
+    "base": {
+      "anchor_mrr@10": null,
+      "anchor_hit@10": null,
+      "keyword_coverage@10": null,
+      "context_precision@5": null
+    },
+    "fine_tuned": {
+      "anchor_mrr@10": null,
+      "anchor_hit@10": null,
+      "keyword_coverage@10": null,
+      "context_precision@5": null
+    }
   }
 }
