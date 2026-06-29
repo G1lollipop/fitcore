@@ -21,6 +21,36 @@ function isOnboardingRoute(pathname: string): boolean {
 }
 
 /**
+ * Per-user cache of the onboarding flag. Onboarding is one-way (once completed
+ * it never reverts), so after the first confirmation we stamp the user's id
+ * into this httpOnly cookie and skip the Supabase lookup on later requests.
+ * Keyed by user id so a different account on the same browser re-checks rather
+ * than inheriting a stale "true".
+ */
+const ONBOARDED_COOKIE = 'fc_onboarded'
+
+async function resolveOnboarded(
+  request: NextRequest,
+  response: NextResponse,
+  userId: string
+): Promise<boolean> {
+  if (request.cookies.get(ONBOARDED_COOKIE)?.value === userId) {
+    return true
+  }
+  const onboarded = await checkUserOnboarded(userId)
+  if (onboarded) {
+    response.cookies.set(ONBOARDED_COOKIE, userId, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+    })
+  }
+  return onboarded
+}
+
+/**
  * Has the user completed onboarding? Checked via a direct PostgREST call with
  * the service-role key — this runs server-side in middleware (never shipped to
  * the browser) and is scoped to the authenticated `userId`.
@@ -100,7 +130,15 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(signInUrl)
   }
 
-  const hasOnboarded = await checkUserOnboarded(user.id)
+  // Onboarding gating only affects real page navigations. Server actions and
+  // RSC data fetches (non-GET, e.g. the POST that loads each tab) authenticate
+  // inside the action itself, so we skip the onboarding lookup + redirect for
+  // them — that removes a Supabase round-trip from every tab data load.
+  if (request.method !== 'GET') {
+    return response
+  }
+
+  const hasOnboarded = await resolveOnboarded(request, response, user.id)
 
   // Unonboarded users are funneled to /onboarding (except while already there).
   if (!hasOnboarded && !isOnboardingRoute(pathname)) {

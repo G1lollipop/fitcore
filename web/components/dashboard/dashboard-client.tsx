@@ -142,11 +142,11 @@ export function DashboardClient({
         <WeeklyActivity data={dashboardData?.weeklyTrend} />
       </TabPanel>
 
-      <TabPanel active={activeNav === 'nutrition'}>
+      <TabPanel active={activeNav === 'nutrition'} prefetch>
         <NutritionCenter userId={userId} onLogSuccess={handleLogSuccess} />
       </TabPanel>
 
-      <TabPanel active={activeNav === 'training'}>
+      <TabPanel active={activeNav === 'training'} prefetch>
         <TrainingHistory userId={userId} onLogSuccess={handleLogSuccess} />
       </TabPanel>
 
@@ -176,16 +176,24 @@ export function DashboardClient({
  */
 function TabPanel({
   active,
+  prefetch = false,
   className,
   children,
 }: {
   active: boolean
+  /**
+   * Mount this panel eagerly (hidden) at startup instead of waiting for the
+   * first activation, so its data-loading effects run in the background right
+   * after login and the tab is instant to open. Used for nutrition/training.
+   */
+  prefetch?: boolean
   className?: string
   children: ReactNode
 }) {
-  // Latches to true on first activation and stays mounted thereafter, so
-  // re-visiting a tab is instant (no remount / refetch / skeleton flash).
-  const [everActive, setEverActive] = useState(active)
+  // Latches to true on first activation (or immediately when prefetch is set)
+  // and stays mounted thereafter, so re-visiting a tab is instant (no remount /
+  // refetch / skeleton flash).
+  const [everActive, setEverActive] = useState(active || prefetch)
   useEffect(() => {
     if (active && !everActive) setEverActive(true)
   }, [active, everActive])
