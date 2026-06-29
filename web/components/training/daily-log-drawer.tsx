@@ -82,7 +82,10 @@ export function DailyLogDrawer({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isToday = dateStr === TODAY_ISO
-  const canEdit = isToday && !!userId
+  const isFuture = !!dateStr && dateStr > TODAY_ISO
+  // Past and current days are editable (add + delete); only future days are
+  // read-only.
+  const canEdit = !!userId && !isFuture
   const { title, description } = formatHeading(dateStr, t)
 
   const totals = useMemo(() => {
@@ -100,7 +103,7 @@ export function DailyLogDrawer({
     if (!inputText.trim() || !canEdit) return
     setIsSubmitting(true)
     try {
-      const result = await logWorkout(inputText)
+      const result = await logWorkout(inputText, undefined, dateStr ?? undefined)
       if (result.success) {
         toast({
           title: t.training.drawer.logSuccess,

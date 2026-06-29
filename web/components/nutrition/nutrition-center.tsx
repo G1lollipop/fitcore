@@ -77,6 +77,12 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
     const text = inputText.trim()
     if (!text || !userId) return
 
+    // Target the currently-viewed day (back-dating supported); only "today"
+    // edits should patch the dashboard cache for the rings/totals.
+    const dateStr = selectedDate.toISOString().split('T')[0]
+    const todayStr = new Date().toISOString().split('T')[0]
+    const addingToday = dateStr === todayStr
+
     // Optimistic: drop a "parsing…" placeholder into the timeline immediately
     // and clear the input, so the UI responds instantly while the LLM runs.
     const tempId = `pending-${Date.now()}`
@@ -87,7 +93,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
       protein: 0,
       carbs: 0,
       fat: 0,
-      logged_at: new Date().toISOString(),
+      logged_at: addingToday ? new Date().toISOString() : `${dateStr}T12:00:00`,
       pending: true,
     }
     setDietData((prev) => [...prev, placeholder])
@@ -95,12 +101,12 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
     setIsSubmitting(true)
 
     try {
-      const result = await logFood(text)
+      const result = await logFood(text, dateStr)
       if (result.success && result.data) {
         const saved = result.data
         // Swap the placeholder for the parsed row in-place (no full reload).
         setDietData((prev) => prev.map((d) => (d.id === tempId ? saved : d)))
-        applyDietLog(saved)
+        if (addingToday) applyDietLog(saved)
         toast({ title: t.nutrition.logSuccess, description: t.nutrition.added(saved.food_name) })
       } else {
         setDietData((prev) => prev.filter((d) => d.id !== tempId))
@@ -119,9 +125,9 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
 
   const isToday = selectedDate.toDateString() === new Date().toDateString()
   const isFuture = selectedDate > new Date()
-  // The MealTimeline supports inline delete only for "today" — historical
-  // days aren't currently editable from this view.
-  const timelineUserId = isToday ? userId : undefined
+  // Past and current days are editable (add + inline delete); only future days
+  // stay read-only. Passing the userId enables MealTimeline's delete affordance.
+  const timelineUserId = isFuture ? undefined : userId
 
   return (
     <div className="space-y-6">
@@ -207,7 +213,7 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
               onChange={setInputText}
               onSubmit={handleAddFood}
               isSubmitting={isSubmitting}
-              disabled={!isToday}
+              disabled={isFuture}
             />
 
             <div className="mt-5">

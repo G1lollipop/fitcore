@@ -105,6 +105,7 @@ export function DashboardClient({
       userName={displayName}
       userId={userId}
       onQuickLogged={handleLogSuccess}
+      onProfileSaved={handleLogSuccess}
       overlay={
         <>
           <AIChatWidget userId={userId} />

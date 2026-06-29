@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
 import { openai } from '@/lib/openaiClient';
 import { supabase } from '@/lib/supabaseClient';
 import { AI_FAST_MODEL } from '@/lib/ai/model';
-import { getTodayDate } from '@/lib/utils/date';
+import { getTodayDate, resolveLogTimestamp } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
 import { recomputeDailyStats } from '@/lib/stats/recompute-daily-stats';
@@ -67,7 +67,8 @@ Return JSON: {food_name, calories, protein, carbs, fat}
 }
 
 export async function logFood(
-  userInput: string
+  userInput: string,
+  dateStr?: string
 ): Promise<{ success: boolean; data?: DietLogItem; error?: string }> {
   const a = await authedUserId();
   if (!a.ok) return a.result;
@@ -81,12 +82,14 @@ export async function logFood(
     return { success: false, error: ActionError.AI_PARSE_FAILED };
   }
 
-  const today = getTodayDate();
+  // Allow back-dated entries (historical-day editing); defaults to today.
+  const { date, loggedAt } = resolveLogTimestamp(dateStr);
+  foodData.logged_at = loggedAt;
 
   const { error: insertError } = await supabase.from('food_logs').insert({
     id: foodData.id,
     user_id: userId,
-    date: today,
+    date,
     food_name: foodData.food_name,
     calories: foodData.calories,
     protein: foodData.protein,
@@ -100,7 +103,7 @@ export async function logFood(
     return { success: false, error: ActionError.DB_INSERT_FAILED };
   }
 
-  await recomputeDailyStats(userId, today);
+  await recomputeDailyStats(userId, date);
 
   revalidatePath('/');
   return { success: true, data: foodData };

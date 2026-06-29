@@ -7,6 +7,7 @@ import {
   Leaf,
   LogOut,
   RefreshCw,
+  Settings,
   type LucideIcon,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -20,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { useSidebarCollapsed } from '@/hooks/use-sidebar-collapsed'
 import { useT } from '@/lib/i18n/provider'
 import { signOut } from '@/app/actions/auth'
+import { useSettings } from '@/components/settings/settings-context'
 import { NAV_ITEMS } from './nav-items'
 
 interface SidebarNavProps {
@@ -88,6 +90,7 @@ export function SidebarNav({ activeNav, onNavChange, userName }: SidebarNavProps
         {/* ── User profile + collapse toggle ── */}
         <div className="border-t border-sidebar-border p-2 space-y-1">
           <UserProfile collapsed={collapsed} userName={displayName} />
+          <SettingsButton collapsed={collapsed} />
           <ReassessButton
             collapsed={collapsed}
             onClick={() => router.push('/onboarding?reassess=true')}
@@ -236,6 +239,34 @@ const ReassessButton = memo(function ReassessButton({ collapsed, onClick }: Reas
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent side="right" sideOffset={8} className="text-xs">
         {t.sidebar.reassess}
+      </TooltipContent>
+    </Tooltip>
+  )
+})
+
+const SettingsButton = memo(function SettingsButton({ collapsed }: { collapsed: boolean }) {
+  const t = useT()
+  const { open } = useSettings()
+  const button = (
+    <button
+      type="button"
+      onClick={open}
+      className={cn(
+        'w-full flex items-center gap-2 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors',
+        collapsed ? 'h-9 justify-center px-0' : 'h-9 px-3'
+      )}
+    >
+      <Settings size={13} className="shrink-0" />
+      {!collapsed && <span>{t.settings.open}</span>}
+    </button>
+  )
+
+  if (!collapsed) return button
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8} className="text-xs">
+        {t.settings.open}
       </TooltipContent>
     </Tooltip>
   )

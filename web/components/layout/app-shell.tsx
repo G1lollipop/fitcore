@@ -8,6 +8,7 @@ import { ActionDock } from './action-dock'
 import { QuickLogProvider } from '@/components/log-form/quick-log-provider'
 import { CoachProvider } from '@/components/ai-chat/coach-context'
 import { MealPhotoProvider } from '@/components/log-form/meal-photo-context'
+import { SettingsProvider } from '@/components/settings/settings-context'
 
 interface AppShellProps {
   activeNav: string
@@ -23,6 +24,8 @@ interface AppShellProps {
   userId?: string
   /** Fired after a successful quick-log submission so the page can refetch. */
   onQuickLogged?: () => void
+  /** Fired after profile/goals are saved in Settings so the page can refetch. */
+  onProfileSaved?: () => void
 }
 
 /**
@@ -54,11 +57,13 @@ export function AppShell({
   overlay,
   userId,
   onQuickLogged,
+  onProfileSaved,
 }: AppShellProps) {
   return (
     <QuickLogProvider userId={userId} onLogged={onQuickLogged}>
       <CoachProvider>
         <MealPhotoProvider>
+          <SettingsProvider onSaved={onProfileSaved}>
           <div className="flex min-h-screen">
             <SidebarNav activeNav={activeNav} onNavChange={onNavChange} userName={userName} />
 
@@ -75,6 +80,7 @@ export function AppShell({
             {overlay}
             <ActionDock />
           </div>
+          </SettingsProvider>
         </MealPhotoProvider>
       </CoachProvider>
     </QuickLogProvider>

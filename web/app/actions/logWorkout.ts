@@ -6,7 +6,7 @@ import { openai } from '@/lib/openaiClient';
 import { supabase } from '@/lib/supabaseClient';
 import { AI_FAST_MODEL } from '@/lib/ai/model';
 import { Database } from '@/lib/database.types';
-import { getTodayDate } from '@/lib/utils/date';
+import { getTodayDate, resolveLogTimestamp } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
 import { recomputeDailyStats } from '@/lib/stats/recompute-daily-stats';
@@ -74,7 +74,8 @@ Return JSON: {workout_name, sets, duration_minutes, calories_burned}
 
 export async function logWorkout(
   userInput: string,
-  planContext?: { planId?: string; dayId?: string }
+  planContext?: { planId?: string; dayId?: string },
+  dateStr?: string
 ): Promise<{ success: boolean; data?: WorkoutLogItem; error?: string }> {
   const a = await authedUserId();
   if (!a.ok) return a.result;
@@ -95,12 +96,14 @@ export async function logWorkout(
     workoutData.day_id = planContext.dayId;
   }
 
-  const today = getTodayDate();
+  // Allow back-dated entries (historical-day editing); defaults to today.
+  const { date, loggedAt } = resolveLogTimestamp(dateStr);
+  workoutData.logged_at = loggedAt;
 
   const { error: insertError } = await supabase.from('workout_logs').insert({
     id: workoutData.id,
     user_id: userId,
-    date: today,
+    date,
     workout_name: workoutData.workout_name,
     sets: workoutData.sets,
     duration_minutes: workoutData.duration_minutes,
@@ -115,7 +118,7 @@ export async function logWorkout(
     return { success: false, error: ActionError.DB_INSERT_FAILED };
   }
 
-  await recomputeDailyStats(userId, today);
+  await recomputeDailyStats(userId, date);
 
   revalidatePath('/');
   return { success: true, data: workoutData };
