@@ -1,7 +1,7 @@
 import {
-  Dumbbell,
+  CalendarCheck,
+  History,
   LayoutDashboard,
-  UtensilsCrossed,
   type LucideIcon,
 } from 'lucide-react'
 import type { Dictionary } from '@/lib/i18n'
@@ -27,8 +27,8 @@ export interface NavItem {
  */
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'dashboard', labelKey: 'dashboard', shortLabelKey: 'shortDashboard', icon: LayoutDashboard },
-  { id: 'nutrition', labelKey: 'nutrition', shortLabelKey: 'shortNutrition', icon: UtensilsCrossed },
-  { id: 'training', labelKey: 'training', shortLabelKey: 'shortTraining', icon: Dumbbell },
+  { id: 'nutrition', labelKey: 'nutrition', shortLabelKey: 'shortNutrition', icon: History },
+  { id: 'training', labelKey: 'training', shortLabelKey: 'shortTraining', icon: CalendarCheck },
 ] as const
 
 /** Lookup helper. Returns `undefined` for unknown ids. */

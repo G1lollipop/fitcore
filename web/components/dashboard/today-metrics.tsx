@@ -21,6 +21,8 @@ interface TodayMetricsProps {
   waterMl?: number
   waterGoalMl?: number
   onWaterLogged?: () => void
+  /** Render slim pills without their own glass card (for the combined overview). */
+  embedded?: boolean
 }
 
 const WATER_INCREMENT = 250
@@ -42,6 +44,7 @@ export function TodayMetrics({
   waterMl = 0,
   waterGoalMl = DEFAULT_WATER_GOAL_ML,
   onWaterLogged,
+  embedded = false,
 }: TodayMetricsProps) {
   const t = useT()
   const { toast } = useToast()
@@ -92,24 +95,28 @@ export function TodayMetrics({
         value={protein}
         goal={proteinGoal}
         unit={t.common.grams}
+        embedded={embedded}
       />
       <MetricPill
         label={t.nutrition.rings.carbs}
         value={carbs}
         goal={carbsGoal}
         unit={t.common.grams}
+        embedded={embedded}
       />
       <MetricPill
         label={t.nutrition.rings.fat}
         value={fat}
         goal={fatGoal}
         unit={t.common.grams}
+        embedded={embedded}
       />
       <MetricPill
         label={t.dashboard.water.title}
         value={Number((ml / 1000).toFixed(1))}
         goal={Number((waterGoalMl / 1000).toFixed(1))}
         unit="L"
+        embedded={embedded}
         icon={<Droplets size={12} />}
         action={
           <button
@@ -134,12 +141,18 @@ interface MetricPillProps {
   unit: string
   icon?: React.ReactNode
   action?: React.ReactNode
+  embedded?: boolean
 }
 
-function MetricPill({ label, value, goal, unit, icon, action }: MetricPillProps) {
+function MetricPill({ label, value, goal, unit, icon, action, embedded = false }: MetricPillProps) {
   const pct = goal > 0 ? Math.min(100, Math.round((value / goal) * 100)) : 0
   return (
-    <div className="glass glass-highlight flex flex-col gap-2 rounded-2xl p-3">
+    <div
+      className={cn(
+        'flex flex-col gap-2 rounded-2xl p-3',
+        embedded ? 'rounded-xl border border-border/50 bg-card/40 p-2.5' : 'glass glass-highlight'
+      )}
+    >
       <div className="flex items-center justify-between">
         <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
           {icon}

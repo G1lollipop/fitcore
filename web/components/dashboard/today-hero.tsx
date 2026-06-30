@@ -12,6 +12,8 @@ interface TodayHeroProps {
   kcalGoal?: number
   workoutMinutes?: number
   className?: string
+  /** Render without the outer glass card (for embedding in a combined card). */
+  embedded?: boolean
 }
 
 const RADIUS_OUTER = 60
@@ -60,6 +62,7 @@ export function TodayHero({
   kcalGoal = 2500,
   workoutMinutes = 0,
   className,
+  embedded = false,
 }: TodayHeroProps) {
   const t = useT()
   const intakePct = clamp01(kcalIntake / Math.max(1, kcalGoal))
@@ -79,20 +82,8 @@ export function TodayHero({
   const offsetOuter = CIRC_OUTER * (1 - intakePct)
   const offsetInner = CIRC_INNER * (1 - burnPct)
 
-  return (
-    <motion.section
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className={cn(
-        'glass glass-highlight relative overflow-hidden rounded-2xl p-4',
-        'flex flex-col gap-3',
-        className
-      )}
-    >
-      <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/5 blur-3xl" aria-hidden />
-      <div className="absolute -bottom-24 -left-12 h-48 w-48 rounded-full bg-accent/10 blur-3xl" aria-hidden />
-
+  const body = (
+    <>
       <header className="relative flex items-center justify-between">
         <h2 className="font-display text-base font-semibold text-foreground">
           {formatDate(new Date(), t.common.locale)}
@@ -213,6 +204,27 @@ export function TodayHero({
           />
         </div>
       </div>
+    </>
+  )
+
+  if (embedded) {
+    return <div className="flex flex-col gap-3">{body}</div>
+  }
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className={cn(
+        'glass glass-highlight relative overflow-hidden rounded-2xl p-4',
+        'flex flex-col gap-3',
+        className
+      )}
+    >
+      <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/5 blur-3xl" aria-hidden />
+      <div className="absolute -bottom-24 -left-12 h-48 w-48 rounded-full bg-accent/10 blur-3xl" aria-hidden />
+      {body}
     </motion.section>
   )
 }

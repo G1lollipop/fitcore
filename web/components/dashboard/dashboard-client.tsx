@@ -4,14 +4,14 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import dynamic from 'next/dynamic'
 import { AppShell } from '@/components/layout/app-shell'
 import { findNavItem } from '@/components/layout/nav-items'
-import { TodayHero } from '@/components/dashboard/today-hero'
-import { TodayMetrics } from '@/components/dashboard/today-metrics'
+import { TodayOverview } from '@/components/dashboard/today-overview'
+import { TodayPlanCard } from '@/components/dashboard/today-plan-card'
 import { WeeklyActivity } from '@/components/dashboard/weekly-activity'
 import { CoachAskBar } from '@/components/dashboard/coach-ask-bar'
-import { GettingStartedCard } from '@/components/dashboard/getting-started-card'
+import { HomeLogBar } from '@/components/dashboard/home-log-bar'
 import { TabActiveProvider } from '@/components/dashboard/tab-active-context'
-import { NutritionCenter } from '@/components/nutrition/nutrition-center'
-import { TrainingCenter } from '@/components/training/training-center'
+import { HistoryCenter } from '@/components/history/history-center'
+import { PlansCenter } from '@/components/plans/plans-center'
 import { useDashboardData, useDashboardActions } from '@/lib/queries/dashboard'
 import type { DashboardData } from '@/app/actions/types'
 import { useT } from '@/lib/i18n/provider'
@@ -94,17 +94,6 @@ export function DashboardClient({
     invalidate()
   }, [invalidate])
 
-  // First-run nudge: no meals/workouts logged today and no active plan yet.
-  const isNewUser = useMemo(() => {
-    if (!dashboardData) return false
-    const { today } = dashboardData
-    return (
-      today.diet_logs.length === 0 &&
-      today.workout_logs.length === 0 &&
-      !dashboardData.todayWorkout
-    )
-  }, [dashboardData])
-
   return (
     <AppShell
       activeNav={activeNav}
@@ -126,48 +115,51 @@ export function DashboardClient({
         active={activeNav === 'dashboard'}
         className="flex min-h-[calc(100dvh_-_12rem)] flex-col gap-3 md:min-h-0 md:gap-4"
       >
-        <TodayHero
+        {/* Status first: combined today overview (calorie ring + macros/water). */}
+        <TodayOverview
+          userId={userId}
           kcalIntake={dashboardData?.today.total_calories}
           kcalBurn={dashboardData?.today.calories_burned}
           kcalGoal={dashboardData?.goals.target_calories}
           workoutMinutes={dashboardData?.today.workout_duration}
+          protein={dashboardData?.today.total_protein}
+          proteinGoal={dashboardData?.goals.target_protein}
+          carbs={dashboardData?.today.total_carbs}
+          carbsGoal={dashboardData?.goals.target_carbs}
+          fat={dashboardData?.today.total_fat}
+          fatGoal={dashboardData?.goals.target_fat}
+          waterMl={dashboardData?.today.water_intake}
+          waterGoalMl={dashboardData?.goals.water_goal}
+          onWaterLogged={handleLogSuccess}
           className="shrink-0"
         />
 
-        {isNewUser ? (
-          <GettingStartedCard
-            onGoNutrition={() => setActiveNav('nutrition')}
-            onGoTraining={() => setActiveNav('training')}
-            className="shrink-0"
-          />
-        ) : (
-          <TodayMetrics
-            userId={userId}
-            protein={dashboardData?.today.total_protein}
-            proteinGoal={dashboardData?.goals.target_protein}
-            carbs={dashboardData?.today.total_carbs}
-            carbsGoal={dashboardData?.goals.target_carbs}
-            fat={dashboardData?.today.total_fat}
-            fatGoal={dashboardData?.goals.target_fat}
-            waterMl={dashboardData?.today.water_intake}
-            waterGoalMl={dashboardData?.goals.water_goal}
-            onWaterLogged={handleLogSuccess}
-          />
-        )}
+        {/* Today's plan always on home (no longer buried in Training → Plans);
+            when there's no active plan it nudges the user to create one. */}
+        <TodayPlanCard
+          info={dashboardData?.todayWorkout ?? null}
+          userId={userId}
+          onLogged={handleLogSuccess}
+          onManage={() => setActiveNav('training')}
+          className="shrink-0"
+        />
 
         {/* Secondary trend — desktop only so the mobile home stays single-screen. */}
         <WeeklyActivity data={dashboardData?.weeklyTrend} className="hidden md:block" />
 
-        {/* AI coach: promoted + anchored to the bottom thumb zone on mobile. */}
-        <CoachAskBar className="mt-auto shrink-0 md:mt-0" />
+        {/* Thumb zone: high-frequency logging first, then the secondary coach. */}
+        <div className="mt-auto flex shrink-0 flex-col gap-3 md:mt-0">
+          <HomeLogBar userId={userId} onLogged={handleLogSuccess} />
+          <CoachAskBar />
+        </div>
       </TabPanel>
 
       <TabPanel active={activeNav === 'nutrition'} prefetch>
-        <NutritionCenter userId={userId} onLogSuccess={handleLogSuccess} />
+        <HistoryCenter userId={userId} onLogSuccess={handleLogSuccess} />
       </TabPanel>
 
       <TabPanel active={activeNav === 'training'} prefetch>
-        <TrainingCenter userId={userId} onLogSuccess={handleLogSuccess} />
+        <PlansCenter userId={userId} onLogSuccess={handleLogSuccess} />
       </TabPanel>
     </AppShell>
   )

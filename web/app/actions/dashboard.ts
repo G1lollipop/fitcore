@@ -7,6 +7,7 @@ import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
 import { calculateTodayWorkout } from '@/lib/plans/today-workout';
+import { DEFAULT_WATER_GOAL_ML } from '@/lib/metrics/water';
 import type {
   DashboardData,
   DietLogItem,
@@ -212,7 +213,7 @@ export async function getUserGoals(): Promise<UserGoals | null> {
       target_protein: 150,
       target_carbs: 300,
       target_fat: 80,
-      water_goal: 2500,
+      water_goal: DEFAULT_WATER_GOAL_ML,
     };
   }
 
@@ -221,7 +222,7 @@ export async function getUserGoals(): Promise<UserGoals | null> {
     target_protein: row.target_protein || 150,
     target_carbs: row.target_carbs || 300,
     target_fat: row.target_fat || 80,
-    water_goal: 2500,
+    water_goal: row.water_goal || DEFAULT_WATER_GOAL_ML,
   };
 }
 
@@ -356,7 +357,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       target_protein: 150,
       target_carbs: 300,
       target_fat: 80,
-      water_goal: 2500,
+      water_goal: DEFAULT_WATER_GOAL_ML,
     },
     today: {
       total_calories: dailyStats?.total_calories || 0,

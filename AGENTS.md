@@ -2,6 +2,36 @@
 
 Agent guide for the FitCore monorepo. For the full development docs, see [`DEVELOPMENT.md`](./DEVELOPMENT.md).
 
+## Product positioning & principles (read first)
+
+FitCore is a **mobile-first, AI-logging-first fitness app**. Every product/UX/architecture decision should serve this north star. When a change conflicts with the principles below, prefer the principle (or flag the tension) instead of silently diverging.
+
+### 1. Primary: AI-powered logging replaces manual entry (the protagonist)
+
+The product's core job is to make tracking food/workouts/water effortless by **letting AI turn a photo or a single natural-language sentence into structured logs** — manual, field-by-field entry is the fallback, never the default.
+
+- The fastest path from "I want to log this" to "it's logged" must always win. Target: a meal/workout captured in **a few seconds, without leaving the home screen**.
+- Logging entry points are first-class and prominent: the home Quick Log bar (`components/dashboard/home-log-bar.tsx`), one-sentence quick log (`actions/quickLog.ts`), meal photo (`actions/parseFoodFromPhoto.ts`), and in-chat `log_*` tools.
+- AI parsing should be optimistic and forgiving: show instant feedback, patch the dashboard cache immediately (`lib/queries/dashboard.ts`), let users correct results afterwards rather than blocking on a perfect parse.
+- When adding features, ask "does this reduce logging friction?" first. Don't bury logging behind menus, modals, or extra taps.
+
+### 2. Secondary: the AI coach (RAG-grounded Q&A + plan/diet authoring)
+
+The AI coach is the **supporting** surface, not the protagonist. It does two things:
+
+- **Evidence-grounded Q&A**: complex fitness questions retrieve relevant chunks from the RAG knowledge base (`web/lib/ai/rag-client.ts` → `rag/` `/v1/retrieve`); answers cite sources. There is intentionally **no standalone Knowledge tab** — that capability is folded into the coach (its seed prompts live in `components/knowledge/starters.ts`).
+- **Plan authoring & editing**: the coach can generate and modify **training plans and diet/nutrition plans** in conversation (`actions/generatePlan.ts`, `adjust_plan` tool). Keep this conversational and forgiving.
+- Keep the coach discoverable but secondary: it lives in the floating widget + the home "AI Coach" bar (ask/plan focused), and must never crowd out the logging surfaces.
+
+### 3. Mobile-first UX: short screens, no long scroll
+
+This is a phone app. Design every screen to fit a phone viewport.
+
+- **Keep pages short.** The home tab in particular should read as a single screen — avoid layouts that force the user to scroll down to reach important content. Put primary actions in the thumb zone.
+- Prefer compact, glanceable cards over long stacked lists. Desktop-only secondary content (e.g. weekly trend) is gated with `hidden md:block`; don't add long content to the mobile flow.
+- Navigation is 3 tabs — **Today / History / Plans** — switched in-place (the nav item `id`s are still `dashboard`/`nutrition`/`training` for historical reasons; their labels/content are Today/History/Plans). Today = the daily command center; History = combined past nutrition + training under one shared date; Plans = the diet plan (nutrition targets) + training plans, both AI-operable. Don't add routes/tabs casually — new capability usually belongs inside an existing tab or the coach, not a new top-level destination.
+- Before adding a new section/card to a screen, check it won't push the screen past one viewport on mobile; if it would, make it collapsible, desktop-only, or move it.
+
 ## Repo structure
 
 - `web/` — Frontend: Next.js 16 (App Router) + React 19 + TypeScript (package manager: npm)
@@ -42,7 +72,7 @@ See `rag/.env.example` for environment variables (at minimum `GOOGLE_AI_STUDIO_A
 
 A few "counterintuitive" spots that trip people up on first read:
 
-- **The home page is a single route + client-side view switching**: `web/app/page.tsx` is a server component (server-side auth + fetching dashboard data); the interactive shell is `web/components/dashboard/dashboard-client.tsx`. The five "pages" — dashboard / nutrition / training / plans / knowledge — are switched via `activeNav` state under the same route, they are **not** separate routes like `/nutrition` or `/training`. Don't go looking for `app/nutrition/page.tsx`; it doesn't exist.
+- **The home page is a single route + client-side view switching**: `web/app/page.tsx` is a server component (server-side auth + fetching dashboard data); the interactive shell is `web/components/dashboard/dashboard-client.tsx`. The three "pages" are switched via `activeNav` state under the same route (`components/layout/nav-items.ts`), they are **not** separate routes. Nav `id`s are `dashboard`/`nutrition`/`training` but the user-facing tabs are **Today / History / Plans**: `dashboard`→Today (`dashboard-client`), `nutrition`→History (`components/history/history-center.tsx`, combined diet + training per day), `training`→Plans (`components/plans/plans-center.tsx` = `diet-plan-card` + `my-plans`). Today's workout is surfaced on Today via `components/dashboard/today-plan-card.tsx`. The old standalone Knowledge tab was retired and its evidence Q&A folded into the AI coach (only `components/knowledge/starters.ts` survives, feeding coach starter prompts).
 - **The middleware file is `web/proxy.ts`, not `middleware.ts`**: Supabase session refresh + route protection + onboarding redirects live here. Identity resolution goes through `lib/auth/require-user.ts` (`requireUserId()` returns the Supabase user id); the cookie client used for auth is in `lib/supabase/{server,client}.ts`, kept separate from the service-role client `lib/supabaseClient.ts` used for data access.
 - **All data access goes through server actions**: `web/app/actions/*`. Frontend components never connect to Supabase directly; `web/lib/supabaseClient.ts` is `server-only` + service-role and importing it into a client component will break the build. Auth resolution uses `authedUserId()` / `getUserIdOrNull()` from `web/lib/auth/require-user.ts`; actions read `userId` internally and callers don't pass it.
 - **AI chat path**: browser → `web/app/api/ai/chat/route.ts` (SSE) → (personal data `lib/ai/user-context.ts` + RAG `lib/ai/rag-client.ts`) → `rag/` service.

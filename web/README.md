@@ -12,7 +12,7 @@
 flowchart TD
     User(["👤 User"])
 
-    subgraph Frontend ["Frontend · Next.js 15 (Vercel)"]
+    subgraph Frontend ["Frontend · Next.js 16 (Vercel)"]
         Widget["AI Chat Widget\nstreaming SSE consumer"]
         Route["POST /api/ai/chat\nReadableStream"]
         Agent["Agent Core\nTool Calling Loop"]
@@ -79,7 +79,7 @@ flowchart TD
 
 | Layer | Technology |
 |---|---|
-| **Frontend framework** | Next.js 15 · React 19 · TypeScript |
+| **Frontend framework** | Next.js 16 · React 19 · TypeScript |
 | **UI / styling** | Tailwind CSS 4 · Radix UI · shadcn/ui |
 | **Authentication** | Supabase Auth (Google OAuth + email/password) |
 | **Backend framework** | FastAPI · Uvicorn (Python) |
@@ -89,20 +89,22 @@ flowchart TD
 | **Chat model** | Google Gemini (default gemini-2.5-flash, switchable via environment variable) through an OpenAI-compatible endpoint |
 | **Reranking** | HuggingFace CrossEncoder (bge-reranker-base) |
 | **Database** | Supabase PostgreSQL |
-| **Deployment** | Vercel (frontend) · self-hosted server (RAG backend) |
+| **Deployment** | Vercel (frontend) · Render Blueprint (RAG backend) |
 
 ---
 
 ## Key Features
 
 ### 🤖 Agent + Tool Calling
-Instead of traditional keyword/rule-based classification, the LLM autonomously decides which tools to call:
+The AI coach is the product's primary surface. Instead of keyword/rule-based classification, the LLM autonomously decides which tools to call (`lib/ai/agent-tools.ts`):
 
-- `set_retrieval_params` — the LLM declares how many results to retrieve, k (3 / 5 / 8), based on question complexity
-- `query_knowledge_base` — calls the RAG retrieval endpoint to fetch professional fitness knowledge
+- `log_food` / `log_workout` / `log_water` — **AI-first logging**: turn a natural-language message ("had 2 eggs and a banana") straight into structured entries
+- `adjust_plan` — tweak the user's current workout plan in conversation
 - `get_user_stats` — reads the user's nutrition / workout / goal data for today
+- `query_knowledge_base` — calls the RAG retrieval endpoint for evidence-grounded fitness knowledge
+- `set_retrieval_params` — the LLM declares how many results to retrieve, k (3 / 5 / 8), based on question complexity
 
-Complex questions (e.g. "the difference between squats and deadlifts and how to combine them into a training plan") → the LLM calls all three tools at once, with only 2 LLM API calls in total.
+Complex requests (e.g. "log my lunch and tell me if I still have protein left for today") → the LLM calls multiple tools in one planning pass, then streams a single grounded answer.
 
 ### ⚡ Streaming output (SSE)
 The API route returns a `ReadableStream`, and the Chat Widget appends tokens one by one, with a time-to-first-token under 1s.
@@ -117,21 +119,21 @@ vector retrieval (k=10)  +  BM25 keyword retrieval (k=10)
 ```
 
 ### 📊 RAG evaluation framework
-A golden test set of 15 questions covering different difficulty levels and topics, evaluated with the LLM-as-Judge method:
+A golden test set (`rag/eval/golden_dataset_en.json`) covering different difficulty levels and topics, evaluated with the LLM-as-Judge method:
 - **Relevance** — whether the answer is on topic
 - **Completeness** — whether it covers the key information
 - **Accuracy** — whether the content matches professional knowledge
 
 ### 💾 Data tracking
-- Daily calories / protein / carbs / fat / water logging
-- Training plan management (drag-and-drop ordering)
+- Daily calories / protein / carbs / fat / water logging (natural-language, meal-photo, and quick-log entry)
+- AI-generated and hand-editable training plans (stored as a single JSON `structure`)
 - Persisted multi-turn conversation history
 
 ---
 
 ## RAG Evaluation Results
 
-> How to run: `cd Rag && python eval/evaluate.py` (start the RAG backend first)
+> How to run: `cd rag && python eval/evaluate.py` (start the RAG backend first)
 
 | Metric | Score |
 |---|---|
@@ -149,25 +151,30 @@ A golden test set of 15 questions covering different difficulty levels and topic
 
 ```
 Fitcore/
-├── fitcore-web/                # Next.js frontend
+├── web/                            # Next.js frontend
 │   ├── app/
-│   │   └── api/ai/chat/        # SSE streaming API route
+│   │   ├── page.tsx                # single route; 3 tabs via state (Today / Nutrition / Training)
+│   │   ├── api/ai/chat/route.ts    # SSE streaming AI endpoint
+│   │   └── actions/                # 'use server' business actions (logs / plans / chat / settings)
 │   ├── components/
-│   │   └── ai-chat-widget.tsx  # streaming Chat UI
-│   └── lib/ai/
-│       ├── agent.ts            # Agent core (Tool Calling Loop)
-│       ├── rag-client.ts       # RAG service client
-│       └── types.ts            # type definitions
+│   │   ├── ai-chat/                # streaming AI coach widget (primary surface)
+│   │   ├── dashboard|nutrition|training|plans|log-form|knowledge|settings/
+│   │   └── ui/                     # shadcn/ui base components
+│   └── lib/
+│       ├── ai/                     # agent.ts · agent-tools.ts · rag-client.ts · user-context.ts
+│       └── plans/ metrics/ supabaseClient.ts database.types.ts
 │
-└── Rag/                        # Python RAG backend
-    ├── backend_api.py          # FastAPI routes (/v1/chat · /v1/retrieve)
-    ├── rag.py                  # RagService + compute_retrieval_k
-    ├── vector_stores.py        # Chroma hybrid retrieval
-    ├── vector_stores_supabase.py
-    ├── knowledge_base.py       # knowledge base management
+└── rag/                            # Python RAG backend (FastAPI + LangChain)
+    ├── backend_api.py              # entry shim → re-exports app.main:app
+    ├── app/
+    │   ├── main.py                 # app factory + lifespan warmup
+    │   ├── api/                    # health / retrieve / chat (+ /v1/chat/stream)
+    │   ├── services/               # rag_service.py + retrieval/* (vector · BM25 · ensemble · rerank)
+    │   ├── infra/                  # embeddings · cache · supabase pgvector
+    │   └── schemas/                # LOCKED API contracts
     └── eval/
-        ├── golden_dataset.json # 15-question evaluation test set
-        └── evaluate.py         # LLM-as-Judge evaluation script
+        ├── golden_dataset_en.json  # LLM-as-Judge evaluation test set
+        └── evaluate.py             # evaluation script
 ```
 
 ---
@@ -177,7 +184,7 @@ Fitcore/
 ### Frontend
 
 ```bash
-cd fitcore-web
+cd web
 cp .env.local.example .env.local   # fill in Supabase / Gemini key
 npm install
 npm run dev
@@ -186,17 +193,19 @@ npm run dev
 ### RAG backend
 
 ```bash
-cd Rag
+cd rag
+python -m venv .venv && .venv/Scripts/activate   # Windows (use source .venv/bin/activate on macOS/Linux)
 cp .env.example .env               # fill in GOOGLE_AI_STUDIO_API_KEY, etc.
-pip install -r requirements.txt
-python backend_api.py              # starts on :8000
+pip install -r requirements-dev.txt
+python scripts/ingest_seed_kb.py   # first run: ingest the seed knowledge base
+uvicorn backend_api:app --host 0.0.0.0 --port 8000
 ```
 
 ### Running the RAG evaluation
 
 ```bash
 # after the backend is started:
-cd Rag
+cd rag
 python eval/evaluate.py
 # outputs eval/eval_report_<timestamp>.json
 ```
@@ -205,7 +214,7 @@ python eval/evaluate.py
 
 ## Environment Variables
 
-### Frontend (`fitcore-web/.env.local`)
+### Frontend (`web/.env.local`)
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
@@ -221,7 +230,7 @@ RAG_SERVICE_URL=http://your-rag-server:8000
 # OPENAI_BASE_URL=
 ```
 
-### RAG backend (`Rag/.env`)
+### RAG backend (`rag/.env`)
 
 ```env
 GOOGLE_AI_STUDIO_API_KEY=        # Gemini key (shared by chat + embedding)

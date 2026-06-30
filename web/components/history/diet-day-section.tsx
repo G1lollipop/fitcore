@@ -1,0 +1,223 @@
+'use client'
+
+import { motion, AnimatePresence } from 'framer-motion'
+import { Sparkles } from 'lucide-react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { logFood } from '@/app/actions/logFood'
+import { getNutritionByDate } from '@/app/actions/history'
+import { useToast } from '@/hooks/use-toast'
+import { sumMacros, macroProgressBundle } from '@/lib/metrics/macros'
+import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/provider'
+import { tError, type Dictionary } from '@/lib/i18n'
+import { Skeleton } from '@/components/ui/skeleton'
+import { MealTimeline } from '@/components/nutrition/meal-timeline'
+import { useDashboardActions } from '@/lib/queries/dashboard'
+import type { DietLogItem } from '@/app/actions/types'
+
+type MacroKey = 'calories' | 'protein' | 'carbs' | 'fat'
+const MACRO_UNITS: Record<MacroKey, string> = { calories: 'kcal', protein: 'g', carbs: 'g', fat: 'g' }
+
+interface DietDaySectionProps {
+  /** The day this section shows; controlled by the parent History page. */
+  date: Date
+  userId?: string
+  onChange?: () => void
+}
+
+const DEFAULT_GOALS = { calories: 2500, protein: 150, carbs: 300, fat: 80 }
+
+function toDateStr(d: Date): string {
+  return d.toISOString().split('T')[0]
+}
+
+/**
+ * The nutrition slice of the History page for a single (parent-controlled) day:
+ * macro ring + add-food + meal timeline. Past and current days are editable;
+ * future days are read-only. Extracted from the old standalone Nutrition tab so
+ * it can stack with the training section under one shared date.
+ */
+export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) {
+  const { toast } = useToast()
+  const t = useT()
+  const { applyDietLog } = useDashboardActions()
+  const [dietData, setDietData] = useState<DietLogItem[]>([])
+  const [goals, setGoals] = useState({ ...DEFAULT_GOALS })
+  const [loading, setLoading] = useState(true)
+  const [inputText, setInputText] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const dateStr = toDateStr(date)
+  const isFuture = date > new Date() && date.toDateString() !== new Date().toDateString()
+
+  const loadDietData = useCallback(async () => {
+    if (!userId) return
+    setLoading(true)
+    try {
+      const { goals: nextGoals, dietLogs } = await getNutritionByDate(dateStr)
+      setGoals(nextGoals)
+      setDietData(dietLogs)
+    } catch (error) {
+      console.error('Failed to load nutrition data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [userId, dateStr])
+
+  useEffect(() => {
+    if (userId) loadDietData()
+  }, [userId, loadDietData])
+
+  const handleAddFood = async () => {
+    const text = inputText.trim()
+    if (!text || !userId) return
+
+    const todayStr = toDateStr(new Date())
+    const addingToday = dateStr === todayStr
+
+    const tempId = `pending-${Date.now()}`
+    const placeholder: DietLogItem = {
+      id: tempId,
+      food_name: text,
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      logged_at: addingToday ? new Date().toISOString() : `${dateStr}T12:00:00`,
+      pending: true,
+    }
+    setDietData((prev) => [...prev, placeholder])
+    setInputText('')
+    setIsSubmitting(true)
+
+    try {
+      const result = await logFood(text, dateStr)
+      if (result.success && result.data) {
+        const saved = result.data
+        setDietData((prev) => prev.map((d) => (d.id === tempId ? saved : d)))
+        if (addingToday) applyDietLog(saved)
+        onChange?.()
+        toast({ title: t.nutrition.logSuccess, description: t.nutrition.added(saved.food_name) })
+      } else {
+        setDietData((prev) => prev.filter((d) => d.id !== tempId))
+        toast({ variant: 'destructive', title: t.nutrition.logFailed, description: tError(t, result.error) })
+      }
+    } catch (error) {
+      console.error('Failed to add food:', error)
+      setDietData((prev) => prev.filter((d) => d.id !== tempId))
+      toast({ variant: 'destructive', title: t.nutrition.logFailed, description: t.nutrition.addInput.parsing })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const totals = useMemo(() => sumMacros(dietData), [dietData])
+  const progress = useMemo(() => macroProgressBundle(totals, goals), [totals, goals])
+  const timelineUserId = isFuture ? undefined : userId
+
+  if (loading) {
+    return <Skeleton className="h-56 w-full rounded-2xl" />
+  }
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="glass glass-highlight rounded-2xl p-4 sm:p-5"
+    >
+      <header className="mb-3 flex items-baseline justify-between">
+        <h3 className="font-display text-base font-semibold text-foreground">
+          {t.history.dietTitle}
+        </h3>
+      </header>
+
+      {/* Compact macro strip (replaces the large radial chart). */}
+      <div className="mb-3 grid grid-cols-4 gap-2">
+        {(['calories', 'protein', 'carbs', 'fat'] as MacroKey[]).map((key) => {
+          const p = progress[key]
+          return (
+            <div key={key} className="rounded-xl border border-border/50 bg-card/40 p-2">
+              <p className="truncate text-[10px] text-muted-foreground">{t.nutrition.rings[key]}</p>
+              <p className="font-display text-sm font-semibold leading-tight tabular-nums text-foreground">
+                {p.current}
+                <span className="text-[10px] font-normal text-muted-foreground">
+                  /{p.target}
+                  {MACRO_UNITS[key]}
+                </span>
+              </p>
+              <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${Math.min(100, p.pct)}%` }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <AddFoodInput
+        t={t}
+        value={inputText}
+        onChange={setInputText}
+        onSubmit={handleAddFood}
+        isSubmitting={isSubmitting}
+        disabled={isFuture}
+      />
+
+      <div className="mt-3">
+        <AnimatePresence mode="popLayout">
+          <MealTimeline
+            key={dateStr}
+            logs={dietData}
+            userId={timelineUserId}
+            onChange={() => {
+              loadDietData()
+              onChange?.()
+            }}
+          />
+        </AnimatePresence>
+      </div>
+    </motion.section>
+  )
+}
+
+interface AddFoodInputProps {
+  t: Dictionary
+  value: string
+  onChange: (v: string) => void
+  onSubmit: () => void
+  isSubmitting: boolean
+  disabled?: boolean
+}
+
+function AddFoodInput({ t, value, onChange, onSubmit, isSubmitting, disabled }: AddFoodInputProps) {
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-2 transition-colors focus-within:border-primary/40 focus-within:bg-card',
+        disabled && 'opacity-60'
+      )}
+    >
+      <Sparkles size={14} className="text-primary" aria-hidden />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
+        placeholder={disabled ? t.nutrition.addInput.disabledPlaceholder : t.nutrition.addInput.placeholder}
+        disabled={isSubmitting || disabled}
+        className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed"
+      />
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={isSubmitting || disabled || !value.trim()}
+        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isSubmitting ? t.nutrition.addInput.parsing : t.common.add}
+      </button>
+    </div>
+  )
+}

@@ -38,7 +38,7 @@ flowchart TD
 
 | Directory | Description | Docs |
 |------|------|------|
-| [`web/`](./web) | Frontend single-page app; the home route `/` contains five modules: "Today / Nutrition / Training history / My plans / Knowledge base" | [`web/README.md`](./web/README.md) |
+| [`web/`](./web) | Frontend single-page app; the home route `/` contains three tabs: "Today / History / Plans" (Today = daily command center with Quick Log + AI coach; History = past nutrition + training; Plans = diet + training plans). The AI coach is the primary surface for natural-language logging and knowledge Q&A | [`web/README.md`](./web/README.md) |
 | [`rag/`](./rag) | RAG retrieval service: vector retrieval + BM25 fusion, optional reranking, adaptive topK | [`DEVELOPMENT.md`](./DEVELOPMENT.md) |
 
 ## Local setup

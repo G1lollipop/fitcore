@@ -1,7 +1,7 @@
 'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
-import { Camera, PencilLine, Plus, Sparkles, X } from 'lucide-react'
+import { Camera, PencilLine, Plus, X } from 'lucide-react'
 import { useState, type ComponentType } from 'react'
 import { useCoach } from '@/components/ai-chat/coach-context'
 import { useMealPhoto } from '@/components/log-form/meal-photo-context'
@@ -81,7 +81,7 @@ export function ActionDock() {
       </AnimatePresence>
 
       <div className="flex items-center gap-3">
-        {/* Secondary expand toggle */}
+        {/* Logging speed-dial: tap to reveal Quick Log + meal photo. */}
         <motion.button
           type="button"
           onClick={() => setExpanded((v) => !v)}
@@ -89,35 +89,11 @@ export function ActionDock() {
           whileTap={{ scale: 0.92 }}
           animate={{ rotate: expanded ? 45 : 0 }}
           className={cn(
-            'flex h-11 w-11 items-center justify-center rounded-full shadow-md',
-            'glass text-foreground'
+            'flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg shadow-primary/30',
+            'bg-primary text-primary-foreground transition-shadow hover:shadow-xl'
           )}
         >
-          {expanded ? <X size={18} /> : <Plus size={18} />}
-        </motion.button>
-
-        {/* Primary: AI coach — the hub */}
-        <motion.button
-          type="button"
-          onClick={() => {
-            setExpanded(false)
-            coach.open()
-          }}
-          aria-label={t.aiChat.openCoach}
-          initial={{ opacity: 0, scale: 0.7 }}
-          animate={{ opacity: 1, scale: 1 }}
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.95 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-          className={cn(
-            'group relative flex h-14 items-center gap-2 rounded-2xl pl-3 pr-4',
-            'bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-shadow hover:shadow-xl'
-          )}
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-foreground/15">
-            <Sparkles size={16} />
-          </span>
-          <span className="font-display text-[13px] font-semibold">{t.aiChat.coach}</span>
+          {expanded ? <X size={20} /> : <Plus size={20} />}
         </motion.button>
       </div>
     </div>

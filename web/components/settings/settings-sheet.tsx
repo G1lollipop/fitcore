@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Calculator, LogOut, Loader2 } from 'lucide-react'
+import { LogOut, Loader2 } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -19,7 +19,7 @@ import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/app/actions/auth'
-import { getUserSettings, calculateNutritionRecommendation } from '@/app/actions/onboarding'
+import { getUserSettings } from '@/app/actions/onboarding'
 import { updateUserSettings } from '@/app/actions/settings'
 
 type Gender = 'male' | 'female'
@@ -32,10 +32,6 @@ interface FormState {
   height: string
   weight: string
   activityLevel: Activity
-  targetCalories: string
-  targetProtein: string
-  targetCarbs: string
-  targetFat: string
 }
 
 const EMPTY_FORM: FormState = {
@@ -44,10 +40,6 @@ const EMPTY_FORM: FormState = {
   height: '',
   weight: '',
   activityLevel: 'moderate',
-  targetCalories: '',
-  targetProtein: '',
-  targetCarbs: '',
-  targetFat: '',
 }
 
 interface SettingsSheetProps {
@@ -56,16 +48,17 @@ interface SettingsSheetProps {
   onSaved?: () => void
 }
 
+/**
+ * Account + body profile settings. Nutrition targets ("diet plan") are edited
+ * on the Plans tab, not here.
+ */
 export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProps) {
   const t = useT()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [recalculating, setRecalculating] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
 
-  // Load current settings each time the sheet opens so it always reflects the
-  // latest saved values.
   useEffect(() => {
     if (!open) return
     let cancelled = false
@@ -80,10 +73,6 @@ export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProp
           height: s.height != null ? String(s.height) : '',
           weight: s.weight != null ? String(s.weight) : '',
           activityLevel: (s.activity_level as Activity) ?? 'moderate',
-          targetCalories: s.target_calories != null ? String(s.target_calories) : '',
-          targetProtein: s.target_protein != null ? String(s.target_protein) : '',
-          targetCarbs: s.target_carbs != null ? String(s.target_carbs) : '',
-          targetFat: s.target_fat != null ? String(s.target_fat) : '',
         })
       } else {
         setForm(EMPTY_FORM)
@@ -101,51 +90,15 @@ export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProp
     []
   )
 
-  const profileNumbers = () => ({
-    gender: form.gender,
-    age: Number(form.age),
-    height: Number(form.height),
-    weight: Number(form.weight),
-    activityLevel: form.activityLevel,
-  })
-
-  const handleRecalc = useCallback(async () => {
-    const p = profileNumbers()
-    if (!p.age || !p.height || !p.weight) {
-      toast({ variant: 'destructive', title: t.settings.profileIncomplete })
-      return
-    }
-    setRecalculating(true)
-    try {
-      const res = await calculateNutritionRecommendation(p)
-      if (res.success && res.recommendation) {
-        const r = res.recommendation
-        setForm((prev) => ({
-          ...prev,
-          targetCalories: String(r.targetCalories),
-          targetProtein: String(r.targetProtein),
-          targetCarbs: String(r.targetCarbs),
-          targetFat: String(r.targetFat),
-        }))
-        toast({ title: t.settings.recalcDone })
-      } else {
-        toast({ variant: 'destructive', title: t.settings.recalcFailed, description: tError(t, res.error) })
-      }
-    } finally {
-      setRecalculating(false)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, t])
-
   const handleSave = useCallback(async () => {
     setSaving(true)
     try {
       const res = await updateUserSettings({
-        ...profileNumbers(),
-        targetCalories: Number(form.targetCalories),
-        targetProtein: Number(form.targetProtein),
-        targetCarbs: Number(form.targetCarbs),
-        targetFat: Number(form.targetFat),
+        gender: form.gender,
+        age: Number(form.age),
+        height: Number(form.height),
+        weight: Number(form.weight),
+        activityLevel: form.activityLevel,
       })
       if (res.success) {
         toast({ title: t.settings.saved })
@@ -157,8 +110,7 @@ export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProp
     } finally {
       setSaving(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, onSaved, onOpenChange, t])
+  }, [form, onSaved, onOpenChange, t, toast])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -244,65 +196,6 @@ export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProp
                     </option>
                   ))}
                 </select>
-              </div>
-            </section>
-
-            {/* ── Nutrition goals ── */}
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t.settings.goalsTitle}
-                </h3>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRecalc}
-                  disabled={recalculating}
-                  className="h-7 text-xs"
-                >
-                  {recalculating ? (
-                    <Loader2 size={13} className="animate-spin" />
-                  ) : (
-                    <Calculator size={13} />
-                  )}
-                  {t.settings.recalc}
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <Field label={t.settings.calories}>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={form.targetCalories}
-                    onChange={(e) => set('targetCalories', e.target.value)}
-                  />
-                </Field>
-                <Field label={t.settings.protein}>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={form.targetProtein}
-                    onChange={(e) => set('targetProtein', e.target.value)}
-                  />
-                </Field>
-                <Field label={t.settings.carbs}>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={form.targetCarbs}
-                    onChange={(e) => set('targetCarbs', e.target.value)}
-                  />
-                </Field>
-                <Field label={t.settings.fat}>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={form.targetFat}
-                    onChange={(e) => set('targetFat', e.target.value)}
-                  />
-                </Field>
               </div>
             </section>
 
