@@ -1,7 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { Plus, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useQuickLog } from '@/hooks/use-quick-log'
 import { useT } from '@/lib/i18n/provider'
@@ -45,35 +44,5 @@ export function QuickLogTriggerPill({ className }: { className?: string }) {
         <span>K</span>
       </kbd>
     </button>
-  )
-}
-
-/**
- * Mobile floating action button. Anchored bottom-right above the floating
- * tab pill. Springs in once mounted and pulses subtly to draw attention.
- */
-export function QuickLogFab({ className }: { className?: string }) {
-  const { setOpen, open } = useQuickLog()
-  const t = useT()
-
-  return (
-    <motion.button
-      type="button"
-      onClick={() => setOpen(true)}
-      aria-label={t.logForm.trigger.quickLog}
-      initial={{ opacity: 0, scale: 0.6, y: 16 }}
-      animate={{ opacity: open ? 0 : 1, scale: open ? 0.6 : 1, y: 0 }}
-      whileTap={{ scale: 0.92 }}
-      transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-      className={cn(
-        'fixed right-5 bottom-24 z-40 md:hidden',
-        'flex h-14 w-14 items-center justify-center rounded-full',
-        'bg-primary text-primary-foreground shadow-lg shadow-primary/30',
-        'before:absolute before:inset-0 before:rounded-full before:bg-primary/40 before:animate-ping before:opacity-30',
-        className
-      )}
-    >
-      <Plus size={22} className="relative" />
-    </motion.button>
   )
 }

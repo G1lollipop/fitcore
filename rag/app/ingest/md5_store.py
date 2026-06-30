@@ -38,13 +38,6 @@ def _ensure_loaded() -> set[str]:
     return _seen
 
 
-def reset_md5_cache() -> None:
-    """Test hook — drops the in-memory set so the next call re-reads the file."""
-    global _seen
-    with _lock:
-        _seen = None
-
-
 def get_string_md5(input_str: str, encoding: str = "utf-8") -> str:
     str_bytes = input_str.encode(encoding=encoding)
     md5_obj = hashlib.md5()

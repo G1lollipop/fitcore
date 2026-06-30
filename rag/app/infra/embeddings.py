@@ -144,10 +144,3 @@ def get_embedding(cache_manager: Optional[CacheManager] = None) -> Embeddings:
     if cache_manager is None:
         return raw
     return CachedEmbeddings(raw, cache_manager)
-
-
-def reset_embedding() -> None:
-    """Test hook — drops the cached raw instance so the next call rebuilds."""
-    global _raw_embedding
-    with _embedding_lock:
-        _raw_embedding = None

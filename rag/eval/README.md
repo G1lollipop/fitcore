@@ -59,7 +59,7 @@ Prerequisites: activate `.venv` under `rag/`, and set `GOOGLE_AI_STUDIO_API_KEY`
 
 ```bash
 # 1) Fetch newly registered CC-BY sources (needs fetch deps: trafilatura/pyyaml/pypdf)
-pip install -r requirements-ingest-ci.txt   # or install the fetch deps separately
+pip install -r requirements-dev.txt   # or install the fetch deps separately
 python scripts/fetch_sources.py              # generates data/auto_*.txt
 
 # 2) Ingest (use --force when switching backends or updating content)

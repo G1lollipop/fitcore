@@ -151,10 +151,6 @@ class RagService(object):
 
         return "\n".join(lines)
 
-    @staticmethod
-    def _build_citations(docs: list[Document]) -> list[dict[str, Any]]:
-        return build_citations(docs)
-
     def __get_chain(self):
         def format_for_prompt_template(value: dict) -> dict[str, Any]:
             original_input = value["input"]

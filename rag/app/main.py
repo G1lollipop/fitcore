@@ -48,13 +48,6 @@ def get_rag_service():
     return _rag_service
 
 
-def reset_rag_service() -> None:
-    """Test hook — drops the cached service so the next call rebuilds it."""
-    global _rag_service
-    with _rag_service_lock:
-        _rag_service = None
-
-
 # ── Lifespan: warm everything before the first request ────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):

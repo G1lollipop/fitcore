@@ -15,7 +15,7 @@ Usage (from rag/):
   ./.venv/bin/python scripts/fetch_sources.py --only who_physical_activity_2020
   ./.venv/bin/python scripts/fetch_sources.py --list
 
-Requires: trafilatura, pyyaml, pypdf, requests  (see requirements-ingest-ci.txt).
+Requires: trafilatura, pyyaml, pypdf, requests  (see requirements-dev.txt).
 """
 
 from __future__ import annotations

@@ -12,7 +12,7 @@ Usage (from rag/):
   ./.venv/Scripts/python scripts/harvest_kb.py          # top up to TARGET
   ./.venv/Scripts/python scripts/harvest_kb.py --target 120
 
-Requires: requests, trafilatura (see requirements-ingest-ci.txt + trafilatura).
+Requires: requests, trafilatura (see requirements-dev.txt).
 Note: MDPI and PMC HTML block this extractor; Frontiers / PLOS / PeerJ /
 SpringerOpen / BMC work — hence the journal allow-list below.
 """

@@ -2,7 +2,7 @@
  * Macro / calorie aggregation used by the nutrition center.
  *
  * Mirrors the inline reductions previously scattered through
- * `components/nutrition-center.tsx` and `components/stats-cards.tsx`.
+ * `components/nutrition-center.tsx`.
  * Pure, memoizable, easy to unit-test.
  */
 

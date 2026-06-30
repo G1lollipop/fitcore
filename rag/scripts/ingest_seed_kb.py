@@ -28,7 +28,7 @@ load_dotenv(RAG_ROOT / ".env")
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Ingest data/kb_*.txt + auto_*.txt into vector store"
+        description="Ingest data/auto_*.txt into vector store"
     )
     parser.add_argument(
         "--force",
@@ -39,7 +39,7 @@ def main() -> int:
         "--keep-list",
         default=None,
         help="Only ingest files listed in this file (one file name per line, e.g. data/cloud_keep.txt); "
-        "used for ingesting a curated cloud subset. If omitted, ingest all data/{kb,auto}_*.txt.",
+        "used for ingesting a curated cloud subset. If omitted, ingest all data/auto_*.txt.",
     )
     args = parser.parse_args()
 
@@ -80,10 +80,9 @@ def main() -> int:
     cache_manager = CacheManager()
     service = KnowledgeBaseService(cache_manager=cache_manager)
 
-    # KB files: curated summaries (kb_*.txt) plus auto-fetched sources
-    # (auto_*.txt produced by scripts/fetch_sources.py).
+    # KB files: auto-fetched sources (auto_*.txt produced by
+    # scripts/fetch_sources.py).
     patterns = [
-        str(RAG_ROOT / "data" / "kb_*.txt"),
         str(RAG_ROOT / "data" / "auto_*.txt"),
     ]
 

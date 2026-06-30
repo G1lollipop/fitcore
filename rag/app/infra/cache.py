@@ -224,7 +224,6 @@ class VectorStoreCache:
 
     def __init__(self, on_hash_change: Optional[Callable[[], None]] = None):
         self._retriever_cache: Any = None
-        self._bm25_retriever_cache: Any = None
         self._docs_hash: Optional[str] = None
         self._last_update_time: float = 0
         self._on_hash_change = on_hash_change
@@ -236,10 +235,9 @@ class VectorStoreCache:
             return self._retriever_cache
         return None
 
-    def set_cached_retriever(self, retriever, bm25_retriever, docs_hash: str):
+    def set_cached_retriever(self, retriever, docs_hash: str):
         prev = self._docs_hash
         self._retriever_cache = retriever
-        self._bm25_retriever_cache = bm25_retriever
         self._docs_hash = docs_hash
         self._last_update_time = time.time()
         # Fire only on a real change (skip the cold-start prev=None case).
@@ -248,7 +246,6 @@ class VectorStoreCache:
 
     def invalidate(self):
         self._retriever_cache = None
-        self._bm25_retriever_cache = None
         self._docs_hash = None
 
     def _compute_docs_hash(self, docs_list: List[str]) -> str:
@@ -277,7 +274,6 @@ class CacheManager:
       - vector_store_cache.{get,set}_cached_retriever
       - vector_store_cache._compute_docs_hash
       - invalidate_query_cache / invalidate_all
-      - get_cache_stats
 
     New methods:
       - get_cached_embedding / set_cached_embedding
@@ -392,18 +388,6 @@ class CacheManager:
     def invalidate_all(self) -> None:
         self._backend.clear()
         self.vector_store_cache.invalidate()
-
-    def get_cache_stats(self) -> dict:
-        size = self._backend.size() if hasattr(self._backend, "size") else None
-        return {
-            **self._stats,
-            "backend": type(self._backend).__name__,
-            "backend_size": size,
-            "retrieval_ttl_sec": self._retrieval_ttl,
-            "embedding_ttl_sec": self._embedding_ttl,
-            "has_retriever_cache": self.vector_store_cache._retriever_cache is not None,
-            "last_update_time": self.vector_store_cache._last_update_time,
-        }
 
     # ── Key derivation ────────────────────────────────────────────────────
 

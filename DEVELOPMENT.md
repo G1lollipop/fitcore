@@ -81,7 +81,7 @@ Fitcore/
 │   │   └── core/             # settings.py / constants.py
 │   ├── parsers/              # TXT/PDF/DOCX/MD/HTML parsing
 │   ├── data/                 # Knowledge base: kb_*.txt (curated) + auto_*.txt (auto-harvested) + sources.yaml
-│   ├── scripts/              # ingest_seed_kb / print_embedding_dim / download_reranker
+│   ├── scripts/              # ingest_seed_kb / print_embedding_dim / fetch_sources / harvest_kb
 │   ├── eval/                 # LLM-as-Judge evaluation
 │   ├── supabase/migrations/  # pgvector table + RPC
 │   ├── tests/                # pytest

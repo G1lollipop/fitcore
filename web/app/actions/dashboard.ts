@@ -10,13 +10,11 @@ import { calculateTodayWorkout } from '@/lib/plans/today-workout';
 import type {
   DashboardData,
   DietLogItem,
+  TodayWorkoutInfo,
   UserGoals,
-  WeeklyActivityData,
   WeeklyTrendData,
   WeeklyTrendDay,
-  WeeklyWorkoutStats,
   WorkoutLogItem,
-  YesterdayWorkoutLog,
 } from './types';
 
 /** Shape of the `user_settings → workout_plans` join (plan body is JSON). */
@@ -53,12 +51,6 @@ function getTodayWeekIndex(): number {
   const day = new Date().getDay();
   return day === 0 ? 6 : day - 1;
 }
-
-export type TodayWorkoutInfo = {
-  plan: { id: string; name: string } | null;
-  todayDay: { id: string; name: string; isRestDay: boolean } | null;
-  exercises: { id: string; text: string; sets?: number; repsMin?: number; repsMax?: number; weight?: number }[];
-} | null;
 
 async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
   try {
@@ -233,61 +225,6 @@ export async function getUserGoals(): Promise<UserGoals | null> {
   };
 }
 
-export async function getWeeklyActivity(): Promise<WeeklyActivityData> {
-  const userId = await getUserIdOrNull();
-  if (!userId) {
-    return {
-      values: [0, 0, 0, 0, 0, 0, 0],
-      weekLabel: getWeekLabel(new Date()),
-      todayIndex: getTodayWeekIndex(),
-    };
-  }
-
-  const today = new Date();
-  const { start, end } = getWeekBounds(today);
-  const todayIndex = getTodayWeekIndex();
-
-  const startDateStr = start.toISOString().split('T')[0];
-  const endDateStr = end.toISOString().split('T')[0];
-
-  const { data, error } = await supabase
-    .from('daily_stats')
-    .select('date, workout_duration')
-    .eq('user_id', userId)
-    .gte('date', startDateStr)
-    .lte('date', endDateStr);
-
-  if (error) {
-    console.error('[getWeeklyActivity] Query error:', error);
-    return {
-      values: [0, 0, 0, 0, 0, 0, 0],
-      weekLabel: getWeekLabel(today),
-      todayIndex,
-    };
-  }
-
-  const values: number[] = [0, 0, 0, 0, 0, 0, 0];
-
-  if (data) {
-    data.forEach((row) => {
-      const rowDate = new Date(row.date + 'T00:00:00');
-      const dayOfWeek = rowDate.getDay();
-      const index = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const duration = row.workout_duration || 0;
-      if (duration > 0) {
-        const activityPercent = Math.min(100, Math.round((duration / 60) * 20));
-        values[index] = activityPercent;
-      }
-    });
-  }
-
-  return {
-    values,
-    weekLabel: getWeekLabel(today),
-    todayIndex,
-  };
-}
-
 const TREND_DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
 function emptyTrend(today: Date): WeeklyTrendData {
@@ -368,79 +305,6 @@ export async function getWeeklyTrend(): Promise<WeeklyTrendData> {
   return { days, weekLabel: getWeekLabel(today), todayIndex, maxKcal };
 }
 
-export async function getWeeklyWorkoutStats(): Promise<WeeklyWorkoutStats> {
-  const defaultResult: WeeklyWorkoutStats = {
-    daysThisWeek: 0,
-    daysLastWeek: 0,
-    change: 0,
-  };
-
-  const userId = await getUserIdOrNull();
-  if (!userId) return defaultResult;
-
-  const today = new Date();
-  const thisWeekBounds = getWeekBounds(today);
-  const lastWeekStart = new Date(thisWeekBounds.start);
-  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-  const lastWeekEnd = new Date(thisWeekBounds.end);
-  lastWeekEnd.setDate(lastWeekEnd.getDate() - 7);
-
-  const thisWeekStartStr = thisWeekBounds.start.toISOString().split('T')[0];
-  const thisWeekEndStr = thisWeekBounds.end.toISOString().split('T')[0];
-  const lastWeekStartStr = lastWeekStart.toISOString().split('T')[0];
-  const lastWeekEndStr = lastWeekEnd.toISOString().split('T')[0];
-
-  const [thisWeekResult, lastWeekResult] = await Promise.all([
-    supabase
-      .from('daily_stats')
-      .select('date')
-      .eq('user_id', userId)
-      .gte('date', thisWeekStartStr)
-      .lte('date', thisWeekEndStr)
-      .gt('workout_duration', 0),
-    supabase
-      .from('daily_stats')
-      .select('date')
-      .eq('user_id', userId)
-      .gte('date', lastWeekStartStr)
-      .lte('date', lastWeekEndStr)
-      .gt('workout_duration', 0),
-  ]);
-
-  const daysThisWeek = thisWeekResult.data?.length || 0;
-  const daysLastWeek = lastWeekResult.data?.length || 0;
-
-  return {
-    daysThisWeek,
-    daysLastWeek,
-    change: daysThisWeek - daysLastWeek,
-  };
-}
-
-export async function getYesterdayWorkout(): Promise<YesterdayWorkoutLog> {
-  const userId = await getUserIdOrNull();
-  if (!userId) return [];
-
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-  const { data, error } = await supabase
-    .from('workout_logs')
-    .select('workout_name')
-    .eq('user_id', userId)
-    .eq('date', yesterdayStr)
-    .order('logged_at', { ascending: true });
-
-  if (error || !data) {
-    return [];
-  }
-
-  return data.map((log) => ({
-    text: log.workout_name || '',
-  }));
-}
-
 export async function getDashboardData(): Promise<DashboardData | null> {
   const userId = await getUserIdOrNull();
   if (!userId) return null;
@@ -453,8 +317,6 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     dietLogsResult,
     workoutLogsResult,
     weeklyTrend,
-    weeklyWorkoutStats,
-    yesterdayWorkout,
     todayWorkout,
   ] = await Promise.all([
     getUserGoals(),
@@ -477,8 +339,6 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       .eq('date', today)
       .order('logged_at', { ascending: true }),
     getWeeklyTrend(),
-    getWeeklyWorkoutStats(),
-    getYesterdayWorkout(),
     getTodayWorkoutData(userId),
   ]);
 
@@ -510,8 +370,6 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       workout_logs: (workoutLogsResult.data as WorkoutLogItem[] | null) ?? [],
     },
     weeklyTrend,
-    weeklyWorkoutStats,
-    yesterdayWorkout,
     todayWorkout,
   };
 }

@@ -9,7 +9,7 @@ import { getTodayDate, resolveLogTimestamp } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
 import { recomputeDailyStats } from '@/lib/stats/recompute-daily-stats';
-import type { DietLogItem, DailyStatsData } from './types';
+import type { DietLogItem } from './types';
 
 async function parseFoodWithAI(userInput: string): Promise<DietLogItem | null> {
   try {
@@ -107,48 +107,6 @@ export async function logFood(
 
   revalidatePath('/');
   return { success: true, data: foodData };
-}
-
-export async function getDailyStats(): Promise<DailyStatsData | null> {
-  const userId = await getUserIdOrNull();
-  if (!userId) return null;
-
-  const today = getTodayDate();
-
-  const [statsRes, logsRes] = await Promise.all([
-    supabase
-      .from('daily_stats')
-      .select('total_calories, total_protein, total_carbs, total_fat')
-      .eq('user_id', userId)
-      .eq('date', today)
-      .maybeSingle(),
-    supabase
-      .from('food_logs')
-      .select('id, food_name, calories, protein, carbs, fat, logged_at')
-      .eq('user_id', userId)
-      .eq('date', today)
-      .order('logged_at', { ascending: true }),
-  ]);
-
-  if (statsRes.error && statsRes.error.code !== 'PGRST116') {
-    console.error('[getDailyStats] Query error:', statsRes.error.message);
-    return null;
-  }
-
-  const row = statsRes.data;
-  const dietLogs = (logsRes.data as DietLogItem[] | null) ?? [];
-
-  if (!row && dietLogs.length === 0) {
-    return null;
-  }
-
-  return {
-    total_calories: row?.total_calories || 0,
-    total_protein: row?.total_protein || 0,
-    total_carbs: row?.total_carbs || 0,
-    total_fat: row?.total_fat || 0,
-    diet_logs: dietLogs,
-  };
 }
 
 export async function deleteDietLog(

@@ -56,8 +56,10 @@ coverage/
 # Vercel
 .vercel/
 
-# Supabase
+# Supabase CLI local artifacts only — specific paths so we do NOT swallow
+# supabase/migrations/ (the committed DB schema) or source dirs like lib/supabase/.
 supabase/.temp/
+supabase/.branches/
 supabase/.env
 
 # SQL scripts (local development only)
@@ -71,10 +73,6 @@ docs/
 # below take effect — files inside a fully ignored directory can't be re-included.
 scripts/*
 !scripts/backfill-exercise-name-en.mjs
-
-# Supabase CLI local config/migrations only (anchored to web root so it does
-# NOT swallow source dirs like lib/supabase/).
-/supabase/
 
 # CSV files (local data files)
 *.csv

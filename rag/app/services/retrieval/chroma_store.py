@@ -89,11 +89,7 @@ class VectorStoreService(object):
 
         docs_hash = self.cache_manager.vector_store_cache._compute_docs_hash(docs_list)
         self.cache_manager.vector_store_cache.set_cached_retriever(
-            ensemble_retriever, bm25_retriever, docs_hash
+            ensemble_retriever, docs_hash
         )
 
         return ensemble_retriever
-
-    def invalidate_cache(self):
-        self.cache_manager.vector_store_cache.invalidate()
-        self.cache_manager.invalidate_query_cache()

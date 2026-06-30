@@ -11,7 +11,7 @@ import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
 import { recomputeDailyStats } from '@/lib/stats/recompute-daily-stats';
 import { workoutLogInputSchema, firstZodError } from '@/lib/validation/schemas';
-import type { WorkoutLogItem, DailyWorkoutStatsData } from './types';
+import type { WorkoutLogItem } from './types';
 
 type WorkoutLogInsert = Database['public']['Tables']['workout_logs']['Insert'];
 
@@ -123,47 +123,6 @@ export async function logWorkout(
 
   revalidatePath('/');
   return { success: true, data: workoutData };
-}
-
-export async function getDailyWorkoutStats(): Promise<DailyWorkoutStatsData | null> {
-  const userId = await getUserIdOrNull();
-  if (!userId) return null;
-
-  const today = getTodayDate();
-
-  const [statsRes, logsRes] = await Promise.all([
-    supabase
-      .from('daily_stats')
-      .select('calories_burned, workout_duration, water_intake')
-      .eq('user_id', userId)
-      .eq('date', today)
-      .maybeSingle(),
-    supabase
-      .from('workout_logs')
-      .select('id, workout_name, sets, duration_minutes, calories_burned, plan_id, day_id, logged_at')
-      .eq('user_id', userId)
-      .eq('date', today)
-      .order('logged_at', { ascending: true }),
-  ]);
-
-  if (statsRes.error && statsRes.error.code !== 'PGRST116') {
-    console.error('[getDailyWorkoutStats] Query error:', statsRes.error.message);
-    return null;
-  }
-
-  const row = statsRes.data;
-  const workoutLogs = (logsRes.data as WorkoutLogItem[] | null) ?? [];
-
-  if (!row && workoutLogs.length === 0) {
-    return null;
-  }
-
-  return {
-    calories_burned: row?.calories_burned || 0,
-    workout_duration: row?.workout_duration || 0,
-    water_intake: row?.water_intake || 0,
-    workout_logs: workoutLogs,
-  };
 }
 
 /**

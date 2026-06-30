@@ -23,21 +23,6 @@ export type WorkoutLogItem = {
   pending?: boolean;
 };
 
-export type DailyStatsData = {
-  total_calories: number;
-  total_protein: number;
-  total_carbs: number;
-  total_fat: number;
-  diet_logs: DietLogItem[];
-};
-
-export type DailyWorkoutStatsData = {
-  calories_burned: number;
-  workout_duration: number;
-  water_intake: number;
-  workout_logs: WorkoutLogItem[];
-};
-
 export type UserGoals = {
   target_calories: number;
   target_protein: number;
@@ -58,12 +43,6 @@ export type TodayStats = {
   workout_logs: WorkoutLogItem[];
 };
 
-export type WeeklyActivityData = {
-  values: number[];
-  weekLabel: string;
-  todayIndex: number;
-};
-
 export type WeeklyTrendDay = {
   dateIso: string;          // 'YYYY-MM-DD'
   dayLabel: string;         // 'Mon'..'Sun'
@@ -80,16 +59,6 @@ export type WeeklyTrendData = {
   maxKcal: number;          // peak intake or burn across the week (for bar scaling)
 };
 
-export type WeeklyWorkoutStats = {
-  daysThisWeek: number;
-  daysLastWeek: number;
-  change: number;
-};
-
-export type YesterdayWorkoutLog = {
-  text: string;
-}[];
-
 export type TodayWorkoutInfo = {
   plan: { id: string; name: string } | null;
   todayDay: { id: string; name: string; isRestDay: boolean } | null;
@@ -99,9 +68,6 @@ export type TodayWorkoutInfo = {
 export type DashboardData = {
   goals: UserGoals;
   today: TodayStats;
-  weeklyActivity?: WeeklyActivityData;
   weeklyTrend?: WeeklyTrendData;
-  weeklyWorkoutStats?: WeeklyWorkoutStats;
-  yesterdayWorkout?: YesterdayWorkoutLog;
   todayWorkout?: TodayWorkoutInfo;
 };
