@@ -56,6 +56,18 @@ def _embed_documents_throttled(
                 break
             except Exception as exc:  # noqa: BLE001 (retry on rate-limit / transient net)
                 msg = str(exc)
+                # Distinguish the daily wall from the per-minute (RPM) limit:
+                # both are RESOURCE_EXHAUSTED on the same free_tier metric, but
+                # only the daily quota (quotaId ...PerDay..., limit 1000) is worth
+                # aborting on — the per-minute one (limit 100) just needs the 61s
+                # wait below. Fast-fail the daily wall so we don't burn 6×61s of
+                # pointless retries per remaining doc.
+                is_daily_quota = ("RESOURCE_EXHAUSTED" in msg or "429" in msg) and (
+                    "PerDay" in msg or "limit: 1000" in msg
+                )
+                if is_daily_quota:
+                    print(f"[kb] Daily embedding quota exhausted on chunks {start}-{start + len(batch)}! Stopping immediately.")
+                    raise exc
                 is_quota = "RESOURCE_EXHAUSTED" in msg or "429" in msg
                 is_transient = any(sig in msg for sig in _EMBED_TRANSIENT_SIGNALS)
                 if (is_quota or is_transient) and attempt < _EMBED_MAX_RETRIES - 1:

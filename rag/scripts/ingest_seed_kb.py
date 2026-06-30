@@ -122,6 +122,15 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 (CLI tool)
             failed += 1
             print(f"[Error] {path.name}: {exc}")
+            msg = str(exc)
+            # Only the daily wall (quotaId ...PerDay..., limit 1000) should abort
+            # the whole run; per-minute (limit 100) limits are handled by retries
+            # inside the embedding throttler.
+            if ("RESOURCE_EXHAUSTED" in msg or "429" in msg) and (
+                "PerDay" in msg or "limit: 1000" in msg
+            ):
+                print("[ingest] Daily embedding quota exhausted. Aborting ingestion loop.")
+                return 3
 
     print(
         f"[Summary] success={ok}, skipped={skipped}, failed={failed}, total={len(files)}"
