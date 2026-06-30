@@ -1,11 +1,20 @@
 'use client'
 
-import { Bot } from 'lucide-react'
+import { ArrowUpRight, Bot } from 'lucide-react'
 import type { RefObject } from 'react'
+import { useT } from '@/lib/i18n/provider'
+import { KNOWLEDGE_TOPICS } from '@/components/knowledge/starters'
 import { ChatInput } from './chat-input'
 import { ChatMessage } from './chat-message'
 import { TypingIndicator } from './typing-indicator'
 import type { Message } from './types'
+
+/**
+ * One seed question per topic, surfaced as one-tap starters in the coach's
+ * empty state. This carries over the discoverability the standalone Knowledge
+ * tab used to provide now that knowledge Q&A lives inside the coach.
+ */
+const COACH_STARTERS = KNOWLEDGE_TOPICS.slice(0, 4).map((topic) => topic.questions[0])
 
 interface ChatBodyProps {
   messages: Message[]
@@ -34,12 +43,18 @@ export function ChatBody({
   // once the streaming bubble appears, it carries its own indicator.
   const showWaiting = isTyping && !messages.some((m) => m.isStreaming)
 
+  // Fresh conversation (only the seeded welcome bubble, nothing asked yet):
+  // offer starter questions so the user discovers the coach can answer
+  // knowledge questions, not just log activity.
+  const showStarters = !isTyping && messages.filter((m) => m.role === 'user').length === 0
+
   return (
     <>
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
         {messages.map((msg) => (
           <ChatMessage key={msg.id} msg={msg} />
         ))}
+        {showStarters && <ChatStarters onPick={onSend} />}
         {showWaiting && (
           <div className="flex gap-2">
             <div className="shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
@@ -61,5 +76,34 @@ export function ChatBody({
         inputRef={inputRef}
       />
     </>
+  )
+}
+
+/** Tappable seed questions shown in a fresh conversation. */
+function ChatStarters({ onPick }: { onPick: (q: string) => void }) {
+  const t = useT()
+  return (
+    <div className="px-1 pt-1">
+      <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        {t.aiChat.startersTitle}
+      </p>
+      <div className="space-y-1.5">
+        {COACH_STARTERS.map((q) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => onPick(q)}
+            className="group flex w-full items-center gap-2 rounded-xl border border-border/70 bg-secondary/30 px-3 py-2 text-left text-[13px] text-foreground/90 transition-colors hover:border-primary/40 hover:bg-card"
+          >
+            <span className="flex-1">{q}</span>
+            <ArrowUpRight
+              size={14}
+              className="shrink-0 text-muted-foreground transition-colors group-hover:text-primary"
+              aria-hidden
+            />
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }

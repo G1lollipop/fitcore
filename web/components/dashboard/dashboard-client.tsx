@@ -4,16 +4,14 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import dynamic from 'next/dynamic'
 import { AppShell } from '@/components/layout/app-shell'
 import { findNavItem } from '@/components/layout/nav-items'
-import { DailyLogForm } from '@/components/log-form/daily-log-form'
-import { AdvancedLogDisclosure } from '@/components/log-form/advanced-log-disclosure'
-import { StatsCards } from '@/components/dashboard/stats-cards'
+import { TodayHero } from '@/components/dashboard/today-hero'
+import { TodayMetrics } from '@/components/dashboard/today-metrics'
 import { WeeklyActivity } from '@/components/dashboard/weekly-activity'
-import { CoachHomeCard } from '@/components/dashboard/coach-home-card'
+import { CoachAskBar } from '@/components/dashboard/coach-ask-bar'
+import { GettingStartedCard } from '@/components/dashboard/getting-started-card'
 import { TabActiveProvider } from '@/components/dashboard/tab-active-context'
-import { MyPlans } from '@/components/plans/my-plans'
 import { NutritionCenter } from '@/components/nutrition/nutrition-center'
-import { TrainingHistory } from '@/components/training/training-history'
-import { KnowledgeCenter } from '@/components/knowledge/knowledge-center'
+import { TrainingCenter } from '@/components/training/training-center'
 import { useDashboardData, useDashboardActions } from '@/lib/queries/dashboard'
 import type { DashboardData } from '@/app/actions/types'
 import { useT } from '@/lib/i18n/provider'
@@ -96,6 +94,17 @@ export function DashboardClient({
     invalidate()
   }, [invalidate])
 
+  // First-run nudge: no meals/workouts logged today and no active plan yet.
+  const isNewUser = useMemo(() => {
+    if (!dashboardData) return false
+    const { today } = dashboardData
+    return (
+      today.diet_logs.length === 0 &&
+      today.workout_logs.length === 0 &&
+      !dashboardData.todayWorkout
+    )
+  }, [dashboardData])
+
   return (
     <AppShell
       activeNav={activeNav}
@@ -113,33 +122,44 @@ export function DashboardClient({
         </>
       }
     >
-      <TabPanel active={activeNav === 'dashboard'} className="space-y-6">
-        <CoachHomeCard />
-
-        <StatsCards
-          userId={userId}
+      <TabPanel
+        active={activeNav === 'dashboard'}
+        className="flex min-h-[calc(100dvh_-_12rem)] flex-col gap-3 md:min-h-0 md:gap-4"
+      >
+        <TodayHero
           kcalIntake={dashboardData?.today.total_calories}
           kcalBurn={dashboardData?.today.calories_burned}
           kcalGoal={dashboardData?.goals.target_calories}
           workoutMinutes={dashboardData?.today.workout_duration}
-          waterIntake={dashboardData?.today.water_intake}
-          waterGoal={dashboardData?.goals.water_goal}
-          onWaterLogged={handleLogSuccess}
+          className="shrink-0"
         />
 
-        <AdvancedLogDisclosure>
-          <DailyLogForm
-            userId={userId}
-            onLogSuccess={handleLogSuccess}
-            initialDietLogs={dashboardData?.today.diet_logs ?? []}
-            initialWorkoutLogs={dashboardData?.today.workout_logs ?? []}
-            yesterdayWorkout={dashboardData?.yesterdayWorkout}
-            todayWorkout={dashboardData?.todayWorkout}
-            compact
+        {isNewUser ? (
+          <GettingStartedCard
+            onGoNutrition={() => setActiveNav('nutrition')}
+            onGoTraining={() => setActiveNav('training')}
+            className="shrink-0"
           />
-        </AdvancedLogDisclosure>
+        ) : (
+          <TodayMetrics
+            userId={userId}
+            protein={dashboardData?.today.total_protein}
+            proteinGoal={dashboardData?.goals.target_protein}
+            carbs={dashboardData?.today.total_carbs}
+            carbsGoal={dashboardData?.goals.target_carbs}
+            fat={dashboardData?.today.total_fat}
+            fatGoal={dashboardData?.goals.target_fat}
+            waterMl={dashboardData?.today.water_intake}
+            waterGoalMl={dashboardData?.goals.water_goal}
+            onWaterLogged={handleLogSuccess}
+          />
+        )}
 
-        <WeeklyActivity data={dashboardData?.weeklyTrend} />
+        {/* Secondary trend — desktop only so the mobile home stays single-screen. */}
+        <WeeklyActivity data={dashboardData?.weeklyTrend} className="hidden md:block" />
+
+        {/* AI coach: promoted + anchored to the bottom thumb zone on mobile. */}
+        <CoachAskBar className="mt-auto shrink-0 md:mt-0" />
       </TabPanel>
 
       <TabPanel active={activeNav === 'nutrition'} prefetch>
@@ -147,15 +167,7 @@ export function DashboardClient({
       </TabPanel>
 
       <TabPanel active={activeNav === 'training'} prefetch>
-        <TrainingHistory userId={userId} onLogSuccess={handleLogSuccess} />
-      </TabPanel>
-
-      <TabPanel active={activeNav === 'plans'}>
-        <MyPlans userId={userId} />
-      </TabPanel>
-
-      <TabPanel active={activeNav === 'knowledge'}>
-        <KnowledgeCenter />
+        <TrainingCenter userId={userId} onLogSuccess={handleLogSuccess} />
       </TabPanel>
     </AppShell>
   )

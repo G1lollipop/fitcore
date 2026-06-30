@@ -9,6 +9,7 @@ import { useTabActive } from '@/components/dashboard/tab-active-context'
 
 interface WeeklyActivityProps {
   data?: WeeklyTrendData
+  className?: string
 }
 
 /** Maps a JS `getDay()` (0=Sun) to a Monday-first index for `weekdays`. */
@@ -43,7 +44,7 @@ const cellVariants = {
  * (accent) as stacked mini-bars, with a backing tint that scales with the
  * higher of the two. Today is outlined and pulses softly.
  */
-export function WeeklyActivity({ data }: WeeklyActivityProps) {
+export function WeeklyActivity({ data, className }: WeeklyActivityProps) {
   const t = useT()
   const active = useTabActive()
   const days: WeeklyTrendDay[] =
@@ -88,7 +89,7 @@ export function WeeklyActivity({ data }: WeeklyActivityProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-      className="glass glass-highlight rounded-2xl p-5"
+      className={cn('glass glass-highlight rounded-2xl p-5', className)}
     >
       <header className="mb-5 flex items-end justify-between">
         <div>

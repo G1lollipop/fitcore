@@ -6,8 +6,10 @@ import { useT } from "@/lib/i18n/provider"
 import { getWorkoutHistory } from "@/app/actions/history"
 import {
   summarizeMonth,
+  toDateString,
   topMuscleGroups,
 } from "@/lib/training/calendar"
+import { cn } from "@/lib/utils"
 import { DailyLogDrawer } from "./daily-log-drawer"
 import { MonthlySummary } from "./monthly-summary"
 import { StreakCalendar } from "./streak-calendar"
@@ -74,6 +76,31 @@ export function TrainingHistory({ userId, onLogSuccess }: TrainingHistoryProps) 
   const muscleGroups = useMemo(() => topMuscleGroups(workoutData, 3), [workoutData])
   const trainingDays = Object.keys(workoutData).length
 
+  const now = new Date()
+  const isCurrentMonth =
+    selectedMonth.getFullYear() === now.getFullYear() &&
+    selectedMonth.getMonth() === now.getMonth()
+
+  // This-week rollup (Mon→Sun) from the already-loaded month data. A different
+  // timeframe than the monthly summary, so it adds glanceable recency without
+  // duplicating it. Only meaningful while viewing the current month.
+  const week = useMemo(() => {
+    const weekDates = currentWeekDateStrings()
+    let sessions = 0
+    let minutes = 0
+    let calories = 0
+    let days = 0
+    for (const dateStr of weekDates) {
+      const logs = workoutData[dateStr]
+      if (!logs || logs.length === 0) continue
+      days += 1
+      sessions += logs.length
+      minutes += logs.reduce((s, w) => s + (w.duration_minutes ?? 0), 0)
+      calories += logs.reduce((s, w) => s + (w.calories_burned ?? 0), 0)
+    }
+    return { sessions, minutes, calories, days }
+  }, [workoutData])
+
   const drawerLogs = selectedDate ? workoutData[selectedDate] ?? [] : []
 
   return (
@@ -82,6 +109,18 @@ export function TrainingHistory({ userId, onLogSuccess }: TrainingHistoryProps) 
         <TrainingSkeleton />
       ) : (
         <>
+          {isCurrentMonth && (
+            <WeekSummary
+              label={t.training.thisWeek.title}
+              days={week.days}
+              daysLabel={t.training.thisWeek.activeDays}
+              minutes={week.minutes}
+              minutesLabel={t.training.summary.totalDuration}
+              calories={week.calories}
+              caloriesLabel={t.training.summary.totalCalories}
+            />
+          )}
+
           <MonthlySummary
             month={selectedMonth}
             totalMinutes={summary.totalDuration}
@@ -124,6 +163,71 @@ export function TrainingHistory({ userId, onLogSuccess }: TrainingHistoryProps) 
         onChange={handleDrawerChange}
       />
     </div>
+  )
+}
+
+/** ISO date strings for the current Monday→Sunday week, in local time. */
+function currentWeekDateStrings(): string[] {
+  const now = new Date()
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return toDateString(d.getFullYear(), d.getMonth(), d.getDate())
+  })
+}
+
+interface WeekSummaryProps {
+  label: string
+  days: number
+  daysLabel: string
+  minutes: number
+  minutesLabel: string
+  calories: number
+  caloriesLabel: string
+}
+
+/** Compact this-week strip: active days / total minutes / calories burned. */
+function WeekSummary({
+  label,
+  days,
+  daysLabel,
+  minutes,
+  minutesLabel,
+  calories,
+  caloriesLabel,
+}: WeekSummaryProps) {
+  const t = useT()
+  const cells: { value: string; label: string }[] = [
+    { value: String(days), label: daysLabel },
+    { value: `${minutes}`, label: minutesLabel },
+    { value: calories.toLocaleString(), label: caloriesLabel },
+  ]
+  return (
+    <section className="glass glass-highlight rounded-2xl p-4">
+      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        {cells.map((cell, i) => (
+          <div
+            key={cell.label}
+            className={cn('text-center', i < cells.length - 1 && 'border-r border-border/50')}
+          >
+            <p className="font-display text-xl font-semibold tabular-nums leading-none text-foreground">
+              {cell.value}
+              {i === 1 && (
+                <span className="ml-0.5 text-[11px] font-normal text-muted-foreground">
+                  {t.common.minutes}
+                </span>
+              )}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">{cell.label}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 

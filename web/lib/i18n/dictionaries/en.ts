@@ -196,6 +196,16 @@ export const en = {
 
   dashboard: {
     weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    gettingStarted: {
+      title: 'Get started',
+      subtitle: 'Three quick ways to kick off your fitness journey',
+      logMeal: 'Log a meal',
+      logMealHint: 'Track what you ate today',
+      pickPlan: 'Pick a plan',
+      pickPlanHint: 'Generate or choose a workout plan',
+      askCoach: 'Ask the coach',
+      askCoachHint: 'Nutrition, training, anything',
+    },
     weeklyTrend: {
       title: 'Weekly Trend',
       intake: 'Intake',
@@ -280,6 +290,15 @@ export const en = {
   training: {
     todayRecord: "Today's log →",
     todayRecordHint: 'Tap to open the side drawer to add or view today’s workout',
+    segments: {
+      aria: 'Training view',
+      records: 'Records',
+      plans: 'Plans',
+    },
+    thisWeek: {
+      title: 'This week',
+      activeDays: 'Active days',
+    },
     muscles: {
       chest: 'Chest',
       back: 'Back',
@@ -792,6 +811,7 @@ export const en = {
     newSessionPreview: '(Current new chat)',
     confirmClear: 'Clear all messages in this conversation?',
     welcome: 'Hi! Ask me anything about nutrition, training, or your fitness plan.',
+    startersTitle: 'Try asking',
     cleared: 'This conversation has been cleared. What would you like to ask next?',
     streamError: 'Sorry, something went wrong',
     requestFailed: (status: number) => `Request failed (${status})`,

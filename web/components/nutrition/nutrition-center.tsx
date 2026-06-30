@@ -130,8 +130,8 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
   const timelineUserId = isFuture ? undefined : userId
 
   return (
-    <div className="space-y-6">
-      <div className="glass glass-highlight flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+    <div className="flex h-[calc(100dvh_-_12rem)] flex-col gap-3 md:h-auto md:gap-6">
+      <div className="glass glass-highlight flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -179,16 +179,8 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="glass glass-highlight rounded-2xl p-5 sm:p-6"
+            className="glass glass-highlight shrink-0 rounded-2xl p-4 sm:p-5"
           >
-            <header className="mb-4 flex items-baseline justify-between">
-              <h3 className="font-display text-base font-semibold text-foreground">
-                {t.nutrition.intakeTitle}
-              </h3>
-              <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                Macros
-              </span>
-            </header>
             <RadialMacroChart totals={totals} goals={goals} />
           </motion.section>
 
@@ -196,9 +188,9 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
-            className="glass glass-highlight rounded-2xl p-5 sm:p-6"
+            className="glass glass-highlight flex min-h-0 flex-1 flex-col rounded-2xl p-4 sm:p-5"
           >
-            <header className="mb-4 flex items-baseline justify-between">
+            <header className="mb-3 flex shrink-0 items-baseline justify-between">
               <h3 className="font-display text-base font-semibold text-foreground">
                 {t.nutrition.timelineTitle}
               </h3>
@@ -207,16 +199,18 @@ export function NutritionCenter({ userId, onLogSuccess }: NutritionCenterProps) 
               </span>
             </header>
 
-            <AddFoodInput
-              t={t}
-              value={inputText}
-              onChange={setInputText}
-              onSubmit={handleAddFood}
-              isSubmitting={isSubmitting}
-              disabled={isFuture}
-            />
+            <div className="shrink-0">
+              <AddFoodInput
+                t={t}
+                value={inputText}
+                onChange={setInputText}
+                onSubmit={handleAddFood}
+                isSubmitting={isSubmitting}
+                disabled={isFuture}
+              />
+            </div>
 
-            <div className="mt-5">
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
               <AnimatePresence mode="popLayout">
                 <MealTimeline
                   key={selectedDate.toDateString()}

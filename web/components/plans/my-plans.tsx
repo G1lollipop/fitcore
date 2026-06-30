@@ -34,7 +34,19 @@ interface PlanRow {
   structure?: unknown
 }
 
-export function MyPlans({ userId }: { userId?: string }) {
+interface MyPlansProps {
+  userId?: string
+  /**
+   * When embedded in the Training tab the today-workout banner is lifted to
+   * the parent (`TrainingCenter`) so it shows under both segments; hide the
+   * local copy to avoid a duplicate.
+   */
+  hideTodayBanner?: boolean
+  /** Fired after the current plan changes (set / delete) so a lifted banner can refresh. */
+  onCurrentPlanChange?: () => void
+}
+
+export function MyPlans({ userId, hideTodayBanner = false, onCurrentPlanChange }: MyPlansProps) {
   const { toast } = useToast()
   const t = useT()
 
@@ -92,6 +104,7 @@ export function MyPlans({ userId }: { userId?: string }) {
           const newCurrent = userPlans.find((p) => p.id === planId) ?? null
           setCurrentPlanData(newCurrent)
           refreshTodayWorkout(newCurrent)
+          onCurrentPlanChange?.()
           toast({ title: t.plans.list.setSuccess, description: t.plans.list.setSuccessDesc })
         } else {
           toast({
@@ -104,7 +117,7 @@ export function MyPlans({ userId }: { userId?: string }) {
         setPendingPlanId(null)
       }
     },
-    [userId, userPlans, refreshTodayWorkout, toast, t]
+    [userId, userPlans, refreshTodayWorkout, onCurrentPlanChange, toast, t]
   )
 
   const handleDelete = useCallback(
@@ -119,6 +132,7 @@ export function MyPlans({ userId }: { userId?: string }) {
           if (currentPlan?.id === planId) {
             setCurrentPlanData(null)
             setTodayResult(null)
+            onCurrentPlanChange?.()
           }
           toast({ title: t.plans.list.deleteSuccess, description: t.plans.list.deleteSuccessDesc })
         } else {
@@ -132,7 +146,7 @@ export function MyPlans({ userId }: { userId?: string }) {
         setPendingPlanId(null)
       }
     },
-    [userId, currentPlan, toast, t]
+    [userId, currentPlan, onCurrentPlanChange, toast, t]
   )
 
   const handleStartWorkout = useCallback(() => {
@@ -166,7 +180,7 @@ export function MyPlans({ userId }: { userId?: string }) {
 
   return (
     <div className="space-y-6">
-      {currentPlan && todayResult && (
+      {!hideTodayBanner && currentPlan && todayResult && (
         <TodayBanner
           planName={currentPlan.name}
           result={todayResult}

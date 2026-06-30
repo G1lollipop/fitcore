@@ -71,7 +71,7 @@ export function AppShell({
               <TopBar pageTitle={pageTitle} greeting={greeting} userName={userName} />
 
               {/* `pb-28` reserves room for the floating mobile tab pill (h ≈ 56px + 12px gap). */}
-              <div className="flex-1 px-5 md:px-8 py-6 space-y-6 pb-28 md:pb-10">
+              <div className="flex-1 px-5 md:px-8 py-4 md:py-6 space-y-6 pb-28 md:pb-10">
                 {children}
               </div>
             </main>

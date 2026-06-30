@@ -7,17 +7,17 @@ import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n/provider'
 
 interface TodayHeroProps {
-  kcalIntake: number
-  kcalBurn: number
-  kcalGoal: number
-  workoutMinutes: number
+  kcalIntake?: number
+  kcalBurn?: number
+  kcalGoal?: number
+  workoutMinutes?: number
   className?: string
 }
 
-const RADIUS_OUTER = 92
-const RADIUS_INNER = 72
-const STROKE = 14
-const SVG_SIZE = 224
+const RADIUS_OUTER = 60
+const RADIUS_INNER = 46
+const STROKE = 11
+const SVG_SIZE = 144
 const CENTER = SVG_SIZE / 2
 
 const CIRC_OUTER = 2 * Math.PI * RADIUS_OUTER
@@ -55,10 +55,10 @@ function useTickUp(target: number, duration = 1.1) {
 }
 
 export function TodayHero({
-  kcalIntake,
-  kcalBurn,
-  kcalGoal,
-  workoutMinutes,
+  kcalIntake = 0,
+  kcalBurn = 0,
+  kcalGoal = 2500,
+  workoutMinutes = 0,
   className,
 }: TodayHeroProps) {
   const t = useT()
@@ -85,23 +85,18 @@ export function TodayHero({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        'glass glass-highlight relative overflow-hidden rounded-2xl p-6',
-        'flex flex-col gap-6',
+        'glass glass-highlight relative overflow-hidden rounded-2xl p-4',
+        'flex flex-col gap-3',
         className
       )}
     >
       <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/5 blur-3xl" aria-hidden />
       <div className="absolute -bottom-24 -left-12 h-48 w-48 rounded-full bg-accent/10 blur-3xl" aria-hidden />
 
-      <header className="relative flex items-start justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Today
-          </p>
-          <h2 className="font-display mt-1 text-lg font-semibold text-foreground">
-            {formatDate(new Date(), t.common.locale)}
-          </h2>
-        </div>
+      <header className="relative flex items-center justify-between">
+        <h2 className="font-display text-base font-semibold text-foreground">
+          {formatDate(new Date(), t.common.locale)}
+        </h2>
         <span
           className={cn(
             'rounded-full px-2.5 py-1 text-[10px] font-medium',
@@ -120,8 +115,8 @@ export function TodayHero({
         </span>
       </header>
 
-      <div className="relative grid items-center gap-6 sm:grid-cols-[auto_1fr]">
-        <div className="relative mx-auto sm:mx-0" style={{ width: SVG_SIZE, height: SVG_SIZE }}>
+      <div className="relative flex flex-row items-center gap-4">
+        <div className="relative shrink-0" style={{ width: SVG_SIZE, height: SVG_SIZE }}>
           <svg
             width={SVG_SIZE}
             height={SVG_SIZE}
@@ -180,7 +175,7 @@ export function TodayHero({
             </span>
             <span
               className={cn(
-                'font-display mt-0.5 text-[44px] font-semibold leading-none tabular-nums',
+                'font-display mt-0.5 text-[34px] font-semibold leading-none tabular-nums',
                 overBudget ? 'text-destructive' : 'text-foreground'
               )}
             >
@@ -194,14 +189,13 @@ export function TodayHero({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3">
+        <div className="flex flex-1 flex-col gap-1.5">
           <Stat
             tone="primary"
             icon={<UtensilsCrossed size={14} />}
             label={t.dashboard.hero.todayIntake}
             value={displayIntake}
             unit="kcal"
-            sub={t.dashboard.hero.goalKcal(kcalGoal)}
           />
           <Stat
             tone="accent"
@@ -209,7 +203,6 @@ export function TodayHero({
             label={t.dashboard.hero.todayBurn}
             value={displayBurn}
             unit="kcal"
-            sub={t.dashboard.hero.burnSub}
           />
           <Stat
             tone="muted"
@@ -217,7 +210,6 @@ export function TodayHero({
             label={t.dashboard.hero.workoutDuration}
             value={displayMinutes}
             unit={t.common.minutes}
-            sub={workoutMinutes > 0 ? t.dashboard.hero.workoutDone : t.dashboard.hero.workoutNotStarted}
           />
         </div>
       </div>
@@ -231,10 +223,9 @@ interface StatProps {
   label: string
   value: number
   unit: string
-  sub: string
 }
 
-function Stat({ tone, icon, label, value, unit, sub }: StatProps) {
+function Stat({ tone, icon, label, value, unit }: StatProps) {
   const toneClass =
     tone === 'primary'
       ? 'bg-primary/10 text-primary'
@@ -243,17 +234,16 @@ function Stat({ tone, icon, label, value, unit, sub }: StatProps) {
         : 'bg-secondary text-muted-foreground'
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-card/50 p-3">
-      <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg', toneClass)}>
+    <div className="flex items-center gap-2.5 rounded-xl border border-border/50 bg-card/50 p-2">
+      <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', toneClass)}>
         {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-muted-foreground">{label}</p>
-        <p className="font-display text-lg font-semibold tabular-nums leading-tight text-foreground">
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[10px] leading-tight text-muted-foreground">{label}</p>
+        <p className="font-display text-base font-semibold tabular-nums leading-tight text-foreground">
           {value}
-          <span className="ml-1 text-xs font-normal text-muted-foreground">{unit}</span>
+          <span className="ml-1 text-[10px] font-normal text-muted-foreground">{unit}</span>
         </p>
-        <p className="truncate text-[10px] text-muted-foreground">{sub}</p>
       </div>
     </div>
   )
