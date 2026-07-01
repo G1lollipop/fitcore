@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Loader2, Save } from 'lucide-react'
 import {
   Dialog,
@@ -40,7 +40,12 @@ export function DietLogEditDialog({ log, onClose, onSuccess }: DietLogEditDialog
   const [fields, setFields] = useState<EditFields | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
+  // Sync form state when a new entry is opened — React's "adjust state during
+  // render" pattern (https://react.dev/learn/you-might-not-need-an-effect),
+  // which avoids an extra effect + render pass.
+  const [prevLog, setPrevLog] = useState(log)
+  if (log !== prevLog) {
+    setPrevLog(log)
     if (log) {
       setFields({
         food_name: log.food_name,
@@ -51,7 +56,7 @@ export function DietLogEditDialog({ log, onClose, onSuccess }: DietLogEditDialog
       })
       setSaving(false)
     }
-  }, [log])
+  }
 
   const setField = <K extends keyof EditFields>(key: K, value: EditFields[K]) => {
     setFields((prev) => (prev ? { ...prev, [key]: value } : prev))

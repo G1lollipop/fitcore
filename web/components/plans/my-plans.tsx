@@ -2,7 +2,8 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dumbbell, Plus } from 'lucide-react'
-import { useCallback, useEffect, useState, useTransition } from 'react'
+import { useCallback, useMemo, useState, useTransition } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getUserPlansLight,
   getCurrentPlanLight,
@@ -49,50 +50,42 @@ interface MyPlansProps {
 export function MyPlans({ userId, hideTodayBanner = false, onCurrentPlanChange }: MyPlansProps) {
   const { toast } = useToast()
   const t = useT()
+  const qc = useQueryClient()
 
-  const [userPlans, setUserPlans] = useState<PlanRow[]>([])
-  const [currentPlan, setCurrentPlanData] = useState<PlanRow | null>(null)
-  const [loading, setLoading] = useState(true)
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null)
-  const [todayResult, setTodayResult] = useState<TodayWorkoutResult | null>(null)
   const [isLogging, startLogging] = useTransition()
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<EditablePlan | null>(null)
 
-  const refreshTodayWorkout = useCallback((plan: PlanRow | null) => {
-    setTodayResult(plan ? calculateTodayWorkout(plan.structure) : null)
-  }, [])
-
-  const loadData = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
-    try {
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['plans'],
+    queryFn: async () => {
       const [userPlansRes, currentPlanRes] = await Promise.all([
         getUserPlansLight(),
         getCurrentPlanLight(),
       ])
-
-      if (userPlansRes.success && userPlansRes.data) {
-        setUserPlans(userPlansRes.data as PlanRow[])
+      return {
+        userPlans:
+          userPlansRes.success && userPlansRes.data ? (userPlansRes.data as PlanRow[]) : [],
+        currentPlan:
+          currentPlanRes.success && currentPlanRes.data
+            ? (currentPlanRes.data.plan as PlanRow)
+            : null,
       }
-      if (currentPlanRes.success && currentPlanRes.data) {
-        const plan = currentPlanRes.data.plan as PlanRow
-        setCurrentPlanData(plan)
-        refreshTodayWorkout(plan)
-      } else {
-        setCurrentPlanData(null)
-        setTodayResult(null)
-      }
-    } catch (error) {
-      console.error('Failed to load plans:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [userId, refreshTodayWorkout])
+    },
+    enabled: !!userId,
+  })
 
-  useEffect(() => {
-    if (userId) loadData()
-  }, [userId, loadData])
+  const userPlans = data?.userPlans ?? []
+  const currentPlan = data?.currentPlan ?? null
+  const todayResult: TodayWorkoutResult | null = useMemo(
+    () => (currentPlan ? calculateTodayWorkout(currentPlan.structure) : null),
+    [currentPlan]
+  )
+
+  const reload = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: ['plans'] })
+  }, [qc])
 
   const handleSetCurrent = useCallback(
     async (planId: string) => {
@@ -101,9 +94,7 @@ export function MyPlans({ userId, hideTodayBanner = false, onCurrentPlanChange }
       try {
         const result = await setCurrentPlan(planId)
         if (result.success) {
-          const newCurrent = userPlans.find((p) => p.id === planId) ?? null
-          setCurrentPlanData(newCurrent)
-          refreshTodayWorkout(newCurrent)
+          reload()
           onCurrentPlanChange?.()
           toast({ title: t.plans.list.setSuccess, description: t.plans.list.setSuccessDesc })
         } else {
@@ -117,7 +108,7 @@ export function MyPlans({ userId, hideTodayBanner = false, onCurrentPlanChange }
         setPendingPlanId(null)
       }
     },
-    [userId, userPlans, refreshTodayWorkout, onCurrentPlanChange, toast, t]
+    [userId, reload, onCurrentPlanChange, toast, t]
   )
 
   const handleDelete = useCallback(
@@ -128,12 +119,8 @@ export function MyPlans({ userId, hideTodayBanner = false, onCurrentPlanChange }
       try {
         const result = await deletePlan(planId)
         if (result.success) {
-          setUserPlans((prev) => prev.filter((p) => p.id !== planId))
-          if (currentPlan?.id === planId) {
-            setCurrentPlanData(null)
-            setTodayResult(null)
-            onCurrentPlanChange?.()
-          }
+          reload()
+          if (currentPlan?.id === planId) onCurrentPlanChange?.()
           toast({ title: t.plans.list.deleteSuccess, description: t.plans.list.deleteSuccessDesc })
         } else {
           toast({
@@ -146,7 +133,7 @@ export function MyPlans({ userId, hideTodayBanner = false, onCurrentPlanChange }
         setPendingPlanId(null)
       }
     },
-    [userId, currentPlan, onCurrentPlanChange, toast, t]
+    [userId, currentPlan, reload, onCurrentPlanChange, toast, t]
   )
 
   const handleStartWorkout = useCallback(() => {
@@ -189,7 +176,7 @@ export function MyPlans({ userId, hideTodayBanner = false, onCurrentPlanChange }
         />
       )}
 
-      <PlanGeneratorCard onGenerated={loadData} onManual={() => setEditorOpen(true)} />
+      <PlanGeneratorCard onGenerated={reload} onManual={() => setEditorOpen(true)} />
 
       <section className="space-y-4">
         <header className="flex items-center justify-between">
@@ -261,14 +248,14 @@ export function MyPlans({ userId, hideTodayBanner = false, onCurrentPlanChange }
         )}
       </section>
 
-      <PlanEditor open={editorOpen} onOpenChange={setEditorOpen} onCreated={loadData} />
+      <PlanEditor open={editorOpen} onOpenChange={setEditorOpen} onCreated={reload} />
 
       <PlanEditDialog
         plan={editingPlan}
         onOpenChange={(open) => {
           if (!open) setEditingPlan(null)
         }}
-        onSaved={loadData}
+        onSaved={reload}
       />
     </div>
   )

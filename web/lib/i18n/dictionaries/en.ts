@@ -296,41 +296,6 @@ export const en = {
   },
 
   training: {
-    todayRecord: "Today's log →",
-    todayRecordHint: 'Tap to open the side drawer to add or view today’s workout',
-    segments: {
-      aria: 'Training view',
-      records: 'Records',
-      plans: 'Plans',
-    },
-    thisWeek: {
-      title: 'This week',
-      activeDays: 'Active days',
-    },
-    muscles: {
-      chest: 'Chest',
-      back: 'Back',
-      legs: 'Legs',
-      shoulders: 'Shoulders',
-      arms: 'Arms',
-      core: 'Core',
-      cardio: 'Cardio',
-      other: 'Other',
-    },
-    summary: {
-      overview: (m: string) => `${m} Overview`,
-      localTz: 'Aggregated in your local timezone',
-      totalDuration: 'Total time',
-      totalCalories: 'Calories burned',
-      trainingDays: 'Training days',
-      daysUnit: 'days',
-      focusMuscles: 'Focus muscles',
-      focusMeta: (mins: number, parts: number) => `${mins} min / ${parts} groups`,
-      emptyTitle: 'No workouts logged this month',
-      emptyDesc: 'Tap a day on the calendar, or use ⌘K to quickly log today’s workout',
-      muscleMeta: (mins: number, sessions: number, pct: number) =>
-        `${mins} min · ${sessions}× · ${pct}%`,
-    },
     calendar: {
       weekDaysSunFirst: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
       weekDaysMonFirst: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -419,7 +384,6 @@ export const en = {
   plans: {
     dietPlan: {
       title: 'Diet plan',
-      subtitle: 'Your daily nutrition targets',
       recalc: 'AI recalc',
       recalcDone: 'Targets recalculated from your profile',
       recalcFailed: 'Could not recalculate targets',
@@ -827,7 +791,6 @@ export const en = {
 
   aiChat: {
     coach: 'AI Coach',
-    openCoach: 'Open AI Coach',
     assistant: 'Fitness assistant',
     online: 'Online',
     switchSession: 'Switch conversation',

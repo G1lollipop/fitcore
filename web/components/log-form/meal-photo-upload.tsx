@@ -116,7 +116,7 @@ function ConfidenceBadge({ value, t }: { value: number; t: Dictionary }) {
  * The dialog only mounts when the user opts in (low-conf review or high-conf
  * "Adjust"), so the happy path is fully background and zero-wait.
  */
-export function MealPhotoUpload({ userId, onSuccess }: Props) {
+export function MealPhotoUpload({ onSuccess }: Props) {
   const t = useT();
   const { registerOpener } = useMealPhoto();
   const [editing, setEditing] = useState<EditState | null>(null);
@@ -250,7 +250,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
         });
       }
     },
-    [toast, userId, onSuccess, openReview, t]
+    [toast, onSuccess, openReview, t]
   );
 
   const onFileSelected = useCallback(
@@ -305,7 +305,7 @@ export function MealPhotoUpload({ userId, onSuccess }: Props) {
       description: `${next.food_name} · ${next.calories} kcal`,
     });
     closeReview();
-  }, [editing, edited, userId, onSuccess, toast, closeReview, t]);
+  }, [editing, edited, onSuccess, toast, closeReview, t]);
 
   const setField = <K extends keyof NonNullable<typeof edited>>(
     key: K,

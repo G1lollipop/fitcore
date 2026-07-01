@@ -15,12 +15,15 @@ const STORAGE_KEY = 'fitcore.sidebar.collapsed'
 export function useSidebarCollapsed(initial = false): [boolean, () => void, (next: boolean) => void] {
   const [collapsed, setCollapsed] = useState(initial)
 
-  // Hydrate from localStorage after mount.
+  // Hydrate from localStorage after mount. This intentionally sets state in an
+  // effect: the value must be `initial` during SSR/first paint (localStorage is
+  // client-only) and adopt the stored preference afterwards — a lazy initializer
+  // would cause a hydration mismatch.
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY)
-      if (stored === '1') setCollapsed(true)
-      else if (stored === '0') setCollapsed(false)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR-safe hydration, see above
+      if (stored === '1' || stored === '0') setCollapsed(stored === '1')
     } catch {
       // localStorage may be blocked (Safari private mode, etc.) — ignore.
     }

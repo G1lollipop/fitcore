@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- this module is the app's console sink; console use is intentional here */
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
 export interface LogContext {

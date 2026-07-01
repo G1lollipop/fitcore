@@ -51,8 +51,9 @@ export default function OnboardingForm({ userName }: { userName: string }) {
   const [isLoading, setIsLoading] = useState(false)
   const [isCalculating, setIsCalculating] = useState(false)
   const [recommendation, setRecommendation] = useState<NutritionRecommendation | null>(null)
-  const [isReassess, setIsReassess] = useState(false)
-  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
+  // Reassess mode is driven by the URL — derive it (no state/effect needed).
+  const isReassess = searchParams.get("reassess") === "true"
+  const [isLoadingSettings, setIsLoadingSettings] = useState(isReassess)
 
   const [formData, setFormData] = useState<OnboardingData>({
     gender: "male",
@@ -62,29 +63,27 @@ export default function OnboardingForm({ userName }: { userName: string }) {
     activityLevel: "moderate",
   })
 
+  // In reassess mode, prefill from saved settings. State is only set after the
+  // await, so this is not a synchronous set-state-in-effect.
   useEffect(() => {
-    setIsReassess(searchParams.get("reassess") === "true")
-  }, [searchParams])
-
-  useEffect(() => {
-    if (isReassess) {
-      const loadUserSettings = async () => {
-        setIsLoadingSettings(true)
-        const settings = await getUserSettings()
-        if (settings) {
-          setFormData({
-            gender: (settings.gender as "male" | "female") || "male",
-            age: settings.age || 25,
-            height: settings.height || 170,
-            weight: settings.weight || 65,
-            activityLevel: (settings.activity_level as OnboardingData["activityLevel"]) || "moderate",
-          })
-        }
-        setIsLoadingSettings(false)
+    if (!isReassess) return
+    let cancelled = false
+    void (async () => {
+      const settings = await getUserSettings()
+      if (cancelled) return
+      if (settings) {
+        setFormData({
+          gender: (settings.gender as "male" | "female") || "male",
+          age: settings.age || 25,
+          height: settings.height || 170,
+          weight: settings.weight || 65,
+          activityLevel: (settings.activity_level as OnboardingData["activityLevel"]) || "moderate",
+        })
       }
-      loadUserSettings()
-    } else {
       setIsLoadingSettings(false)
+    })()
+    return () => {
+      cancelled = true
     }
   }, [isReassess])
 
@@ -93,18 +92,6 @@ export default function OnboardingForm({ userName }: { userName: string }) {
     value: OnboardingData[K]
   ) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const handleNext = () => {
-    if (currentStep < TOTAL_STEPS) {
-      setCurrentStep((prev) => prev + 1)
-    }
-  }
-
-  const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep((prev) => prev - 1)
-    }
   }
 
   const handleCalculateRecommendation = async () => {
@@ -121,11 +108,21 @@ export default function OnboardingForm({ userName }: { userName: string }) {
     }
   }
 
-  useEffect(() => {
-    if (currentStep === 3 && !recommendation) {
-      handleCalculateRecommendation()
+  const handleNext = () => {
+    if (currentStep < TOTAL_STEPS) {
+      const next = currentStep + 1
+      setCurrentStep(next)
+      // Kick off the recommendation as the user enters the final step, instead
+      // of reacting to the step change in an effect.
+      if (next === TOTAL_STEPS && !recommendation) void handleCalculateRecommendation()
     }
-  }, [currentStep])
+  }
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => prev - 1)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!recommendation) return

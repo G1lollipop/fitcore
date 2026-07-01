@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Loader2, Save } from 'lucide-react'
 import {
   Dialog,
@@ -45,7 +45,11 @@ export function WorkoutLogEditDialog({ log, onClose, onSuccess }: WorkoutLogEdit
   const [fields, setFields] = useState<EditFields | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
+  // Sync form state when a new entry is opened — React's "adjust state during
+  // render" pattern, which avoids an extra effect + render pass.
+  const [prevLog, setPrevLog] = useState(log)
+  if (log !== prevLog) {
+    setPrevLog(log)
     if (log) {
       setFields({
         workout_name: log.workout_name,
@@ -55,7 +59,7 @@ export function WorkoutLogEditDialog({ log, onClose, onSuccess }: WorkoutLogEdit
       })
       setSaving(false)
     }
-  }, [log])
+  }
 
   const setField = <K extends keyof EditFields>(key: K, value: EditFields[K]) => {
     setFields((prev) => (prev ? { ...prev, [key]: value } : prev))

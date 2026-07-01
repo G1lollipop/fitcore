@@ -2,9 +2,10 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { logFood } from '@/app/actions/logFood'
-import { getNutritionByDate } from '@/app/actions/history'
+import { getNutritionByDate, type NutritionDayData } from '@/app/actions/history'
 import { useToast } from '@/hooks/use-toast'
 import { sumMacros, macroProgressBundle } from '@/lib/metrics/macros'
 import { cn } from '@/lib/utils'
@@ -40,33 +41,29 @@ function toDateStr(d: Date): string {
 export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) {
   const { toast } = useToast()
   const t = useT()
+  const qc = useQueryClient()
   const { applyDietLog } = useDashboardActions()
-  const [dietData, setDietData] = useState<DietLogItem[]>([])
-  const [goals, setGoals] = useState({ ...DEFAULT_GOALS })
-  const [loading, setLoading] = useState(true)
   const [inputText, setInputText] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const dateStr = toDateStr(date)
   const isFuture = date > new Date() && date.toDateString() !== new Date().toDateString()
+  const nutritionKey = ['nutrition', dateStr] as const
 
-  const loadDietData = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
-    try {
-      const { goals: nextGoals, dietLogs } = await getNutritionByDate(dateStr)
-      setGoals(nextGoals)
-      setDietData(dietLogs)
-    } catch (error) {
-      console.error('Failed to load nutrition data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [userId, dateStr])
+  const { data, isLoading: loading } = useQuery({
+    queryKey: nutritionKey,
+    queryFn: () => getNutritionByDate(dateStr),
+    enabled: !!userId,
+  })
+  const goals = data?.goals ?? DEFAULT_GOALS
+  const dietData = useMemo(() => data?.dietLogs ?? [], [data])
 
-  useEffect(() => {
-    if (userId) loadDietData()
-  }, [userId, loadDietData])
+  /** Patch the cached day's diet logs (optimistic add / swap / rollback). */
+  const patchLogs = (fn: (logs: DietLogItem[]) => DietLogItem[]) =>
+    qc.setQueryData<NutritionDayData>(nutritionKey, (old) => ({
+      goals: old?.goals ?? DEFAULT_GOALS,
+      dietLogs: fn(old?.dietLogs ?? []),
+    }))
 
   const handleAddFood = async () => {
     const text = inputText.trim()
@@ -86,7 +83,7 @@ export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) 
       logged_at: addingToday ? new Date().toISOString() : `${dateStr}T12:00:00`,
       pending: true,
     }
-    setDietData((prev) => [...prev, placeholder])
+    patchLogs((logs) => [...logs, placeholder])
     setInputText('')
     setIsSubmitting(true)
 
@@ -94,17 +91,17 @@ export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) 
       const result = await logFood(text, dateStr)
       if (result.success && result.data) {
         const saved = result.data
-        setDietData((prev) => prev.map((d) => (d.id === tempId ? saved : d)))
+        patchLogs((logs) => logs.map((d) => (d.id === tempId ? saved : d)))
         if (addingToday) applyDietLog(saved)
         onChange?.()
         toast({ title: t.nutrition.logSuccess, description: t.nutrition.added(saved.food_name) })
       } else {
-        setDietData((prev) => prev.filter((d) => d.id !== tempId))
+        patchLogs((logs) => logs.filter((d) => d.id !== tempId))
         toast({ variant: 'destructive', title: t.nutrition.logFailed, description: tError(t, result.error) })
       }
     } catch (error) {
       console.error('Failed to add food:', error)
-      setDietData((prev) => prev.filter((d) => d.id !== tempId))
+      patchLogs((logs) => logs.filter((d) => d.id !== tempId))
       toast({ variant: 'destructive', title: t.nutrition.logFailed, description: t.nutrition.addInput.parsing })
     } finally {
       setIsSubmitting(false)
@@ -168,15 +165,15 @@ export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) 
 
       <div className="mt-3">
         <AnimatePresence mode="popLayout">
-          <MealTimeline
-            key={dateStr}
-            logs={dietData}
-            userId={timelineUserId}
-            onChange={() => {
-              loadDietData()
-              onChange?.()
-            }}
-          />
+            <MealTimeline
+              key={dateStr}
+              logs={dietData}
+              userId={timelineUserId}
+              onChange={() => {
+                void qc.invalidateQueries({ queryKey: nutritionKey })
+                onChange?.()
+              }}
+            />
         </AnimatePresence>
       </div>
     </motion.section>

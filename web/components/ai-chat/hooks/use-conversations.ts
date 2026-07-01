@@ -60,7 +60,12 @@ export interface UseConversationsResult {
  */
 export function useConversations(userId: string): UseConversationsResult {
   const t = useT()
-  const [conversationId, setConversationId] = useState('')
+  // Lazy-init from persisted storage (this hook only runs client-side — the
+  // widget is dynamically imported with ssr:false), avoiding a setState in the
+  // mount effect.
+  const [conversationId, setConversationId] = useState(() =>
+    userId ? loadOrCreateConversationId(userId) : ''
+  )
   const [conversations, setConversations] = useState<ChatConversationSummary[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(true)
@@ -92,14 +97,14 @@ export function useConversations(userId: string): UseConversationsResult {
     [t]
   )
 
-  // Initial mount: pull the persisted conversation id, load history,
-  // and refresh the sibling list.
+  // Initial mount: load history for the (lazy-initialised) conversation and
+  // refresh the sibling list. `userId` is stable, so this runs once; switching
+  // conversations handles its own loading.
   useEffect(() => {
     if (!userId) return
-    const cid = loadOrCreateConversationId(userId)
-    setConversationId(cid)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time load of conversation list + history; loading flags are set intentionally
     void refreshSummaries()
-    void loadHistoryFor(cid)
+    void loadHistoryFor(loadOrCreateConversationId(userId))
   }, [userId, loadHistoryFor, refreshSummaries])
 
   /**

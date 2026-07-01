@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { AppShell } from '@/components/layout/app-shell'
 import { findNavItem } from '@/components/layout/nav-items'
@@ -196,11 +196,10 @@ function TabPanel({
 }) {
   // Latches to true on first activation (or immediately when prefetch is set)
   // and stays mounted thereafter, so re-visiting a tab is instant (no remount /
-  // refetch / skeleton flash).
+  // refetch / skeleton flash). Uses React's "adjust state during render" pattern
+  // instead of an effect.
   const [everActive, setEverActive] = useState(active || prefetch)
-  useEffect(() => {
-    if (active && !everActive) setEverActive(true)
-  }, [active, everActive])
+  if (active && !everActive) setEverActive(true)
 
   if (!everActive) return null
 

@@ -30,12 +30,17 @@ export function QuickLogBar() {
   const [text, setText] = useState('')
   const [recents, setRecents] = useState<string[]>([])
 
-  // Reset input + restore focus whenever the dialog re-opens. Recents persist
-  // for the lifetime of the page (intentionally local — not in DB).
+  // Reset the input when the dialog opens — render-time sync instead of an
+  // effect (recents persist for the page lifetime; intentionally not in DB).
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) setText('')
+  }
+
+  // Focus is a DOM side effect (no state), so it stays in an effect.
   useEffect(() => {
-    if (!open) return
-    setText('')
-    requestAnimationFrame(() => inputRef.current?.focus())
+    if (open) requestAnimationFrame(() => inputRef.current?.focus())
   }, [open])
 
   const handleSubmit = useCallback(() => {

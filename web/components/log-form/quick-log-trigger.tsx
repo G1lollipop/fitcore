@@ -10,6 +10,7 @@ function useIsMac() {
   const [isMac, setIsMac] = useState(false)
   useEffect(() => {
     if (typeof navigator === 'undefined') return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only platform detection; must run after mount to avoid an SSR hydration mismatch
     setIsMac(/Mac|iPhone|iPad/i.test(navigator.platform))
   }, [])
   return isMac

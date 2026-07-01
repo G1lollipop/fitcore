@@ -62,6 +62,7 @@ export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProp
   useEffect(() => {
     if (!open) return
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-open: reflect loading while settings are fetched
     setLoading(true)
     void (async () => {
       const s = await getUserSettings()

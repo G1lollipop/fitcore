@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { ChevronRight, Coffee, Dumbbell, Play } from 'lucide-react'
-import { useCallback, useTransition } from 'react'
+import { useCallback, useMemo, useTransition } from 'react'
 import { batchLogWorkouts } from '@/app/actions/logWorkout'
 import { useToast } from '@/hooks/use-toast'
 import { useT } from '@/lib/i18n/provider'
@@ -38,7 +38,7 @@ export function TodayPlanCard({
   const { toast } = useToast()
   const [isLogging, startLogging] = useTransition()
 
-  const exercises = info?.exercises ?? []
+  const exercises = useMemo(() => info?.exercises ?? [], [info])
   const isRest = info?.todayDay?.isRestDay ?? false
 
   const handleStart = useCallback(() => {

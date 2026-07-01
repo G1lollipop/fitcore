@@ -1,4 +1,5 @@
 #!/usr/bin/env npx tsx
+/* eslint-disable no-console -- CLI eval harness: console output is the intended report surface */
 /**
  * Agent Step-1 tool-selection offline eval.
  *

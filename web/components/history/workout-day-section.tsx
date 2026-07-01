@@ -2,7 +2,8 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, Dumbbell, Flame, Pencil, Sparkles, Target, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import { useCallback, useMemo, useState, useTransition } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { logWorkout, deleteWorkoutLog } from '@/app/actions/logWorkout'
 import { getWorkoutHistory } from '@/app/actions/history'
 import { WorkoutLogEditDialog } from '@/components/log-form/workout-log-edit-dialog'
@@ -34,9 +35,8 @@ function toDateStr(d: Date): string {
 export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionProps) {
   const { toast } = useToast()
   const t = useT()
+  const qc = useQueryClient()
   const { invalidate } = useDashboardActions()
-  const [logs, setLogs] = useState<WorkoutLogItem[]>([])
-  const [loading, setLoading] = useState(true)
   const [inputText, setInputText] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editing, setEditing] = useState<WorkoutLogItem | null>(null)
@@ -47,28 +47,17 @@ export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionP
   const addingToday = dateStr === todayStr
   const canEdit = !!userId && !isFuture
 
-  const load = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
-    try {
-      const grouped = await getWorkoutHistory(dateStr, dateStr)
-      setLogs(grouped[dateStr] ?? [])
-    } catch (error) {
-      console.error('Failed to load workout data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [userId, dateStr])
-
-  useEffect(() => {
-    if (userId) load()
-  }, [userId, load])
+  const { data: logs = [], isLoading: loading } = useQuery({
+    queryKey: ['workouts', dateStr],
+    queryFn: () => getWorkoutHistory(dateStr, dateStr).then((g) => g[dateStr] ?? []),
+    enabled: !!userId,
+  })
 
   const refresh = useCallback(() => {
-    void load()
+    void qc.invalidateQueries({ queryKey: ['workouts', dateStr] })
     if (addingToday) invalidate()
     onChange?.()
-  }, [load, addingToday, invalidate, onChange])
+  }, [qc, dateStr, addingToday, invalidate, onChange])
 
   const handleAdd = async () => {
     const text = inputText.trim()
