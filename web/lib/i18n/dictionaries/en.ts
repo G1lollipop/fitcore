@@ -93,19 +93,19 @@ export const en = {
   },
 
   history: {
-    title: 'History',
+    title: 'Record',
     dietTitle: 'Nutrition',
     trainingTitle: 'Training',
   },
 
   nav: {
     dashboard: 'Today',
-    nutrition: 'History',
+    nutrition: 'Record',
     training: 'Plans',
     plans: 'My Plans',
     knowledge: 'Knowledge',
     shortDashboard: 'Today',
-    shortNutrition: 'History',
+    shortNutrition: 'Record',
     shortTraining: 'Plans',
     shortPlans: 'Plans',
     shortKnowledge: 'Learn',

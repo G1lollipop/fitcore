@@ -161,23 +161,23 @@ function MealSection({ config, logs, userId, onChange, onEdit, isLast }: MealSec
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-      className="relative pl-10"
+      className="relative pl-7"
     >
       {/* Timeline rail — runs from the bottom of this section's node to the
           top of the next. Hidden on the final populated section. */}
       {!isLast && (
         <span
-          className="absolute left-[15px] top-9 h-[calc(100%+1.5rem)] w-px bg-border"
+          className="absolute left-[13px] top-8 h-[calc(100%+1.5rem)] w-px bg-border"
           aria-hidden
         />
       )}
 
       <span
-        className="absolute left-0 top-0 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card shadow-sm"
+        className="absolute left-0 top-0 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card shadow-sm"
         style={{ color: config.accent }}
         aria-hidden
       >
-        <Icon size={15} />
+        <Icon size={14} />
       </span>
 
       <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -254,7 +254,7 @@ function MealRow({ log, userId, onChange, onEdit, accent }: MealRowProps) {
       animate={{ opacity: isRemoving ? 0.4 : 1, x: 0 }}
       exit={{ opacity: 0, height: 0, marginTop: 0 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className="group flex items-center gap-3 rounded-xl border border-border/60 bg-card px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md"
+      className="group flex items-center gap-2 rounded-xl border border-border/60 bg-card px-2.5 py-2.5 shadow-sm transition-shadow hover:shadow-md"
     >
       <span
         className="h-1.5 w-1.5 shrink-0 rounded-full"
@@ -269,7 +269,7 @@ function MealRow({ log, userId, onChange, onEdit, accent }: MealRowProps) {
             {t.nutrition.addInput.parsing}
           </p>
         ) : (
-          <p className="text-[11px] text-muted-foreground tabular-nums">
+          <p className="truncate text-[11px] text-muted-foreground tabular-nums">
             {formatTime(log.logged_at, t.common.locale)} · {log.calories} kcal ·{' '}
             {t.nutrition.macroLine(log.protein, log.carbs, log.fat)}
           </p>
@@ -280,7 +280,7 @@ function MealRow({ log, userId, onChange, onEdit, accent }: MealRowProps) {
         onClick={() => onEdit(log)}
         disabled={!userId || isPending || log.pending}
         aria-label={t.nutrition.editAria(log.food_name)}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:w-9"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Pencil size={14} />
       </button>
@@ -289,7 +289,7 @@ function MealRow({ log, userId, onChange, onEdit, accent }: MealRowProps) {
         onClick={handleDelete}
         disabled={!userId || isPending || log.pending}
         aria-label={t.nutrition.deleteAria(log.food_name)}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:w-9"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Trash2 size={14} />
       </button>

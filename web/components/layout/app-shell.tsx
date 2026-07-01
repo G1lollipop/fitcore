@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react'
 import { SidebarNav } from './sidebar-nav'
-import { AccountMenu } from './account-menu'
 import { MobileTabBar } from './mobile-tab-bar'
 import { QuickLogProvider } from '@/components/log-form/quick-log-provider'
 import { CoachProvider } from '@/components/ai-chat/coach-context'
@@ -27,17 +26,18 @@ interface AppShellProps {
 
 /**
  * Outer chrome for the dashboard. Composes the desktop sidebar rail, the
- * scrollable content region, and the mobile floating chrome (tab bar +
- * bottom-left account avatar). There is no top header bar.
+ * scrollable content region, and the mobile floating chrome (a single centered
+ * tab-bar pill whose leftmost element is the account avatar). There is no top
+ * header bar.
  *
  *   ┌────────────────────────────────────────────────┐
  *   │ [SidebarRail] │  Scroll region (children)      │
  *   │               │                                │
  *   │   md+ only    │             …                  │
  *   │               │                                │
- *   │  ⦿ Account    │  ┌────────────────────────┐    │  ← MobileTabBar floats
- *   │  (mobile FAB) │  │  [tab][tab][tab][tab]  │    │     bottom-center on mobile
- *   │  bottom-left  │  └────────────────────────┘    │
+ *   │               │  ┌──────────────────────────┐  │  ← MobileTabBar floats
+ *   │               │  │ ⦿ | [tab][tab][tab][tab] │  │     bottom-center on mobile
+ *   │               │  └──────────────────────────┘  │     (avatar merged in)
  *   └────────────────────────────────────────────────┘
  *
  * The previous version inlined all of this into `app/page.tsx`. Pulling it
@@ -69,8 +69,7 @@ export function AppShell({
               </div>
             </main>
 
-            <MobileTabBar activeNav={activeNav} onNavChange={onNavChange} />
-            <AccountMenu userName={userName} />
+            <MobileTabBar activeNav={activeNav} onNavChange={onNavChange} userName={userName} />
             {overlay}
           </div>
           </SettingsProvider>

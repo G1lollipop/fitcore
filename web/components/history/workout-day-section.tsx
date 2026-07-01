@@ -223,10 +223,9 @@ export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionP
             type="button"
             onClick={() => setManualOpen(true)}
             aria-label={t.logForm.manual.workoutAria}
-            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border bg-secondary/50 px-3 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 px-0 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
           >
-            <PencilLine size={14} aria-hidden />
-            {t.logForm.manual.label}
+            <PencilLine size={16} aria-hidden />
           </button>
         </div>
       )}
@@ -274,6 +273,17 @@ export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionP
   )
 }
 
+/**
+ * Strip a trailing "N sets …" clause from a workout name so the row shows just
+ * the movement (e.g. "Barbell Bench Press 3 sets 8-12 reps" → "Barbell Bench
+ * Press"). Sets/reps are surfaced as separate chips. Falls back to the original
+ * name when stripping would empty it (e.g. "3 sets of burpees").
+ */
+function cleanWorkoutName(name: string): string {
+  const stripped = name.replace(/\s*[·\-–]?\s*\d+\s*sets?\b.*$/i, '').trim()
+  return stripped || name
+}
+
 interface WorkoutRowProps {
   log: WorkoutLogItem
   canEdit: boolean
@@ -288,6 +298,9 @@ function WorkoutRow({ log, canEdit, userId, onChange, onEdit }: WorkoutRowProps)
   const [isPending, startTransition] = useTransition()
   const rowPending = !!log.pending
   const rowEditable = canEdit && !rowPending
+  // Older logs saved the whole "Bench Press 3 sets 8-12 reps" string as the
+  // name; sets/reps are shown as separate chips, so strip the trailing clause.
+  const displayName = cleanWorkoutName(log.workout_name)
 
   const handleDelete = () => {
     if (!rowEditable || !userId || isPending) return
@@ -313,13 +326,13 @@ function WorkoutRow({ log, canEdit, userId, onChange, onEdit }: WorkoutRowProps)
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, height: 0, marginTop: 0 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className="group flex items-start gap-3 rounded-xl border border-border bg-card px-3 py-3 shadow-sm"
+      className="group flex items-start gap-2 rounded-xl border border-border bg-card px-2.5 py-3 shadow-sm"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden>
         <Dumbbell size={15} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{log.workout_name}</p>
+        <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
         {rowPending ? (
           <p className="mt-1 flex items-center gap-1.5 text-[11px] text-primary">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
@@ -355,7 +368,7 @@ function WorkoutRow({ log, canEdit, userId, onChange, onEdit }: WorkoutRowProps)
           disabled={isPending}
           aria-label={t.training.drawer.editAria(log.workout_name)}
           className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:w-9'
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50'
           )}
         >
           <Pencil size={14} />
@@ -368,7 +381,7 @@ function WorkoutRow({ log, canEdit, userId, onChange, onEdit }: WorkoutRowProps)
           disabled={isPending}
           aria-label={t.training.drawer.deleteAria(log.workout_name)}
           className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:w-9'
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50'
           )}
         >
           <Trash2 size={14} />

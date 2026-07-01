@@ -5,10 +5,12 @@ import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n/provider'
 import { NAV_ITEMS } from './nav-items'
+import { AccountMenu } from './account-menu'
 
 interface MobileTabBarProps {
   activeNav: string
   onNavChange: (id: string) => void
+  userName: string
 }
 
 /**
@@ -16,10 +18,15 @@ interface MobileTabBarProps {
  * edge with a frosted-glass effect — feels closer to a native iOS tab bar
  * than the previous full-width strip.
  *
+ * The account avatar (`AccountMenu`) is rendered inline as the leftmost
+ * element inside the pill, followed by a thin divider, so the bottom chrome is
+ * one clean centered cluster that never overlaps card content. The pill must
+ * NOT use `overflow-hidden` so the account dropdown can escape upward.
+ *
  * Active tab gets a solid primary pill; inactive tabs are muted. Memoized
  * tab items so toggling the active id only re-renders two items.
  */
-export function MobileTabBar({ activeNav, onNavChange }: MobileTabBarProps) {
+export function MobileTabBar({ activeNav, onNavChange, userName }: MobileTabBarProps) {
   const t = useT()
   return (
     <nav
@@ -27,6 +34,8 @@ export function MobileTabBar({ activeNav, onNavChange }: MobileTabBarProps) {
       className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40"
     >
       <div className="glass flex items-center gap-1 rounded-full px-1.5 py-1.5">
+        <AccountMenu userName={userName} />
+        <span className="mx-0.5 h-5 w-px bg-border/60" />
         {NAV_ITEMS.map((item) => (
           <TabItem
             key={item.id}

@@ -224,10 +224,9 @@ export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) 
           onClick={() => setManualOpen(true)}
           disabled={isFuture}
           aria-label={t.logForm.manual.foodAria}
-          className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border bg-secondary/50 px-3 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 px-0 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <PencilLine size={14} aria-hidden />
-          {t.logForm.manual.label}
+          <PencilLine size={16} aria-hidden />
         </button>
       </div>
 

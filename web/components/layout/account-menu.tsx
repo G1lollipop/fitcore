@@ -14,12 +14,14 @@ interface AccountMenuProps {
 }
 
 /**
- * Floating bottom-left avatar button (mobile only, `md:hidden`) that opens a
- * lightweight custom dropdown with Settings, theme toggle, Reassess and Sign
- * out. On desktop the same actions live in the sidebar footer, so this is
- * hidden at `md+`. Since it sits at the bottom of the viewport the panel opens
- * UPWARD. There is no popover/dropdown primitive in `components/ui`, so this is
- * a hand-rolled panel with click-outside + Escape to close (no new deps).
+ * Account avatar button that opens a lightweight custom dropdown with Settings,
+ * theme toggle, Reassess and Sign out. On mobile it renders inline as the
+ * leftmost element inside the floating tab-bar pill (see `MobileTabBar`); on
+ * desktop the same actions live in the sidebar footer. The root is a `relative`
+ * inline wrapper so the panel can open UPWARD via `absolute bottom-full`
+ * (the parent pill must not clip it with `overflow-hidden`). There is no
+ * popover/dropdown primitive in `components/ui`, so this is a hand-rolled panel
+ * with click-outside + Escape to close (no new deps).
  */
 export function AccountMenu({ userName }: AccountMenuProps) {
   const t = useT()
@@ -53,14 +55,14 @@ export function AccountMenu({ userName }: AccountMenuProps) {
   }, [isOpen])
 
   return (
-    <div ref={rootRef} className="md:hidden fixed bottom-3 left-3 z-40">
+    <div ref={rootRef} className="relative">
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label={t.sidebar.account}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         {initial}
       </button>

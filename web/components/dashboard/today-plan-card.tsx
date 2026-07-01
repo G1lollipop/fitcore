@@ -55,8 +55,11 @@ export function TodayPlanCard({
       if (!userId || loggingId || loggedIds.has(e.id)) return
       setLoggingId(e.id)
       const sets = e.sets ?? null
+      // Persist the clean movement name (sets/reps live in their own fields),
+      // so History doesn't show "Bench Press 3 sets 8-12 reps".
+      const name = displayName(e, Boolean(formatSummary(t, e))) || t.plans.list.workoutDefaultName
       const res = await createWorkoutLog({
-        workout_name: e.text || t.plans.list.workoutDefaultName,
+        workout_name: name,
         sets,
         // Rough per-exercise estimates; users can correct in History.
         duration_minutes: 5,
@@ -67,9 +70,7 @@ export function TodayPlanCard({
         setLoggedIds((prev) => new Set(prev).add(e.id))
         toast({
           title: t.dashboard.todayPlan.exerciseLogged,
-          description: t.dashboard.todayPlan.exerciseLoggedDesc(
-            e.text || t.plans.list.workoutDefaultName
-          ),
+          description: t.dashboard.todayPlan.exerciseLoggedDesc(name),
         })
         onLogged?.()
       } else {
@@ -193,16 +194,18 @@ function ExerciseRow({
   onLog: () => void
 }) {
   const t = useT()
-  const name = exercise.text || t.plans.list.workoutDefaultName
   const summary = formatSummary(t, exercise)
+  const name = displayName(exercise, Boolean(summary)) || t.plans.list.workoutDefaultName
 
   return (
-    <li className="flex items-center gap-2.5 rounded-xl bg-secondary/40 px-2.5 py-1.5">
-      <div className="min-w-0 flex-1">
+    <li className="flex items-center gap-2 rounded-xl bg-secondary/40 px-2.5 py-1">
+      <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
         <p className={cn('truncate text-[13px] font-medium text-foreground', done && 'text-muted-foreground line-through')}>
           {name}
         </p>
-        {summary && <p className="truncate text-[11px] text-muted-foreground">{summary}</p>}
+        {summary && (
+          <span className="shrink-0 text-[11px] text-muted-foreground">{summary}</span>
+        )}
       </div>
       <motion.button
         type="button"
@@ -211,22 +214,36 @@ function ExerciseRow({
         whileTap={disabled || done || logging ? undefined : { scale: 0.92 }}
         aria-label={done ? t.dashboard.todayPlan.done : t.dashboard.todayPlan.logExerciseAria(name)}
         className={cn(
-          'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed',
+          'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed',
           done
             ? 'bg-primary/15 text-primary'
             : 'bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50'
         )}
       >
         {logging ? (
-          <Loader2 size={16} className="animate-spin" />
+          <Loader2 size={14} className="animate-spin" />
         ) : done ? (
-          <Check size={16} />
+          <Check size={14} />
         ) : (
-          <Plus size={16} />
+          <Plus size={14} />
         )}
       </motion.button>
     </li>
   )
+}
+
+/**
+ * Movement name for a row. When the row already renders a structured
+ * sets/reps summary, `exercise.text` (e.g. "Barbell Bench Press 3 sets
+ * 8-12 reps") duplicates that info, so strip the trailing sets/reps clause
+ * to show just the movement. Falls back to the full text when stripping
+ * would empty it or there's no structured summary.
+ */
+function displayName(e: Exercise, hasSummary: boolean): string {
+  const text = e.text ?? ''
+  if (!hasSummary) return text
+  const stripped = text.replace(/\s*[·\-–]?\s*\d+\s*sets?\b.*$/i, '').trim()
+  return stripped || text
 }
 
 /** "3 × 8-12 · 20kg" style summary from the plan slice. */
