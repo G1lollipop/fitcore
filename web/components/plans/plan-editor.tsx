@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { createCustomPlan, type CustomPlanDay } from '@/app/actions/plans'
+import { createCustomPlan, setCurrentPlan, type CustomPlanDay } from '@/app/actions/plans'
 
 interface ExerciseRow {
   name: string
@@ -141,6 +141,11 @@ export function PlanEditor({ open, onOpenChange, onCreated }: PlanEditorProps) {
         days: planDays,
       })
       if (res.success) {
+        // Activate the newly created plan so the home "Today" card reflects it
+        // right away; onCreated() then refreshes both the plans + dashboard caches.
+        if ('data' in res && res.data?.id) {
+          await setCurrentPlan(res.data.id)
+        }
         toast({ title: t.plans.editor.created, description: t.plans.editor.createdDesc })
         reset()
         onCreated()

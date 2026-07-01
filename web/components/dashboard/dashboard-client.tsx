@@ -1,21 +1,21 @@
 'use client'
 
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { AppShell } from '@/components/layout/app-shell'
-import { findNavItem } from '@/components/layout/nav-items'
 import { TodayOverview } from '@/components/dashboard/today-overview'
-import { TodayPlanCard } from '@/components/dashboard/today-plan-card'
+import { HomePlanSection } from '@/components/dashboard/home-plan-section'
 import { WeeklyActivity } from '@/components/dashboard/weekly-activity'
 import { CoachAskBar } from '@/components/dashboard/coach-ask-bar'
 import { HomeLogBar } from '@/components/dashboard/home-log-bar'
 import { TabActiveProvider } from '@/components/dashboard/tab-active-context'
 import { HistoryCenter } from '@/components/history/history-center'
-import { PlansCenter } from '@/components/plans/plans-center'
 import { useDashboardData, useDashboardActions } from '@/lib/queries/dashboard'
+import { useHistoryActions } from '@/lib/queries/history'
+import { usePrefetchUserSettings } from '@/lib/queries/settings'
+import { getTodayDate } from '@/lib/utils/date'
 import type { DashboardData } from '@/app/actions/types'
 import { useT } from '@/lib/i18n/provider'
-import type { Dictionary } from '@/lib/i18n'
 
 /**
  * AI chat is opened on demand — defer its bundle until after first paint.
@@ -38,16 +38,6 @@ const MealPhotoUpload = dynamic(
   { ssr: false }
 )
 
-function getGreeting(t: Dictionary): string {
-  const hour = new Date().getHours()
-  if (hour < 6) return t.greeting.lateNight
-  if (hour < 12) return t.greeting.morning
-  if (hour < 14) return t.greeting.noon
-  if (hour < 18) return t.greeting.afternoon
-  if (hour < 22) return t.greeting.evening
-  return t.greeting.lateNight
-}
-
 interface DashboardClientProps {
   userId: string
   userName: string
@@ -59,8 +49,8 @@ interface DashboardClientProps {
  * Interactive client shell for the home experience.
  *
  * Data fetching and auth happen in the server component (`app/page.tsx`); this
- * component owns only client-side concerns: nav switching, the greeting (local
- * clock), and refetching dashboard data after a successful log.
+ * component owns only client-side concerns: nav switching and refetching
+ * dashboard data after a successful log.
  */
 export function DashboardClient({
   userId,
@@ -74,32 +64,34 @@ export function DashboardClient({
   // so the rings/totals update instantly without a blocking full refetch.
   const { data: dashboardData } = useDashboardData(initialDashboardData)
   const { invalidate } = useDashboardActions()
+  const { invalidateDate } = useHistoryActions()
 
-  // Greeting is computed once per render; that's fine — it's pure and cheap.
-  const greeting = getGreeting(t)
-
-  // Page title is derived from the shared NAV_ITEMS source via the active
-  // dictionary, eliminating the duplicate Record map that lived here.
-  const pageTitle = useMemo(() => {
-    const item = findNavItem(activeNav)
-    return item ? t.nav[item.labelKey] : ''
-  }, [activeNav, t])
+  // Warm the shared user-settings cache right after the home mounts so the
+  // Settings sheet and Edit-targets dialog open instantly (both read the same
+  // `getUserSettings()` row). Non-blocking: doesn't affect first paint.
+  const prefetchUserSettings = usePrefetchUserSettings()
+  useEffect(() => {
+    prefetchUserSettings()
+  }, [prefetchUserSettings])
 
   const displayName = userName || t.greeting.defaultUserName
 
   // Generic "something changed" hook: kick a non-blocking background refetch
   // to reconcile the cache. Surfaces that already know the delta (quick-log,
   // water) patch the cache directly and this just confirms against the server.
+  //
+  // Also reconciles today's History caches (`['nutrition'|'workouts', today]`),
+  // so an entry logged from the home Quick Log / meal photo shows up the moment
+  // the user opens History instead of staying stale until a manual refresh.
   const handleLogSuccess = useCallback(() => {
     invalidate()
-  }, [invalidate])
+    invalidateDate(getTodayDate())
+  }, [invalidate, invalidateDate])
 
   return (
     <AppShell
       activeNav={activeNav}
       onNavChange={setActiveNav}
-      pageTitle={pageTitle}
-      greeting={greeting}
       userName={displayName}
       userId={userId}
       onQuickLogged={handleLogSuccess}
@@ -131,16 +123,17 @@ export function DashboardClient({
           waterMl={dashboardData?.today.water_intake}
           waterGoalMl={dashboardData?.goals.water_goal}
           onWaterLogged={handleLogSuccess}
+          onTargetsSaved={handleLogSuccess}
           className="shrink-0"
         />
 
-        {/* Today's plan always on home (no longer buried in Training → Plans);
-            when there's no active plan it nudges the user to create one. */}
-        <TodayPlanCard
+        {/* The single active plan lives on home now (the Plans tab was retired):
+            today's slice by default, tap to expand the full week, or a compact
+            create surface when there's no active plan yet. */}
+        <HomePlanSection
           info={dashboardData?.todayWorkout ?? null}
           userId={userId}
           onLogged={handleLogSuccess}
-          onManage={() => setActiveNav('training')}
           className="shrink-0"
         />
 
@@ -156,10 +149,6 @@ export function DashboardClient({
 
       <TabPanel active={activeNav === 'nutrition'} prefetch>
         <HistoryCenter userId={userId} onLogSuccess={handleLogSuccess} />
-      </TabPanel>
-
-      <TabPanel active={activeNav === 'training'} prefetch>
-        <PlansCenter userId={userId} onLogSuccess={handleLogSuccess} />
       </TabPanel>
     </AppShell>
   )

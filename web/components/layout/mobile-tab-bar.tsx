@@ -64,10 +64,12 @@ const TabItem = memo(function TabItem({
       aria-current={isActive ? 'page' : undefined}
       aria-label={label}
       className={cn(
-        'flex items-center gap-1.5 rounded-full transition-all',
+        // `min-h-10` guarantees a ≥40px tap target on the primary mobile nav
+        // while the pill stays visually slim.
+        'flex min-h-10 items-center gap-1.5 rounded-full transition-all',
         isActive
           ? 'bg-primary text-primary-foreground px-3.5 py-2'
-          : 'text-muted-foreground hover:text-foreground px-2.5 py-2'
+          : 'text-muted-foreground hover:text-foreground px-3 py-2'
       )}
     >
       <Icon size={18} strokeWidth={isActive ? 2.25 : 2} className="shrink-0" />

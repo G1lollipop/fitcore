@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { LogOut, Loader2 } from 'lucide-react'
 import {
   Sheet,
@@ -19,8 +19,8 @@ import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/app/actions/auth'
-import { getUserSettings } from '@/app/actions/onboarding'
 import { updateUserSettings } from '@/app/actions/settings'
+import { useUserSettings, useInvalidateUserSettings } from '@/lib/queries/settings'
 
 type Gender = 'male' | 'female'
 type Activity = 'sedentary' | 'light' | 'moderate' | 'heavy'
@@ -55,35 +55,34 @@ interface SettingsSheetProps {
 export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProps) {
   const t = useT()
   const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
+  // Shared cache: warmed on home mount, so opening the sheet is instant.
+  const { data: settings, isPending } = useUserSettings()
+  const invalidateUserSettings = useInvalidateUserSettings()
   const [saving, setSaving] = useState(false)
+  const [seeded, setSeeded] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
 
-  useEffect(() => {
-    if (!open) return
-    let cancelled = false
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-open: reflect loading while settings are fetched
-    setLoading(true)
-    void (async () => {
-      const s = await getUserSettings()
-      if (cancelled) return
-      if (s) {
-        setForm({
-          gender: (s.gender as Gender) ?? 'male',
-          age: s.age != null ? String(s.age) : '',
-          height: s.height != null ? String(s.height) : '',
-          weight: s.weight != null ? String(s.weight) : '',
-          activityLevel: (s.activity_level as Activity) ?? 'moderate',
-        })
-      } else {
-        setForm(EMPTY_FORM)
-      }
-      setLoading(false)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [open])
+  // Seed the form from the cached settings when the sheet opens, using the
+  // render-time "adjust state on prop change" pattern (no effect, no
+  // fetch-on-open). If the cache is warm this seeds on the first open render
+  // (no skeleton); otherwise it waits for the query to resolve.
+  if (open && !seeded && !isPending) {
+    setForm(
+      settings
+        ? {
+            gender: (settings.gender as Gender) ?? 'male',
+            age: settings.age != null ? String(settings.age) : '',
+            height: settings.height != null ? String(settings.height) : '',
+            weight: settings.weight != null ? String(settings.weight) : '',
+            activityLevel: (settings.activity_level as Activity) ?? 'moderate',
+          }
+        : EMPTY_FORM
+    )
+    setSeeded(true)
+  }
+  if (!open && seeded) setSeeded(false)
+
+  const loading = open && !seeded
 
   const set = useCallback(
     <K extends keyof FormState>(key: K, val: FormState[K]) =>
@@ -102,6 +101,7 @@ export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProp
         activityLevel: form.activityLevel,
       })
       if (res.success) {
+        invalidateUserSettings()
         toast({ title: t.settings.saved })
         onSaved?.()
         onOpenChange(false)
@@ -111,7 +111,7 @@ export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProp
     } finally {
       setSaving(false)
     }
-  }, [form, onSaved, onOpenChange, t, toast])
+  }, [form, invalidateUserSettings, onSaved, onOpenChange, t, toast])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

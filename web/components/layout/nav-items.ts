@@ -1,5 +1,4 @@
 import {
-  CalendarCheck,
   History,
   LayoutDashboard,
   type LucideIcon,
@@ -28,7 +27,6 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'dashboard', labelKey: 'dashboard', shortLabelKey: 'shortDashboard', icon: LayoutDashboard },
   { id: 'nutrition', labelKey: 'nutrition', shortLabelKey: 'shortNutrition', icon: History },
-  { id: 'training', labelKey: 'training', shortLabelKey: 'shortTraining', icon: CalendarCheck },
 ] as const
 
 /** Lookup helper. Returns `undefined` for unknown ids. */

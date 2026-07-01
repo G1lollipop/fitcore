@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { useT } from '@/lib/i18n/provider'
+import { toLocalDateStr } from '@/lib/utils/date'
 import { DietDaySection } from './diet-day-section'
 import { WorkoutDaySection } from './workout-day-section'
 
@@ -11,9 +12,7 @@ interface HistoryCenterProps {
   onLogSuccess?: () => void
 }
 
-function toDateStr(d: Date): string {
-  return d.toISOString().split('T')[0]
-}
+const toDateStr = toLocalDateStr
 
 /**
  * Combined history: one shared date selector with the day's nutrition and
@@ -25,8 +24,13 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
   const t = useT()
   const [selectedDate, setSelectedDate] = useState(new Date())
 
-  const isToday = selectedDate.toDateString() === new Date().toDateString()
-  const isFuture = selectedDate > new Date() && !isToday
+  // Compare by the same local (Asia/Shanghai) calendar day the write path and
+  // the day sections use, so "today" and "future" agree with the logged rows
+  // near midnight instead of drifting via UTC.
+  const todayStr = toDateStr(new Date())
+  const selectedStr = toDateStr(selectedDate)
+  const isToday = selectedStr === todayStr
+  const isFuture = selectedStr > todayStr
 
   const shiftDay = (delta: number) => {
     setSelectedDate((cur) => {
@@ -38,54 +42,55 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      {/* Shared date navigator */}
-      <div className="glass glass-highlight flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => shiftDay(-1)}
-            aria-label={t.nutrition.prevDay}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            <ChevronLeft size={18} />
-          </button>
+      {/* Slim shared date navigator — a single compact row instead of a full
+          glass card, so it barely costs any vertical space on mobile. */}
+      <div className="flex items-center justify-center gap-1">
+        <button
+          type="button"
+          onClick={() => shiftDay(-1)}
+          aria-label={t.nutrition.prevDay}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <ChevronLeft size={16} />
+        </button>
 
-          <label className="relative min-w-[10rem] cursor-pointer rounded-xl bg-secondary/60 px-4 py-2 text-center">
-            <span className="text-sm font-medium text-foreground tabular-nums">
-              {selectedDate.toLocaleDateString(t.common.locale, {
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long',
-              })}
-            </span>
-            <input
-              type="date"
-              value={toDateStr(selectedDate)}
-              max={toDateStr(new Date())}
-              onChange={(e) => {
-                if (e.target.value) setSelectedDate(new Date(`${e.target.value}T00:00:00`))
-              }}
-              className="absolute inset-0 cursor-pointer opacity-0"
-              aria-label={t.history.title}
-            />
-          </label>
+        <label className="relative cursor-pointer rounded-lg px-2.5 py-1 text-center transition-colors hover:bg-secondary/60">
+          <span className="text-sm font-medium text-foreground tabular-nums">
+            {selectedDate.toLocaleDateString(t.common.locale, {
+              month: 'short',
+              day: 'numeric',
+              weekday: 'short',
+            })}
+          </span>
+          <input
+            type="date"
+            value={toDateStr(selectedDate)}
+            max={toDateStr(new Date())}
+            onChange={(e) => {
+              // Anchor at local noon so formatting the picked day back to a
+              // date string can't slip to an adjacent day across time zones.
+              if (e.target.value) setSelectedDate(new Date(`${e.target.value}T12:00:00`))
+            }}
+            className="absolute inset-0 cursor-pointer opacity-0"
+            aria-label={t.history.title}
+          />
+        </label>
 
-          <button
-            type="button"
-            onClick={() => shiftDay(1)}
-            disabled={isFuture}
-            aria-label={t.nutrition.nextDay}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => shiftDay(1)}
+          disabled={isFuture}
+          aria-label={t.nutrition.nextDay}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+        >
+          <ChevronRight size={16} />
+        </button>
 
         {!isToday && (
           <button
             type="button"
             onClick={() => setSelectedDate(new Date())}
-            className="text-xs font-medium text-primary hover:underline"
+            className="ml-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:underline"
           >
             {t.nutrition.backToToday}
           </button>

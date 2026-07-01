@@ -7,7 +7,21 @@
  * land on the previous day's row. `en-CA` formats as `YYYY-MM-DD`.
  */
 export function getTodayDate(timeZone = 'Asia/Shanghai'): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date());
+  return toLocalDateStr(new Date(), timeZone);
+}
+
+/**
+ * Format an arbitrary `Date` as `YYYY-MM-DD` in the given IANA time zone
+ * (default Asia/Shanghai).
+ *
+ * Use this instead of `date.toISOString().split('T')[0]` anywhere a log's
+ * calendar day is derived: `toISOString()` returns the UTC date, which drifts
+ * a day away from the write path (which uses `getTodayDate`) around local
+ * midnight and hides just-logged entries. Sharing this helper keeps the
+ * read-date and write-date in the same time zone so they always agree.
+ */
+export function toLocalDateStr(date: Date, timeZone = 'Asia/Shanghai'): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(date);
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

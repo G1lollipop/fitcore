@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Save } from 'lucide-react'
+import { Loader2, Plus, Save } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -17,43 +17,82 @@ import { useToast } from '@/hooks/use-toast'
 import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
 import { updateDietLog } from '@/app/actions/updateDietLog'
+import { saveDietLog } from '@/app/actions/saveDietLog'
 import type { DietLogItem } from '@/app/actions/types'
 
+/** Client-side row id for optimistic inserts, with a non-crypto fallback. */
+function newId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+  return `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 interface DietLogEditDialogProps {
-  /** The entry being edited; `null` keeps the dialog closed. */
-  log: DietLogItem | null
+  /** The entry being edited; `null` keeps the dialog closed (edit mode). */
+  log?: DietLogItem | null
+  /**
+   * `'edit'` (default) pre-fills from `log` and persists via `updateDietLog`.
+   * `'create'` starts empty and inserts a new row via `saveDietLog`.
+   */
+  mode?: 'edit' | 'create'
+  /** Controls visibility in create mode (edit mode derives it from `log`). */
+  open?: boolean
+  /** Target calendar day (YYYY-MM-DD) for create-mode back-dating. */
+  dateStr?: string
   onClose: () => void
-  onSuccess?: () => void
+  /** In create mode, receives the inserted row so callers can patch caches. */
+  onSuccess?: (created?: DietLogItem) => void
 }
 
 type EditFields = Pick<DietLogItem, 'food_name' | 'calories' | 'protein' | 'carbs' | 'fat'>
 
+const EMPTY_FIELDS: EditFields = { food_name: '', calories: 0, protein: 0, carbs: 0, fat: 0 }
+
 /**
- * Shared in-place editor for a single food entry. Pre-fills from the passed
- * `log`, validates client-side numbers, and persists via `updateDietLog`
- * (which recomputes the day's stats). Used by the meal timeline, the dashboard
- * daily log, and any other surface that lists food entries.
+ * Shared create + edit form for a single food entry.
+ *
+ * - Edit mode pre-fills from `log`, validates client-side numbers, and persists
+ *   via `updateDietLog` (which recomputes the day's stats).
+ * - Create mode starts empty and inserts a new `food_logs` row via `saveDietLog`
+ *   for the passed `dateStr` (so manual entries land on the day being viewed).
+ *
+ * Used by the meal timeline, the History diet/workout sections, and the home
+ * Quick Log bar.
  */
-export function DietLogEditDialog({ log, onClose, onSuccess }: DietLogEditDialogProps) {
+export function DietLogEditDialog({
+  log,
+  mode = 'edit',
+  open,
+  dateStr,
+  onClose,
+  onSuccess,
+}: DietLogEditDialogProps) {
   const t = useT()
   const { toast } = useToast()
+  const isCreate = mode === 'create'
+  const isOpen = isCreate ? !!open : (log ?? null) !== null
+
   const [fields, setFields] = useState<EditFields | null>(null)
   const [saving, setSaving] = useState(false)
 
-  // Sync form state when a new entry is opened — React's "adjust state during
-  // render" pattern (https://react.dev/learn/you-might-not-need-an-effect),
-  // which avoids an extra effect + render pass.
-  const [prevLog, setPrevLog] = useState(log)
-  if (log !== prevLog) {
-    setPrevLog(log)
-    if (log) {
-      setFields({
-        food_name: log.food_name,
-        calories: log.calories,
-        protein: log.protein,
-        carbs: log.carbs,
-        fat: log.fat,
-      })
+  // Sync form state on the closed→open transition — React's "adjust state
+  // during render" pattern (https://react.dev/learn/you-might-not-need-an-effect),
+  // which avoids an extra effect + render pass. These dialogs always mount
+  // closed, so the initial (no-op) render never needs to seed fields.
+  const [prevOpen, setPrevOpen] = useState(isOpen)
+  if (isOpen !== prevOpen) {
+    setPrevOpen(isOpen)
+    if (isOpen) {
+      setFields(
+        isCreate || !log
+          ? { ...EMPTY_FIELDS }
+          : {
+              food_name: log.food_name,
+              calories: log.calories,
+              protein: log.protein,
+              carbs: log.carbs,
+              fat: log.fat,
+            }
+      )
       setSaving(false)
     }
   }
@@ -63,7 +102,42 @@ export function DietLogEditDialog({ log, onClose, onSuccess }: DietLogEditDialog
   }
 
   const handleSave = async () => {
-    if (!log || !fields) return
+    if (!fields) return
+    if (isCreate) {
+      if (!fields.food_name.trim()) return
+      setSaving(true)
+      const created: DietLogItem = {
+        id: newId(),
+        food_name: fields.food_name.trim(),
+        calories: fields.calories,
+        protein: fields.protein,
+        carbs: fields.carbs,
+        fat: fields.fat,
+        // Server resolves the real timestamp from `dateStr`; this is a
+        // reasonable default for the "today" case.
+        logged_at: new Date().toISOString(),
+      }
+      const result = await saveDietLog(created, dateStr)
+      if (!result.success) {
+        setSaving(false)
+        toast({
+          variant: 'destructive',
+          title: t.logForm.create.createFailed,
+          description: result.error ? tError(t, result.error) : t.logForm.edit.tryLater,
+        })
+        return
+      }
+      onSuccess?.(result.data ?? created)
+      toast({
+        title: t.logForm.create.foodAdded,
+        description: `${created.food_name} · ${created.calories} kcal`,
+      })
+      onClose()
+      return
+    }
+
+    // Edit mode.
+    if (!log) return
     setSaving(true)
     const next: DietLogItem = {
       id: log.id,
@@ -91,34 +165,37 @@ export function DietLogEditDialog({ log, onClose, onSuccess }: DietLogEditDialog
 
   return (
     <Dialog
-      open={log !== null}
+      open={isOpen}
       onOpenChange={(next) => {
         if (!next && !saving) onClose()
       }}
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t.logForm.edit.dietTitle}</DialogTitle>
-          <DialogDescription>{t.logForm.edit.dietDesc}</DialogDescription>
+          <DialogTitle>{isCreate ? t.logForm.create.dietTitle : t.logForm.edit.dietTitle}</DialogTitle>
+          <DialogDescription>
+            {isCreate ? t.logForm.create.dietDesc : t.logForm.edit.dietDesc}
+          </DialogDescription>
         </DialogHeader>
 
         {fields && (
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label htmlFor="edit-food-name">{t.logForm.edit.foodName}</Label>
+              <Label htmlFor="diet-food-name">{t.logForm.edit.foodName}</Label>
               <Input
-                id="edit-food-name"
+                id="diet-food-name"
                 value={fields.food_name}
                 onChange={(e) => setField('food_name', e.target.value)}
                 disabled={saving}
+                autoFocus={isCreate}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label htmlFor="edit-calories">{t.logForm.edit.calories}</Label>
+                <Label htmlFor="diet-calories">{t.logForm.edit.calories}</Label>
                 <Input
-                  id="edit-calories"
+                  id="diet-calories"
                   type="number"
                   inputMode="numeric"
                   value={fields.calories}
@@ -127,9 +204,9 @@ export function DietLogEditDialog({ log, onClose, onSuccess }: DietLogEditDialog
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="edit-protein">{t.logForm.edit.protein}</Label>
+                <Label htmlFor="diet-protein">{t.logForm.edit.protein}</Label>
                 <Input
-                  id="edit-protein"
+                  id="diet-protein"
                   type="number"
                   inputMode="numeric"
                   value={fields.protein}
@@ -138,9 +215,9 @@ export function DietLogEditDialog({ log, onClose, onSuccess }: DietLogEditDialog
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="edit-carbs">{t.logForm.edit.carbs}</Label>
+                <Label htmlFor="diet-carbs">{t.logForm.edit.carbs}</Label>
                 <Input
-                  id="edit-carbs"
+                  id="diet-carbs"
                   type="number"
                   inputMode="numeric"
                   value={fields.carbs}
@@ -149,9 +226,9 @@ export function DietLogEditDialog({ log, onClose, onSuccess }: DietLogEditDialog
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="edit-fat">{t.logForm.edit.fat}</Label>
+                <Label htmlFor="diet-fat">{t.logForm.edit.fat}</Label>
                 <Input
-                  id="edit-fat"
+                  id="diet-fat"
                   type="number"
                   inputMode="numeric"
                   value={fields.fat}
@@ -167,9 +244,19 @@ export function DietLogEditDialog({ log, onClose, onSuccess }: DietLogEditDialog
           <Button variant="outline" onClick={onClose} disabled={saving}>
             {t.common.cancel}
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {t.logForm.edit.save}
+          <Button
+            onClick={handleSave}
+            disabled={saving || (isCreate && !fields?.food_name.trim())}
+            className="gap-2"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isCreate ? (
+              <Plus className="h-4 w-4" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {isCreate ? t.logForm.create.save : t.logForm.edit.save}
           </Button>
         </DialogFooter>
       </DialogContent>

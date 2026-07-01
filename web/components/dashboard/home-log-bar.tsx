@@ -1,11 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, CornerDownLeft, Loader2, PencilLine, RotateCcw } from 'lucide-react'
+import { Camera, Check, CornerDownLeft, Loader2, Mic, PencilLine, RotateCcw } from 'lucide-react'
 import { useT } from '@/lib/i18n/provider'
 import { tError, type Dictionary } from '@/lib/i18n'
 import { quickLog, type QuickLogResult } from '@/app/actions/quickLog'
 import { useDashboardActions } from '@/lib/queries/dashboard'
+import { useHistoryActions } from '@/lib/queries/history'
+import { useMealPhoto } from '@/components/log-form/meal-photo-context'
+import { DietLogEditDialog } from '@/components/log-form/diet-log-edit-dialog'
+import { useSpeechInput } from '@/lib/hooks/use-speech-input'
+import { getTodayDate } from '@/lib/utils/date'
+import type { DietLogItem } from '@/app/actions/types'
 import { cn } from '@/lib/utils'
 
 interface HomeLogBarProps {
@@ -17,27 +23,35 @@ interface HomeLogBarProps {
 
 type Feedback =
   | { kind: 'success'; text: string }
-  | { kind: 'error'; text: string }
+  | { kind: 'error'; text: string; retry?: string }
 
 /**
  * Always-visible natural-language logging bar for the home tab — the product's
  * primary action ("logging is the protagonist").
  *
- * Unlike the ⌘K command modal and the AI coach (which opens a chat), this logs
- * inline: one `quickLog` call → optimistic dashboard patch → instant inline
- * confirmation, so meal/workout capture stays under a few seconds without
- * leaving the home screen. Recent entries become one-tap "log again" chips.
+ * Submitting is fully non-blocking: the input clears and stays usable while an
+ * optimistic `pending: true` placeholder is dropped into today's History cache
+ * (mirroring the meal-timeline pattern). `quickLog` runs in the background; on
+ * success the placeholder is swapped for the parsed food/workout rows and the
+ * dashboard rings are patched, on failure it's removed and a retry is offered.
+ *
+ * A camera button reuses the existing meal-photo picker, and a mic button
+ * (auto-hidden when the Web Speech API is unavailable) dictates into the input.
  */
 export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
   const t = useT()
-  const { applyQuickLogItems } = useDashboardActions()
+  const { applyQuickLogItems, applyDietLog } = useDashboardActions()
+  const history = useHistoryActions()
+  const { openPicker } = useMealPhoto()
   const inputRef = useRef<HTMLInputElement>(null)
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Text captured when voice input starts, so dictation appends to it.
+  const speechBaseRef = useRef('')
 
   const [text, setText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [recents, setRecents] = useState<string[]>([])
+  const [pendingCount, setPendingCount] = useState(0)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const [manualOpen, setManualOpen] = useState(false)
 
   useEffect(
     () => () => {
@@ -53,57 +67,117 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
   }, [])
 
   const submit = useCallback(
-    async (raw: string) => {
+    (raw: string) => {
       const trimmed = raw.trim()
-      if (!trimmed || submitting) return
+      if (!trimmed) return
       if (!userId) {
         showFeedback({ kind: 'error', text: t.logForm.quick.loginFirst })
         return
       }
 
-      setSubmitting(true)
+      // Clear + keep the input usable immediately — the user can log again
+      // without waiting for the model.
       setText('')
-      setRecents((prev) => [trimmed, ...prev.filter((r) => r !== trimmed)].slice(0, 4))
 
-      try {
-        const res = await quickLog(trimmed)
-        if (!res.success) {
-          showFeedback({ kind: 'error', text: tError(t, res.error) })
-          // Restore the text so the user can fix and retry.
-          setText(trimmed)
-          return
-        }
-        // Patch the dashboard cache so rings/totals move immediately, then
-        // reconcile against the server in the background.
-        applyQuickLogItems(res.items)
-        onLogged?.()
-        showFeedback({ kind: 'success', text: summarize(res.items, t) })
-      } catch (err) {
-        showFeedback({
-          kind: 'error',
-          text: err instanceof Error ? err.message : t.logForm.quick.tryLater,
-        })
-        setText(trimmed)
-      } finally {
-        setSubmitting(false)
+      const today = getTodayDate()
+      const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+      const placeholder: DietLogItem = {
+        id: tempId,
+        food_name: trimmed,
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        logged_at: new Date().toISOString(),
+        pending: true,
       }
+      history.addPendingFood(today, placeholder)
+      setPendingCount((c) => c + 1)
+
+      void (async () => {
+        try {
+          const res = await quickLog(trimmed)
+          if (!res.success) {
+            history.removeFood(today, tempId)
+            showFeedback({ kind: 'error', text: tError(t, res.error), retry: trimmed })
+            return
+          }
+          // Patch the dashboard rings/totals + splice the resolved rows into
+          // today's History caches, then reconcile against the server.
+          applyQuickLogItems(res.items)
+          history.applyResolvedQuickLog(today, tempId, res.items)
+          onLogged?.()
+          showFeedback({ kind: 'success', text: summarize(res.items, t) })
+        } catch (err) {
+          history.removeFood(today, tempId)
+          showFeedback({
+            kind: 'error',
+            text: err instanceof Error ? err.message : t.logForm.quick.tryLater,
+            retry: trimmed,
+          })
+        } finally {
+          setPendingCount((c) => Math.max(0, c - 1))
+        }
+      })()
     },
-    [submitting, userId, applyQuickLogItems, onLogged, showFeedback, t]
+    [userId, applyQuickLogItems, history, onLogged, showFeedback, t]
   )
+
+  const speech = useSpeechInput({
+    lang: t.common.locale,
+    onTranscript: (transcript) => {
+      const base = speechBaseRef.current
+      setText(base ? `${base} ${transcript}`.trim() : transcript)
+    },
+    onError: (error) => {
+      if (error === 'no-speech' || error === 'aborted') return
+      showFeedback({
+        kind: 'error',
+        text:
+          error === 'not-allowed' || error === 'service-not-allowed'
+            ? t.logForm.quick.micDenied
+            : t.logForm.quick.micError,
+      })
+    },
+  })
+
+  const toggleMic = useCallback(() => {
+    if (speech.listening) {
+      speech.stop()
+      return
+    }
+    speechBaseRef.current = text.trim()
+    speech.start()
+    inputRef.current?.focus()
+  }, [speech, text])
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      void submit(text)
+      submit(text)
     }
   }
 
-  const chips = recents.length > 0 ? recents : t.logForm.quick.suggestions
+  // Manual structured food entry (secondary to the AI path). The dialog inserts
+  // the row server-side for today; here we patch the dashboard rings + today's
+  // History cache so it shows instantly, then reconcile.
+  const handleManualCreated = useCallback(
+    (created?: DietLogItem) => {
+      if (!created) return
+      applyDietLog(created)
+      history.addPendingFood(getTodayDate(), created)
+      onLogged?.()
+      showFeedback({ kind: 'success', text: t.logForm.create.foodAdded })
+    },
+    [applyDietLog, history, onLogged, showFeedback, t]
+  )
+
+  const busy = pendingCount > 0
 
   return (
     <section
       className={cn(
-        'glass glass-highlight relative flex flex-col gap-2.5 overflow-hidden rounded-2xl border-primary/30 bg-primary/[0.05] p-4',
+        'glass glass-highlight relative flex flex-col gap-1.5 overflow-hidden rounded-2xl border-primary/30 bg-primary/[0.05] p-2.5',
         className
       )}
     >
@@ -112,38 +186,12 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
         className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-primary/10 blur-2xl"
       />
 
-      <header className="relative flex items-center gap-2.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
-          <PencilLine size={16} />
-        </span>
-        <div className="min-w-0">
-          <h2 className="font-display text-sm font-semibold leading-tight text-foreground">
-            {t.logForm.quick.homeTitle}
-          </h2>
-          <p className="truncate text-[11px] text-muted-foreground">
-            {feedback ? (
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 font-medium',
-                  feedback.kind === 'success' ? 'text-primary' : 'text-destructive'
-                )}
-              >
-                {feedback.kind === 'success' ? <Check size={11} /> : null}
-                {feedback.text}
-              </span>
-            ) : (
-              t.logForm.quick.homeSubtitle
-            )}
-          </p>
-        </div>
-      </header>
-
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          void submit(text)
+          submit(text)
         }}
-        className="relative flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 transition-shadow focus-within:border-primary/60"
+        className="relative flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-2 transition-shadow focus-within:border-primary/60"
       >
         <input
           ref={inputRef}
@@ -151,61 +199,100 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
-          disabled={submitting}
-          placeholder={t.logForm.quick.placeholder}
+          placeholder={speech.listening ? t.logForm.quick.micListening : t.logForm.quick.homeSubtitle}
           aria-label={t.logForm.quick.homeTitle}
-          className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/70 disabled:opacity-60"
+          className="min-w-0 flex-1 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
         />
+
+        {speech.supported && (
+          <button
+            type="button"
+            onClick={toggleMic}
+            aria-label={speech.listening ? t.logForm.quick.micStop : t.logForm.quick.micStart}
+            aria-pressed={speech.listening}
+            className={cn(
+              'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors',
+              speech.listening
+                ? 'bg-destructive/15 text-destructive'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+            )}
+          >
+            <Mic size={15} className={speech.listening ? 'animate-pulse' : undefined} />
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setManualOpen(true)}
+          aria-label={t.logForm.manual.foodAria}
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <PencilLine size={15} />
+        </button>
+
+        <button
+          type="button"
+          onClick={openPicker}
+          aria-label={t.logForm.quick.photoAria}
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <Camera size={15} />
+        </button>
+
         <button
           type="submit"
-          disabled={submitting || !text.trim()}
+          disabled={!text.trim()}
           aria-label={t.logForm.quick.submit}
           className={cn(
             'inline-flex h-7 shrink-0 items-center gap-1 rounded-lg px-2.5 text-xs font-medium transition-colors',
-            text.trim() && !submitting
+            text.trim()
               ? 'bg-primary text-primary-foreground hover:bg-primary/90'
               : 'bg-secondary text-muted-foreground'
           )}
         >
-          {submitting ? (
-            <>
-              <Loader2 size={12} className="animate-spin" />
-              {t.logForm.quick.homeSubmitting}
-            </>
-          ) : (
-            <>
-              {t.logForm.quick.submit}
-              <CornerDownLeft size={12} />
-            </>
-          )}
+          {t.logForm.quick.submit}
+          <CornerDownLeft size={12} />
         </button>
       </form>
 
-      <div className="relative flex flex-wrap gap-1.5">
-        {chips.slice(0, 3).map((chip) => {
-          const isRecent = recents.length > 0
-          return (
-            <button
-              key={chip}
-              type="button"
-              disabled={submitting}
-              onClick={() => {
-                if (isRecent) {
-                  void submit(chip)
-                } else {
-                  setText(chip)
-                  inputRef.current?.focus()
-                }
-              }}
-              title={isRecent ? t.logForm.quick.homeReuse : undefined}
-              className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-50"
-            >
-              {isRecent ? <RotateCcw size={10} className="shrink-0" /> : null}
-              <span className="truncate">{chip}</span>
-            </button>
-          )
-        })}
-      </div>
+      {feedback ? (
+        <p className="relative truncate px-1 text-[11px]">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 font-medium',
+              feedback.kind === 'success' ? 'text-primary' : 'text-destructive'
+            )}
+          >
+            {feedback.kind === 'success' ? <Check size={11} /> : null}
+            {feedback.text}
+            {feedback.kind === 'error' && feedback.retry ? (
+              <button
+                type="button"
+                onClick={() => submit(feedback.retry as string)}
+                className="ml-1 inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
+              >
+                <RotateCcw size={10} />
+                {t.logForm.quick.retry}
+              </button>
+            ) : null}
+          </span>
+        </p>
+      ) : busy ? (
+        <p className="relative truncate px-1 text-[11px]">
+          <span className="inline-flex items-center gap-1 font-medium text-primary">
+            <Loader2 size={11} className="animate-spin" />
+            {t.logForm.quick.homeSubmitting}
+          </span>
+        </p>
+      ) : null}
+
+      <DietLogEditDialog
+        mode="create"
+        open={manualOpen}
+        dateStr={getTodayDate()}
+        onClose={() => setManualOpen(false)}
+        onSuccess={handleManualCreated}
+      />
     </section>
   )
 }

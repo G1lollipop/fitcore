@@ -203,6 +203,58 @@ export async function deleteWorkoutLog(
   return { success: true };
 }
 
+/**
+ * Inserts a single manually-entered workout row (no AI parsing), then
+ * recomputes the daily_stats aggregate. Mirrors `saveDietLog` for the food
+ * side: the structured create-mode dialog builds the fields and this persists
+ * them. An optional `dateStr` back-dates the row (historical-day editing) via
+ * `resolveLogTimestamp`, matching `logWorkout(text, ctx, dateStr)`.
+ */
+export async function createWorkoutLog(
+  input: Pick<WorkoutLogItem, 'workout_name' | 'sets' | 'duration_minutes' | 'calories_burned'>,
+  dateStr?: string
+): Promise<{ success: boolean; data?: WorkoutLogItem; error?: string }> {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const userId = a.userId;
+
+  const parsed = workoutLogInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: firstZodError(parsed.error) };
+  }
+
+  const { date, loggedAt } = resolveLogTimestamp(dateStr);
+  const row: WorkoutLogItem = {
+    id: randomUUID(),
+    workout_name: parsed.data.workout_name,
+    sets: parsed.data.sets,
+    duration_minutes: parsed.data.duration_minutes,
+    calories_burned: parsed.data.calories_burned,
+    logged_at: loggedAt,
+  };
+
+  const { error: insertError } = await supabase.from('workout_logs').insert({
+    id: row.id,
+    user_id: userId,
+    date,
+    workout_name: row.workout_name,
+    sets: row.sets,
+    duration_minutes: row.duration_minutes,
+    calories_burned: row.calories_burned,
+    logged_at: row.logged_at,
+  });
+
+  if (insertError) {
+    console.error('[createWorkoutLog] Insert error:', insertError.message);
+    return { success: false, error: ActionError.DB_INSERT_FAILED };
+  }
+
+  await recomputeDailyStats(userId, date);
+
+  revalidatePath('/');
+  return { success: true, data: row };
+}
+
 export async function batchLogWorkouts(
   workouts: Array<{ name: string; sets?: number | null; duration_minutes?: number; calories_burned?: number }>
 ): Promise<{ success: boolean; count?: number; error?: string }> {

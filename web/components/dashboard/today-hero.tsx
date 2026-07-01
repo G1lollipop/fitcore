@@ -16,10 +16,10 @@ interface TodayHeroProps {
   embedded?: boolean
 }
 
-const RADIUS_OUTER = 60
-const RADIUS_INNER = 46
-const STROKE = 11
-const SVG_SIZE = 144
+const RADIUS_OUTER = 56
+const RADIUS_INNER = 43
+const STROKE = 10
+const SVG_SIZE = 132
 const CENTER = SVG_SIZE / 2
 
 const CIRC_OUTER = 2 * Math.PI * RADIUS_OUTER
@@ -85,7 +85,7 @@ export function TodayHero({
   const body = (
     <>
       <header className="relative flex items-center justify-between">
-        <h2 className="font-display text-base font-semibold text-foreground">
+        <h2 className="font-display text-sm font-semibold text-foreground">
           {formatDate(new Date(), t.common.locale)}
         </h2>
         <span
@@ -160,19 +160,19 @@ export function TodayHero({
             />
           </svg>
 
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-1 text-center">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
               {t.dashboard.hero.netIntake}
             </span>
             <span
               className={cn(
-                'font-display mt-0.5 text-[34px] font-semibold leading-none tabular-nums',
+                'font-display text-[34px] font-semibold leading-none tabular-nums',
                 overBudget ? 'text-destructive' : 'text-foreground'
               )}
             >
               {displayNet}
             </span>
-            <span className="mt-1 text-[11px] text-muted-foreground">
+            <span className="mt-1 text-[10px] leading-tight text-muted-foreground">
               {overBudget
                 ? t.dashboard.hero.over(displayNet - kcalGoal)
                 : t.dashboard.hero.remaining(Math.max(0, kcalGoal - displayNet))}
@@ -180,7 +180,7 @@ export function TodayHero({
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-1.5">
+        <div className="flex flex-1 flex-col gap-1">
           <Stat
             tone="primary"
             icon={<UtensilsCrossed size={14} />}
@@ -208,7 +208,7 @@ export function TodayHero({
   )
 
   if (embedded) {
-    return <div className="flex flex-col gap-3">{body}</div>
+    return <div className="flex flex-col gap-2.5">{body}</div>
   }
 
   return (
@@ -229,15 +229,22 @@ export function TodayHero({
   )
 }
 
-interface StatProps {
+export interface StatProps {
   tone: 'primary' | 'accent' | 'muted'
   icon: React.ReactNode
   label: string
   value: number
+  /** When set, renders "value / goal unit" (e.g. macros). Omit for plain stats. */
+  goal?: number
   unit: string
 }
 
-function Stat({ tone, icon, label, value, unit }: StatProps) {
+/**
+ * Shared stat row used across the today overview: an icon chip + label + a big
+ * value with a small unit. Exported so the macro rows (TodayMetrics) match the
+ * energy rows exactly, keeping the whole card as one coherent stat list.
+ */
+export function Stat({ tone, icon, label, value, goal, unit }: StatProps) {
   const toneClass =
     tone === 'primary'
       ? 'bg-primary/10 text-primary'
@@ -246,15 +253,17 @@ function Stat({ tone, icon, label, value, unit }: StatProps) {
         : 'bg-secondary text-muted-foreground'
 
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-border/50 bg-card/50 p-2">
-      <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', toneClass)}>
+    <div className="flex items-center gap-2 py-0.5">
+      <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-md', toneClass)}>
         {icon}
       </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[10px] leading-tight text-muted-foreground">{label}</p>
-        <p className="font-display text-base font-semibold tabular-nums leading-tight text-foreground">
+      <div className="flex min-w-0 flex-1 items-baseline justify-between gap-1">
+        <p className="truncate text-[11px] leading-tight text-muted-foreground">{label}</p>
+        <p className="font-display text-[13px] font-semibold tabular-nums leading-tight text-foreground">
           {value}
-          <span className="ml-1 text-[10px] font-normal text-muted-foreground">{unit}</span>
+          <span className="ml-0.5 whitespace-nowrap text-[10px] font-normal text-muted-foreground">
+            {goal != null && goal > 0 ? `/ ${goal} ${unit}` : unit}
+          </span>
         </p>
       </div>
     </div>

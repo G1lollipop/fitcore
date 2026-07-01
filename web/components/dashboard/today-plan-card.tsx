@@ -1,60 +1,75 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ChevronRight, Coffee, Dumbbell, Play } from 'lucide-react'
-import { useCallback, useMemo, useTransition } from 'react'
-import { batchLogWorkouts } from '@/app/actions/logWorkout'
+import { Check, ChevronRight, Coffee, Dumbbell, Loader2, Plus } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { createWorkoutLog } from '@/app/actions/logWorkout'
 import { useToast } from '@/hooks/use-toast'
 import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
 import type { TodayWorkoutInfo } from '@/app/actions/types'
 import { cn } from '@/lib/utils'
 
+type Exercise = NonNullable<TodayWorkoutInfo>['exercises'][number]
+
 interface TodayPlanCardProps {
   info: TodayWorkoutInfo
   userId?: string
-  /** Refresh dashboard after a successful batch log. */
+  /** Refresh dashboard after a successful per-exercise log. */
   onLogged?: () => void
-  /** Jump to the Training tab to view/manage the full plan. */
-  onManage: () => void
+  /** Expand the active plan into the full-week detail sheet. */
+  onExpand?: () => void
+  /** Start the create-a-plan flow when there's no active plan. */
+  onCreate?: () => void
   className?: string
 }
 
 /**
- * Compact "today's plan" card for the home tab.
+ * "Today's plan" card for the home tab.
  *
  * Surfaces the daily slice of the active plan (already present on the dashboard
- * payload) so users don't have to dig into Training → Plans. Keeps it to one or
- * two rows to respect the single-screen home; full details live in Training.
+ * payload) so users don't have to dig into a separate Plans tab. On a workout
+ * day it lists today's exercises with a per-exercise "log" control; tapping the
+ * header expands to the full week (`onExpand`), and the no-plan branch kicks off
+ * plan creation (`onCreate`).
  */
 export function TodayPlanCard({
   info,
   userId,
   onLogged,
-  onManage,
+  onExpand,
+  onCreate,
   className,
 }: TodayPlanCardProps) {
   const t = useT()
   const { toast } = useToast()
-  const [isLogging, startLogging] = useTransition()
+  // Optimistic per-exercise state: which rows are done, and which is in-flight.
+  const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set())
+  const [loggingId, setLoggingId] = useState<string | null>(null)
 
   const exercises = useMemo(() => info?.exercises ?? [], [info])
   const isRest = info?.todayDay?.isRestDay ?? false
 
-  const handleStart = useCallback(() => {
-    if (!userId || exercises.length === 0 || isLogging) return
-    startLogging(async () => {
-      const workouts = exercises.map((e) => ({
-        name: e.text || t.plans.list.workoutDefaultName,
-        sets: e.sets ?? undefined,
-        duration_minutes: 15,
-        calories_burned: Math.round((e.sets ?? 3) * 8),
-      }))
-      const res = await batchLogWorkouts(workouts)
+  const logExercise = useCallback(
+    async (e: Exercise) => {
+      if (!userId || loggingId || loggedIds.has(e.id)) return
+      setLoggingId(e.id)
+      const sets = e.sets ?? null
+      const res = await createWorkoutLog({
+        workout_name: e.text || t.plans.list.workoutDefaultName,
+        sets,
+        // Rough per-exercise estimates; users can correct in History.
+        duration_minutes: 5,
+        calories_burned: Math.round((sets ?? 3) * 8),
+      })
+      setLoggingId(null)
       if (res.success) {
+        setLoggedIds((prev) => new Set(prev).add(e.id))
         toast({
-          title: t.plans.list.workoutStarted,
-          description: t.plans.list.workoutStartedDesc(workouts.length),
+          title: t.dashboard.todayPlan.exerciseLogged,
+          description: t.dashboard.todayPlan.exerciseLoggedDesc(
+            e.text || t.plans.list.workoutDefaultName
+          ),
         })
         onLogged?.()
       } else {
@@ -64,8 +79,9 @@ export function TodayPlanCard({
           description: typeof res.error === 'string' ? tError(t, res.error) : t.plans.list.tryLater,
         })
       }
-    })
-  }, [userId, exercises, isLogging, toast, t, onLogged])
+    },
+    [userId, loggingId, loggedIds, toast, t, onLogged]
+  )
 
   // ── No active plan ──────────────────────────────────────────────────────
   if (!info) {
@@ -73,7 +89,7 @@ export function TodayPlanCard({
       <Shell className={className}>
         <button
           type="button"
-          onClick={onManage}
+          onClick={onCreate}
           className="flex w-full items-center gap-3 text-left"
         >
           <Badge tone="muted">
@@ -95,14 +111,21 @@ export function TodayPlanCard({
       <Shell className={className}>
         <button
           type="button"
-          onClick={onManage}
+          onClick={onExpand}
           className="flex w-full items-center gap-3 text-left"
         >
           <Badge tone="accent">
             <Coffee size={14} />
           </Badge>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground">{t.dashboard.todayPlan.restTitle}</p>
+            <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <span className="shrink-0">{t.dashboard.todayPlan.restTitle}</span>
+              {info.plan?.name && (
+                <span className="truncate text-[11px] font-normal text-muted-foreground">
+                  · {info.plan.name}
+                </span>
+              )}
+            </p>
             <p className="truncate text-[11px] text-muted-foreground">{t.dashboard.todayPlan.restCopy}</p>
           </div>
           <ChevronRight size={16} className="shrink-0 text-muted-foreground" />
@@ -113,45 +136,110 @@ export function TodayPlanCard({
 
   // ── Workout day ─────────────────────────────────────────────────────────
   const dayName = info.todayDay?.name || t.dashboard.todayPlan.trainToday
-  const preview = exercises
-    .slice(0, 2)
-    .map((e) => e.text)
-    .filter(Boolean)
-    .join(' · ')
 
   return (
     <Shell className={className}>
-      <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={onExpand}
+        className="flex w-full items-center gap-3 text-left"
+      >
         <Badge tone="primary">
           <Dumbbell size={14} />
         </Badge>
-        <button type="button" onClick={onManage} className="min-w-0 flex-1 text-left">
+        <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
             <span className="truncate">{dayName}</span>
             <span className="shrink-0 text-[11px] font-normal text-muted-foreground">
               · {t.dashboard.todayPlan.exercisesN(exercises.length)}
             </span>
           </p>
-          <p className="truncate text-[11px] text-muted-foreground">
-            {preview || t.dashboard.todayPlan.viewAll}
-          </p>
-        </button>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-medium text-muted-foreground">
+          {t.dashboard.todayPlan.viewWeek}
+          <ChevronRight size={14} />
+        </span>
+      </button>
 
-        {exercises.length > 0 && (
-          <motion.button
-            type="button"
-            onClick={handleStart}
-            disabled={isLogging || !userId}
-            whileTap={isLogging ? undefined : { scale: 0.96 }}
-            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Play size={12} className={cn(isLogging && 'animate-pulse')} />
-            {isLogging ? t.plans.banner.logging : t.dashboard.todayPlan.start}
-          </motion.button>
-        )}
-      </div>
+      {exercises.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-1.5">
+          {exercises.map((e) => (
+            <ExerciseRow
+              key={e.id}
+              exercise={e}
+              done={loggedIds.has(e.id)}
+              logging={loggingId === e.id}
+              disabled={!userId || (loggingId !== null && loggingId !== e.id)}
+              onLog={() => logExercise(e)}
+            />
+          ))}
+        </ul>
+      )}
     </Shell>
   )
+}
+
+function ExerciseRow({
+  exercise,
+  done,
+  logging,
+  disabled,
+  onLog,
+}: {
+  exercise: Exercise
+  done: boolean
+  logging: boolean
+  disabled: boolean
+  onLog: () => void
+}) {
+  const t = useT()
+  const name = exercise.text || t.plans.list.workoutDefaultName
+  const summary = formatSummary(t, exercise)
+
+  return (
+    <li className="flex items-center gap-2.5 rounded-xl bg-secondary/40 px-2.5 py-1.5">
+      <div className="min-w-0 flex-1">
+        <p className={cn('truncate text-[13px] font-medium text-foreground', done && 'text-muted-foreground line-through')}>
+          {name}
+        </p>
+        {summary && <p className="truncate text-[11px] text-muted-foreground">{summary}</p>}
+      </div>
+      <motion.button
+        type="button"
+        onClick={onLog}
+        disabled={disabled || done || logging}
+        whileTap={disabled || done || logging ? undefined : { scale: 0.92 }}
+        aria-label={done ? t.dashboard.todayPlan.done : t.dashboard.todayPlan.logExerciseAria(name)}
+        className={cn(
+          'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed',
+          done
+            ? 'bg-primary/15 text-primary'
+            : 'bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50'
+        )}
+      >
+        {logging ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : done ? (
+          <Check size={16} />
+        ) : (
+          <Plus size={16} />
+        )}
+      </motion.button>
+    </li>
+  )
+}
+
+/** "3 × 8-12 · 20kg" style summary from the plan slice. */
+function formatSummary(t: ReturnType<typeof useT>, e: Exercise): string {
+  const parts: string[] = []
+  if (e.sets != null && e.repsMin != null) {
+    const reps = t.dashboard.todayPlan.repsRange(e.repsMin, e.repsMax ?? e.repsMin)
+    parts.push(t.dashboard.todayPlan.setsReps(e.sets, reps))
+  } else if (e.sets != null) {
+    parts.push(t.dashboard.todayPlan.setsN(e.sets))
+  }
+  if (e.weight != null) parts.push(`${e.weight}kg`)
+  return parts.join(' · ')
 }
 
 function Shell({ children, className }: { children: React.ReactNode; className?: string }) {

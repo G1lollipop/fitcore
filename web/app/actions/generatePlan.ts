@@ -194,11 +194,19 @@ export async function generateWorkoutPlan(input: GeneratePlanInput) {
     return { success: false, error: built.error };
   }
 
-  return createCustomPlan(built.planData, {
+  const created = await createCustomPlan(built.planData, {
     isAiGenerated: true,
     aiPrompt: goalText,
     aiModelVersion: AI_CHAT_MODEL,
   });
+
+  // Auto-activate the freshly generated plan so "today's workout" on the home
+  // tab reflects it immediately, even if the client forgets to set it current.
+  if (created.success && 'data' in created && created.data?.id) {
+    await setCurrentPlan(created.data.id);
+  }
+
+  return created;
 }
 
 export interface AdjustPlanInput {

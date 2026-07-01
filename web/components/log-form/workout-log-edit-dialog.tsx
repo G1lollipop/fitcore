@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Save } from 'lucide-react'
+import { Loader2, Plus, Save } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -16,14 +16,24 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
-import { updateWorkoutLog } from '@/app/actions/logWorkout'
+import { updateWorkoutLog, createWorkoutLog } from '@/app/actions/logWorkout'
 import type { WorkoutLogItem } from '@/app/actions/types'
 
 interface WorkoutLogEditDialogProps {
-  /** The entry being edited; `null` keeps the dialog closed. */
-  log: WorkoutLogItem | null
+  /** The entry being edited; `null` keeps the dialog closed (edit mode). */
+  log?: WorkoutLogItem | null
+  /**
+   * `'edit'` (default) pre-fills from `log` and persists via `updateWorkoutLog`.
+   * `'create'` starts empty and inserts a new row via `createWorkoutLog`.
+   */
+  mode?: 'edit' | 'create'
+  /** Controls visibility in create mode (edit mode derives it from `log`). */
+  open?: boolean
+  /** Target calendar day (YYYY-MM-DD) for create-mode back-dating. */
+  dateStr?: string
   onClose: () => void
-  onSuccess?: () => void
+  /** In create mode, receives the inserted row so callers can patch caches. */
+  onSuccess?: (created?: WorkoutLogItem) => void
 }
 
 type EditFields = {
@@ -34,29 +44,55 @@ type EditFields = {
   calories_burned: number
 }
 
+const EMPTY_FIELDS: EditFields = {
+  workout_name: '',
+  sets: '',
+  duration_minutes: 0,
+  calories_burned: 0,
+}
+
 /**
- * Shared in-place editor for a single workout entry. Pre-fills from the passed
- * `log` and persists via `updateWorkoutLog` (which recomputes the day's stats).
- * A manual numeric edit — it does not re-run AI parsing.
+ * Shared create + edit form for a single workout entry.
+ *
+ * - Edit mode pre-fills from `log` and persists via `updateWorkoutLog`.
+ * - Create mode starts empty and inserts a new `workout_logs` row via
+ *   `createWorkoutLog` for the passed `dateStr` (so manual entries land on the
+ *   day being viewed).
+ *
+ * Manual numeric entry throughout — it never re-runs AI parsing.
  */
-export function WorkoutLogEditDialog({ log, onClose, onSuccess }: WorkoutLogEditDialogProps) {
+export function WorkoutLogEditDialog({
+  log,
+  mode = 'edit',
+  open,
+  dateStr,
+  onClose,
+  onSuccess,
+}: WorkoutLogEditDialogProps) {
   const t = useT()
   const { toast } = useToast()
+  const isCreate = mode === 'create'
+  const isOpen = isCreate ? !!open : (log ?? null) !== null
+
   const [fields, setFields] = useState<EditFields | null>(null)
   const [saving, setSaving] = useState(false)
 
-  // Sync form state when a new entry is opened — React's "adjust state during
-  // render" pattern, which avoids an extra effect + render pass.
-  const [prevLog, setPrevLog] = useState(log)
-  if (log !== prevLog) {
-    setPrevLog(log)
-    if (log) {
-      setFields({
-        workout_name: log.workout_name,
-        sets: log.sets ?? '',
-        duration_minutes: log.duration_minutes,
-        calories_burned: log.calories_burned,
-      })
+  // Sync form state on the closed→open transition — React's "adjust state
+  // during render" pattern, which avoids an extra effect + render pass.
+  const [prevOpen, setPrevOpen] = useState(isOpen)
+  if (isOpen !== prevOpen) {
+    setPrevOpen(isOpen)
+    if (isOpen) {
+      setFields(
+        isCreate || !log
+          ? { ...EMPTY_FIELDS }
+          : {
+              workout_name: log.workout_name,
+              sets: log.sets ?? '',
+              duration_minutes: log.duration_minutes,
+              calories_burned: log.calories_burned,
+            }
+      )
       setSaving(false)
     }
   }
@@ -66,14 +102,37 @@ export function WorkoutLogEditDialog({ log, onClose, onSuccess }: WorkoutLogEdit
   }
 
   const handleSave = async () => {
-    if (!log || !fields) return
-    setSaving(true)
-    const result = await updateWorkoutLog(log.id, {
-      workout_name: fields.workout_name,
+    if (!fields) return
+    const payload = {
+      workout_name: fields.workout_name.trim(),
       sets: fields.sets === '' ? null : fields.sets,
       duration_minutes: fields.duration_minutes,
       calories_burned: fields.calories_burned,
-    })
+    }
+
+    if (isCreate) {
+      if (!payload.workout_name) return
+      setSaving(true)
+      const result = await createWorkoutLog(payload, dateStr)
+      if (!result.success) {
+        setSaving(false)
+        toast({
+          variant: 'destructive',
+          title: t.logForm.create.createFailed,
+          description: result.error ? tError(t, result.error) : t.logForm.edit.tryLater,
+        })
+        return
+      }
+      onSuccess?.(result.data)
+      toast({ title: t.logForm.create.workoutAdded, description: payload.workout_name })
+      onClose()
+      return
+    }
+
+    // Edit mode.
+    if (!log) return
+    setSaving(true)
+    const result = await updateWorkoutLog(log.id, payload)
     if (!result.success) {
       setSaving(false)
       toast({
@@ -84,40 +143,45 @@ export function WorkoutLogEditDialog({ log, onClose, onSuccess }: WorkoutLogEdit
       return
     }
     onSuccess?.()
-    toast({ title: t.logForm.edit.updated, description: fields.workout_name })
+    toast({ title: t.logForm.edit.updated, description: payload.workout_name })
     onClose()
   }
 
   return (
     <Dialog
-      open={log !== null}
+      open={isOpen}
       onOpenChange={(next) => {
         if (!next && !saving) onClose()
       }}
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t.logForm.edit.workoutTitle}</DialogTitle>
-          <DialogDescription>{t.logForm.edit.workoutDesc}</DialogDescription>
+          <DialogTitle>
+            {isCreate ? t.logForm.create.workoutTitle : t.logForm.edit.workoutTitle}
+          </DialogTitle>
+          <DialogDescription>
+            {isCreate ? t.logForm.create.workoutDesc : t.logForm.edit.workoutDesc}
+          </DialogDescription>
         </DialogHeader>
 
         {fields && (
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label htmlFor="edit-workout-name">{t.logForm.edit.workoutName}</Label>
+              <Label htmlFor="workout-name">{t.logForm.edit.workoutName}</Label>
               <Input
-                id="edit-workout-name"
+                id="workout-name"
                 value={fields.workout_name}
                 onChange={(e) => setField('workout_name', e.target.value)}
                 disabled={saving}
+                autoFocus={isCreate}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label htmlFor="edit-sets">{t.logForm.edit.sets}</Label>
+                <Label htmlFor="workout-sets">{t.logForm.edit.sets}</Label>
                 <Input
-                  id="edit-sets"
+                  id="workout-sets"
                   type="number"
                   inputMode="numeric"
                   value={fields.sets}
@@ -131,9 +195,9 @@ export function WorkoutLogEditDialog({ log, onClose, onSuccess }: WorkoutLogEdit
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="edit-duration">{t.logForm.edit.duration}</Label>
+                <Label htmlFor="workout-duration">{t.logForm.edit.duration}</Label>
                 <Input
-                  id="edit-duration"
+                  id="workout-duration"
                   type="number"
                   inputMode="numeric"
                   value={fields.duration_minutes}
@@ -144,9 +208,9 @@ export function WorkoutLogEditDialog({ log, onClose, onSuccess }: WorkoutLogEdit
                 />
               </div>
               <div className="col-span-2 space-y-1">
-                <Label htmlFor="edit-burned">{t.logForm.edit.burned}</Label>
+                <Label htmlFor="workout-burned">{t.logForm.edit.burned}</Label>
                 <Input
-                  id="edit-burned"
+                  id="workout-burned"
                   type="number"
                   inputMode="numeric"
                   value={fields.calories_burned}
@@ -164,9 +228,19 @@ export function WorkoutLogEditDialog({ log, onClose, onSuccess }: WorkoutLogEdit
           <Button variant="outline" onClick={onClose} disabled={saving}>
             {t.common.cancel}
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {t.logForm.edit.save}
+          <Button
+            onClick={handleSave}
+            disabled={saving || (isCreate && !fields?.workout_name.trim())}
+            className="gap-2"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isCreate ? (
+              <Plus className="h-4 w-4" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {isCreate ? t.logForm.create.save : t.logForm.edit.save}
           </Button>
         </DialogFooter>
       </DialogContent>

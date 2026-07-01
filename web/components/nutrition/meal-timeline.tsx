@@ -280,7 +280,7 @@ function MealRow({ log, userId, onChange, onEdit, accent }: MealRowProps) {
         onClick={() => onEdit(log)}
         disabled={!userId || isPending || log.pending}
         aria-label={t.nutrition.editAria(log.food_name)}
-        className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:w-9"
       >
         <Pencil size={14} />
       </button>
@@ -289,7 +289,7 @@ function MealRow({ log, userId, onChange, onEdit, accent }: MealRowProps) {
         onClick={handleDelete}
         disabled={!userId || isPending || log.pending}
         aria-label={t.nutrition.deleteAria(log.food_name)}
-        className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:w-9"
       >
         <Trash2 size={14} />
       </button>

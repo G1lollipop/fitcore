@@ -6,7 +6,11 @@ import { createModuleLogger } from '@/lib/logger';
 import { authedUserId } from '@/lib/auth/require-user';
 import { planMetaSchema, firstZodError } from '@/lib/validation/schemas';
 import { ActionError } from '@/lib/errors';
-import { emptyPlanStructure, type PlanStructure } from '@/lib/plans/types';
+import {
+  emptyPlanStructure,
+  normalizePlanStructure,
+  type PlanStructure,
+} from '@/lib/plans/types';
 
 type WorkoutPlanInsert = Database['public']['Tables']['workout_plans']['Insert'];
 
@@ -144,6 +148,46 @@ export async function updatePlan(
     return { success: true, data };
   } catch (error) {
     planLogger.error('Error updating plan', { error: String(error), planId });
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
+ * Overwrite a plan's whole day/exercise body (`workout_plans.structure`). The
+ * incoming structure is normalized to a well-formed 7-day (Mon–Sun) shape and
+ * `frequency_per_week` is recomputed from the training-day count so metadata
+ * stays in sync with the edited body. Ownership is validated like other writes.
+ */
+export async function updatePlanStructure(planId: string, structure: PlanStructure) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+  const ownerCheck = await assertPlanOwner(planId, a.userId);
+  if (ownerCheck) return ownerCheck;
+  try {
+    planLogger.info('Updating plan structure', { planId });
+
+    const normalized = normalizePlanStructure(structure);
+    const trainingDays = normalized.days.filter((d) => !d.rest_day).length;
+
+    const { data, error } = await supabase
+      .from('workout_plans')
+      .update({
+        structure: normalized as unknown as Json,
+        frequency_per_week: trainingDays || 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', planId)
+      .select(PLAN_COLUMNS)
+      .single();
+
+    if (error) {
+      planLogger.error('Failed to update plan structure', { error: error.message, planId });
+      throw new Error(error.message);
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    planLogger.error('Error updating plan structure', { error: String(error), planId });
     return { success: false, error: String(error) };
   }
 }

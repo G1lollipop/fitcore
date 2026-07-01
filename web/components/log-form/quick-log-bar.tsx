@@ -2,7 +2,7 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CornerDownLeft, Sparkles, X } from 'lucide-react'
+import { CornerDownLeft, Mic, Sparkles, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { useQuickLog } from '@/hooks/use-quick-log'
@@ -10,6 +10,7 @@ import { useT } from '@/lib/i18n/provider'
 import { tError, type Dictionary } from '@/lib/i18n'
 import { quickLog, type QuickLogResult } from '@/app/actions/quickLog'
 import { useDashboardActions } from '@/lib/queries/dashboard'
+import { useSpeechInput } from '@/lib/hooks/use-speech-input'
 import { cn } from '@/lib/utils'
 
 /**
@@ -26,6 +27,7 @@ export function QuickLogBar() {
   const t = useT()
   const { applyQuickLogItems } = useDashboardActions()
   const inputRef = useRef<HTMLInputElement>(null)
+  const speechBaseRef = useRef('')
 
   const [text, setText] = useState('')
   const [recents, setRecents] = useState<string[]>([])
@@ -82,6 +84,35 @@ export function QuickLogBar() {
     })()
   }, [text, userId, toast, onLogged, setOpen, t, applyQuickLogItems])
 
+  const speech = useSpeechInput({
+    lang: t.common.locale,
+    onTranscript: (transcript) => {
+      const base = speechBaseRef.current
+      setText(base ? `${base} ${transcript}`.trim() : transcript)
+    },
+    onError: (error) => {
+      if (error === 'no-speech' || error === 'aborted') return
+      toast({
+        variant: 'destructive',
+        title: t.logForm.quick.micError,
+        description:
+          error === 'not-allowed' || error === 'service-not-allowed'
+            ? t.logForm.quick.micDenied
+            : undefined,
+      })
+    },
+  })
+
+  const toggleMic = useCallback(() => {
+    if (speech.listening) {
+      speech.stop()
+      return
+    }
+    speechBaseRef.current = text.trim()
+    speech.start()
+    inputRef.current?.focus()
+  }, [speech, text])
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -126,6 +157,9 @@ export function QuickLogBar() {
                   onSubmit={handleSubmit}
                   onKeyDown={onKeyDown}
                   disabled={!userId}
+                  micSupported={speech.supported}
+                  listening={speech.listening}
+                  onToggleMic={toggleMic}
                   t={t}
                 />
 
@@ -180,10 +214,24 @@ interface InputRowProps {
   onSubmit: () => void
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
   disabled?: boolean
+  micSupported?: boolean
+  listening?: boolean
+  onToggleMic?: () => void
   t: Dictionary
 }
 
-function InputRow({ inputRef, value, onChange, onSubmit, onKeyDown, disabled, t }: InputRowProps) {
+function InputRow({
+  inputRef,
+  value,
+  onChange,
+  onSubmit,
+  onKeyDown,
+  disabled,
+  micSupported,
+  listening,
+  onToggleMic,
+  t,
+}: InputRowProps) {
   return (
     <div className="relative px-4 pt-4 pb-3">
       <div
@@ -202,9 +250,26 @@ function InputRow({ inputRef, value, onChange, onSubmit, onKeyDown, disabled, t 
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
           disabled={disabled}
-          placeholder={t.logForm.quick.placeholder}
+          placeholder={listening ? t.logForm.quick.micListening : t.logForm.quick.placeholder}
           className="flex-1 bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/70"
         />
+        {micSupported && onToggleMic && (
+          <button
+            type="button"
+            onClick={onToggleMic}
+            disabled={disabled}
+            aria-label={listening ? t.logForm.quick.micStop : t.logForm.quick.micStart}
+            aria-pressed={listening}
+            className={cn(
+              'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors',
+              listening
+                ? 'bg-destructive/15 text-destructive'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+            )}
+          >
+            <Mic size={15} className={listening ? 'animate-pulse' : undefined} />
+          </button>
+        )}
         <button
           type="button"
           onClick={onSubmit}

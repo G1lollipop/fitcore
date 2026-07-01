@@ -24,20 +24,18 @@ export function CoachAskBar({ className }: CoachAskBarProps) {
       type="button"
       onClick={() => coach.open()}
       className={cn(
-        'glass glass-highlight group relative flex items-center gap-3 overflow-hidden rounded-2xl border-primary/30 bg-primary/[0.05] px-4 py-3 text-left transition-colors hover:bg-primary/[0.08]',
+        // Intentionally lighter than the Quick Log bar: a slim, single-line
+        // secondary entry (no glass card, no filled tint) so logging stays the
+        // visual protagonist in the thumb zone.
+        'group flex min-h-11 w-full items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-left text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground',
         className
       )}
     >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-        <Sparkles size={16} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold leading-tight text-foreground">{t.aiChat.home.title}</p>
-        <p className="truncate text-[11px] text-muted-foreground">{t.aiChat.home.subtitle}</p>
-      </div>
+      <Sparkles size={15} className="shrink-0 text-primary" />
+      <span className="min-w-0 flex-1 truncate text-xs font-medium">{t.aiChat.home.title}</span>
       <ArrowRight
-        size={16}
-        className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+        size={14}
+        className="shrink-0 transition-transform group-hover:translate-x-0.5"
       />
     </button>
   )
