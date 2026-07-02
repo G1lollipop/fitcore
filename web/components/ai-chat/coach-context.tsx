@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import type { PlanPreviewPayload } from '@/lib/plans/types'
 
 interface CoachContextValue {
   isOpen: boolean
@@ -20,6 +21,12 @@ interface CoachContextValue {
    * opening so the prompt is sent exactly once.
    */
   consumePrompt: () => string | null
+  /** Active plan preview waiting for user confirmation in the plan detail sheet. */
+  planPreview: PlanPreviewPayload | null
+  /** Show a plan preview in the plan detail sheet. */
+  openPlanPreview: (preview: PlanPreviewPayload) => void
+  /** Dismiss the active plan preview. */
+  clearPlanPreview: () => void
 }
 
 const CoachContext = createContext<CoachContextValue | null>(null)
@@ -31,6 +38,7 @@ const CoachContext = createContext<CoachContextValue | null>(null)
  */
 export function CoachProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [planPreview, setPlanPreview] = useState<PlanPreviewPayload | null>(null)
   const pendingPrompt = useRef<string | null>(null)
 
   const open = useCallback((prompt?: string) => {
@@ -46,9 +54,25 @@ export function CoachProvider({ children }: { children: ReactNode }) {
     return p
   }, [])
 
+  const openPlanPreview = useCallback((preview: PlanPreviewPayload) => {
+    setPlanPreview(preview)
+  }, [])
+
+  const clearPlanPreview = useCallback(() => {
+    setPlanPreview(null)
+  }, [])
+
   const value = useMemo(
-    () => ({ isOpen, open, close, consumePrompt }),
-    [isOpen, open, close, consumePrompt]
+    () => ({
+      isOpen,
+      open,
+      close,
+      consumePrompt,
+      planPreview,
+      openPlanPreview,
+      clearPlanPreview,
+    }),
+    [isOpen, open, close, consumePrompt, planPreview, openPlanPreview, clearPlanPreview]
   )
 
   return <CoachContext.Provider value={value}>{children}</CoachContext.Provider>

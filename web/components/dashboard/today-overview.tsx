@@ -67,7 +67,7 @@ export function TodayOverview({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        'glass glass-highlight relative overflow-hidden rounded-2xl p-4',
+        'glass glass-highlight relative overflow-hidden rounded-2xl p-3 md:p-4',
         className
       )}
     >
@@ -85,8 +85,8 @@ export function TodayOverview({
       {/* Macros continue the same stat-row language as the energy stats above,
           so the ring + all six stats read as one list. Targets are editable
           inline right where the goals are shown. */}
-      <div className="relative mt-3 border-t border-border/50 pt-3">
-        <div className="mb-2 flex items-center justify-between">
+      <div className="relative mt-2 border-t border-border/50 pt-2 md:mt-3 md:pt-3">
+        <div className="mb-1.5 flex items-center justify-between md:mb-2">
           <span className="text-[11px] font-medium text-muted-foreground">
             {t.dashboard.targets.label}
           </span>
@@ -118,7 +118,7 @@ export function TodayOverview({
         onClick={() => setDietOpen((v) => !v)}
         aria-expanded={dietOpen}
         aria-label={dietOpen ? t.dashboard.overview.collapse : t.dashboard.overview.expand}
-        className="relative mt-3 flex w-full items-center justify-between rounded-xl border border-border/50 bg-card/40 px-3 py-2.5 text-left transition-colors hover:border-primary/40"
+        className="relative mt-3 flex w-full items-center justify-between rounded-xl border border-border/50 bg-card/40 px-3 py-2 text-left transition-colors hover:border-primary/40 md:py-2.5"
       >
         <span className="inline-flex items-center gap-2 text-xs font-medium text-foreground">
           <UtensilsCrossed size={14} className="text-primary" aria-hidden />

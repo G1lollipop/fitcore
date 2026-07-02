@@ -20,8 +20,9 @@ interface MobileTabBarProps {
  *
  * The account avatar (`AccountMenu`) is rendered inline as the leftmost
  * element inside the pill, followed by a thin divider, so the bottom chrome is
- * one clean centered cluster that never overlaps card content. The pill must
- * NOT use `overflow-hidden` so the account dropdown can escape upward.
+ * one clean centered cluster that never overlaps card content. The pill now
+ * uses `overflow-hidden` for clean rounded corners because the avatar opens
+ * the Settings sheet instead of an escaping dropdown.
  *
  * Active tab gets a solid primary pill; inactive tabs are muted. Memoized
  * tab items so toggling the active id only re-renders two items.
@@ -33,7 +34,7 @@ export function MobileTabBar({ activeNav, onNavChange, userName }: MobileTabBarP
       aria-label={t.sidebar.mainNav}
       className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40"
     >
-      <div className="glass flex items-center gap-1 rounded-full px-1.5 py-1.5">
+      <div className="glass flex items-center gap-1 overflow-hidden rounded-full px-1.5 py-1.5">
         <AccountMenu userName={userName} />
         <span className="mx-0.5 h-5 w-px bg-border/60" />
         {NAV_ITEMS.map((item) => (

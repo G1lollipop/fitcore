@@ -94,7 +94,7 @@ function MobileSheet({
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ duration: 0.32, ease: PANEL_EASE }}
-      className="glass-strong fixed inset-0 z-50 flex flex-col md:hidden"
+      className="glass-strong fixed inset-0 z-50 flex flex-col shadow-2xl md:hidden"
     >
       <ChatHeader
         compact={false}
@@ -164,7 +164,8 @@ function DesktopDock({
       exit={{ x: '100%', opacity: 0 }}
       transition={{ duration: 0.32, ease: PANEL_EASE }}
       className={cn(
-        'glass-strong fixed inset-y-0 right-0 z-50 hidden w-full max-w-[420px] flex-col shadow-2xl',
+        'glass-strong fixed inset-y-0 right-0 z-50 hidden w-full max-w-[420px] flex-col',
+        'rounded-l-2xl border-l border-border/60 shadow-[0_0_60px_-12px_rgba(0,0,0,0.25)]',
         'md:flex'
       )}
     >
@@ -224,7 +225,7 @@ function IconButton({ onClick, ariaLabel, tone = 'default', children }: IconButt
       onClick={onClick}
       aria-label={ariaLabel}
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-secondary/80 text-muted-foreground transition-all hover:border-primary/30',
+        'flex h-8 w-8 items-center justify-center rounded-xl border border-border/70 bg-secondary/60 text-muted-foreground transition-all hover:border-primary/30 hover:bg-secondary',
         tone === 'destructive' ? 'hover:text-destructive' : 'hover:text-foreground'
       )}
     >

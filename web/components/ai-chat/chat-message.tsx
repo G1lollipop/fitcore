@@ -21,19 +21,20 @@ export function ChatMessage({ msg }: ChatMessageProps) {
   const isUser = msg.role === 'user'
 
   return (
-    <div className={cn('flex gap-2', isUser ? 'flex-row-reverse' : 'flex-row')}>
+    <div className={cn('flex gap-2.5', isUser ? 'flex-row-reverse' : 'flex-row')}>
       {!isUser && (
-        <div className="shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
-          <Bot size={12} className="text-primary" />
+        <div className="shrink-0 w-7 h-7 rounded-xl bg-gradient-to-br from-primary/25 to-accent/20 flex items-center justify-center mt-0.5 shadow-sm">
+          <Bot size={13} className="text-primary" />
         </div>
       )}
-      <div className={cn('flex flex-col gap-0.5', isUser ? 'items-end' : 'items-start')}>
+      <div className={cn('flex flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
         <div
           className={cn(
-            'px-3 py-2.5 rounded-2xl text-[13px] leading-relaxed max-w-[320px] whitespace-pre-line',
+            'px-3.5 py-2.5 text-[13px] leading-relaxed max-w-[320px] whitespace-pre-line shadow-sm',
+            'rounded-2xl',
             isUser
-              ? 'bg-primary text-primary-foreground rounded-tr-sm'
-              : 'bg-secondary text-foreground rounded-tl-sm'
+              ? 'bg-primary text-primary-foreground rounded-tr-md'
+              : 'glass-highlight bg-card/70 text-foreground border border-border/50 rounded-tl-md backdrop-blur-sm'
           )}
           // Announce assistant replies (including streamed updates) to screen
           // readers; user messages don't need to be re-read.
@@ -44,7 +45,10 @@ export function ChatMessage({ msg }: ChatMessageProps) {
           {msg.isStreaming && (
             <span
               aria-hidden="true"
-              className="inline-block w-0.5 h-3.5 bg-foreground/60 ml-0.5 align-middle animate-pulse"
+              className={cn(
+                'inline-block w-0.5 h-3.5 ml-0.5 align-middle animate-pulse',
+                isUser ? 'bg-primary-foreground/70' : 'bg-foreground/60'
+              )}
             />
           )}
         </div>
@@ -69,7 +73,7 @@ function AssistantMeta({ msg }: { msg: Message }) {
         <div className="flex flex-wrap items-center gap-1.5 px-1 max-w-[320px]">
           {msg.mode && (
             <span
-              className="text-[10px] rounded-md border border-border bg-background/80 px-1.5 py-0.5 text-muted-foreground shrink-0"
+              className="text-[10px] rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-primary font-medium shrink-0"
               title={msg.toolsUsed?.length ? t.aiChat.tools(msg.toolsUsed.join(', ')) : undefined}
             >
               {t.aiChat.modeLabel[msg.mode]}
@@ -114,7 +118,7 @@ function FeedbackButtons({ msg }: { msg: Message }) {
   }
 
   return (
-    <div className="flex items-center gap-1 px-1" aria-live="polite">
+    <div className="flex items-center gap-0.5 px-1" aria-live="polite">
       <button
         type="button"
         onClick={() => send(1)}
@@ -123,8 +127,8 @@ function FeedbackButtons({ msg }: { msg: Message }) {
         aria-label={t.aiChat.feedback.helpful}
         title={t.aiChat.feedback.helpful}
         className={cn(
-          'rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50',
-          rating === 1 && 'text-primary'
+          'rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50',
+          rating === 1 && 'bg-primary/10 text-primary'
         )}
       >
         <ThumbsUp size={12} />
@@ -137,14 +141,14 @@ function FeedbackButtons({ msg }: { msg: Message }) {
         aria-label={t.aiChat.feedback.notHelpful}
         title={t.aiChat.feedback.notHelpful}
         className={cn(
-          'rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50',
-          rating === -1 && 'text-destructive'
+          'rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50',
+          rating === -1 && 'bg-destructive/10 text-destructive'
         )}
       >
         <ThumbsDown size={12} />
       </button>
       {rating !== null && (
-        <span className="text-[10px] text-muted-foreground">
+        <span className="ml-1 text-[10px] text-muted-foreground">
           {t.aiChat.feedback.thanks}
         </span>
       )}

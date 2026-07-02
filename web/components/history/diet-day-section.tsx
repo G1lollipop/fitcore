@@ -1,11 +1,22 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, Mic, PencilLine, Sparkles } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Camera, ChevronDown, Mic, PencilLine, Sparkles } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { logFood } from '@/app/actions/logFood'
 import { getNutritionByDate, type NutritionDayData } from '@/app/actions/history'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { useToast } from '@/hooks/use-toast'
 import { sumMacros, macroProgressBundle } from '@/lib/metrics/macros'
 import { cn } from '@/lib/utils'
@@ -28,19 +39,57 @@ interface DietDaySectionProps {
   date: Date
   userId?: string
   onChange?: () => void
+  weekData?: Record<string, NutritionDayData>
+  isLoadingWeek?: boolean
 }
 
 const DEFAULT_GOALS = { calories: 2500, protein: 150, carbs: 300, fat: 80 }
 
 const toDateStr = toLocalDateStr
 
+function buildWeekChartData(
+  todayStr: string,
+  weekData: Record<string, NutritionDayData> | undefined
+) {
+  const data: Array<{
+    date: string
+    label: string
+    calories: number
+    protein: number
+    carbs: number
+    fat: number
+    goal: number
+  }> = []
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(`${todayStr}T12:00:00`)
+    date.setDate(date.getDate() - i)
+    const dateStr = toLocalDateStr(date)
+    const day = weekData?.[dateStr]
+    const totals = sumMacros(day?.dietLogs ?? [])
+    data.push({
+      date: dateStr,
+      label: date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
+      calories: totals.calories,
+      protein: totals.protein,
+      carbs: totals.carbs,
+      fat: totals.fat,
+      goal: day?.goals.calories ?? DEFAULT_GOALS.calories,
+    })
+  }
+  return data
+}
+
 /**
- * The nutrition slice of the History page for a single (parent-controlled) day:
- * macro ring + add-food + meal timeline. Past and current days are editable;
- * future days are read-only. Extracted from the old standalone Nutrition tab so
- * it can stack with the training section under one shared date.
+ * Compact, expandable nutrition card for the Record page. Tapping the card
+ * opens a bottom sheet with the full meal timeline and 7-day macro trend charts.
  */
-export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) {
+export function DietDaySection({
+  date,
+  userId,
+  onChange,
+  weekData,
+  isLoadingWeek,
+}: DietDaySectionProps) {
   const { toast } = useToast()
   const t = useT()
   const qc = useQueryClient()
@@ -49,13 +98,26 @@ export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) 
   const [inputText, setInputText] = useState('')
   const [pendingCount, setPendingCount] = useState(0)
   const [manualOpen, setManualOpen] = useState(false)
-  // Text captured when dictation starts, so speech appends to it.
+  const [expanded, setExpanded] = useState(false)
   const speechBaseRef = useRef('')
 
   const dateStr = toDateStr(date)
   const isFuture = date > new Date() && date.toDateString() !== new Date().toDateString()
   const addingToday = dateStr === toDateStr(new Date())
   const nutritionKey = ['nutrition', dateStr] as const
+
+  const rangeData = weekData?.[dateStr]
+  const { data: fetchedData } = useQuery({
+    queryKey: ['nutrition', dateStr],
+    queryFn: () => getNutritionByDate(dateStr),
+    enabled: !!userId && !isLoadingWeek && !rangeData,
+  })
+  const data = rangeData ?? fetchedData
+  const goals = data?.goals ?? DEFAULT_GOALS
+  const dietData = useMemo(() => data?.dietLogs ?? [], [data])
+
+  const todayStr = toDateStr(new Date())
+  const chartData = useMemo(() => buildWeekChartData(todayStr, weekData), [todayStr, weekData])
 
   const speech = useSpeechInput({
     lang: t.common.locale,
@@ -85,30 +147,15 @@ export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) 
     speech.start()
   }
 
-  const { data, isLoading: loading } = useQuery({
-    queryKey: nutritionKey,
-    queryFn: () => getNutritionByDate(dateStr),
-    enabled: !!userId,
-  })
-  const goals = data?.goals ?? DEFAULT_GOALS
-  const dietData = useMemo(() => data?.dietLogs ?? [], [data])
-
-  /** Patch the cached day's diet logs (optimistic add / swap / rollback). */
   const patchLogs = (fn: (logs: DietLogItem[]) => DietLogItem[]) =>
     qc.setQueryData<NutritionDayData>(nutritionKey, (old) => ({
       goals: old?.goals ?? DEFAULT_GOALS,
       dietLogs: fn(old?.dietLogs ?? []),
     }))
 
-  // Non-blocking: drop an optimistic `pending` placeholder, clear the input so
-  // the user can keep adding, and reconcile in the background when the parse
-  // resolves. The input is never frozen while the model runs.
   const handleAddFood = () => {
     const text = inputText.trim()
     if (!text || !userId) return
-
-    const todayStr = toDateStr(new Date())
-    const addingToday = dateStr === todayStr
 
     const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     const placeholder: DietLogItem = {
@@ -132,6 +179,7 @@ export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) 
           const saved = result.data
           patchLogs((logs) => logs.map((d) => (d.id === tempId ? saved : d)))
           if (addingToday) applyDietLog(saved)
+          void qc.invalidateQueries({ queryKey: ['nutrition', 'range'] })
           onChange?.()
           toast({ title: t.nutrition.logSuccess, description: t.nutrition.added(saved.food_name) })
         } else {
@@ -148,12 +196,11 @@ export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) 
     })()
   }
 
-  // Manual structured create resolved server-side already: splice the real row
-  // into the day cache, patch today's dashboard rings when relevant, reconcile.
   const handleManualCreated = (created?: DietLogItem) => {
     if (!created) return
     patchLogs((logs) => [...logs, created])
     if (dateStr === toDateStr(new Date())) applyDietLog(created)
+    void qc.invalidateQueries({ queryKey: ['nutrition', 'range'] })
     onChange?.()
   }
 
@@ -161,88 +208,168 @@ export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) 
   const progress = useMemo(() => macroProgressBundle(totals, goals), [totals, goals])
   const timelineUserId = isFuture ? undefined : userId
 
-  if (loading) {
-    return <Skeleton className="h-56 w-full rounded-2xl" />
+  if (isLoadingWeek) {
+    return <Skeleton className="h-28 w-full rounded-2xl" />
   }
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="glass glass-highlight rounded-2xl p-4 sm:p-5"
-    >
-      <header className="mb-3 flex items-baseline justify-between">
-        <h3 className="font-display text-base font-semibold text-foreground">
-          {t.history.dietTitle}
-        </h3>
-      </header>
+    <Sheet open={expanded} onOpenChange={setExpanded}>
+      <SheetTrigger asChild>
+        <motion.button
+          type="button"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="glass glass-highlight block w-full rounded-2xl p-3 text-left"
+          aria-label={t.history.expandAria}
+        >
+          <div className="flex w-full items-center justify-between">
+            <div>
+              <h3 className="font-display text-sm font-semibold text-foreground">{t.history.dietTitle}</h3>
+              <p className="text-[11px] text-muted-foreground">{t.history.tapToExpand}</p>
+            </div>
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary/60 text-muted-foreground">
+              <ChevronDown size={14} />
+            </div>
+          </div>
 
-      {/* Compact macro strip (replaces the large radial chart). */}
-      <div className="mb-3 grid grid-cols-4 gap-2">
-        {(['calories', 'protein', 'carbs', 'fat'] as MacroKey[]).map((key) => {
-          const p = progress[key]
-          return (
-            <div key={key} className="rounded-xl border border-border/50 bg-card/40 p-2">
-              <p className="truncate text-[10px] text-muted-foreground">{t.nutrition.rings[key]}</p>
-              <p className="font-display text-sm font-semibold leading-tight tabular-nums text-foreground">
-                {p.current}
-                <span className="text-[10px] font-normal text-muted-foreground">
-                  /{p.target}
-                  {MACRO_UNITS[key]}
-                </span>
-              </p>
-              <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-secondary">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${Math.min(100, p.pct)}%` }}
-                />
+          {/* Compact macro summary */}
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {(['calories', 'protein', 'carbs', 'fat'] as MacroKey[]).map((key) => {
+              const p = progress[key]
+              return (
+                <div key={key} className="rounded-xl border border-border/50 bg-card/40 p-2">
+                  <p className="truncate text-[10px] text-muted-foreground">{t.nutrition.rings[key]}</p>
+                  <p className="font-display text-sm font-semibold leading-tight tabular-nums text-foreground">
+                    {p.current}
+                    <span className="text-[10px] font-normal text-muted-foreground">
+                      /{p.target}
+                      {MACRO_UNITS[key]}
+                    </span>
+                  </p>
+                  <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-secondary">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, p.pct)}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </motion.button>
+      </SheetTrigger>
+
+      <SheetContent side="bottom" className="h-[85dvh] rounded-t-2xl p-0">
+        <div className="flex h-full flex-col">
+          <SheetHeader className="px-4 pt-5 pb-2">
+            <SheetTitle className="font-display text-lg">
+              {date.toLocaleDateString(t.common.locale, {
+                month: 'short',
+                day: 'numeric',
+                weekday: 'short',
+              })}
+              {' · '}{t.history.dietTitle}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-6">
+            {/* Calories trend */}
+            <div className="rounded-2xl border border-border/50 bg-card/40 p-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">{t.history.last7Days} · {t.history.caloriesTrend}</p>
+              <div className="h-40 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                    <CartesianGrid stroke="var(--border)" vertical={false} strokeDasharray="3 3" />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
+                      contentStyle={{
+                        backgroundColor: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '0.75rem',
+                        fontSize: '12px',
+                      }}
+                      labelStyle={{ color: 'var(--foreground)' }}
+                    />
+                    <ReferenceLine y={goals.calories} stroke="var(--muted-foreground)" strokeDasharray="4 4" />
+                    <Bar dataKey="calories" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
-          )
-        })}
-      </div>
 
-      <div className="flex items-stretch gap-2">
-        <div className="min-w-0 flex-1">
-          <AddFoodInput
-            t={t}
-            value={inputText}
-            onChange={setInputText}
-            onSubmit={handleAddFood}
-            busy={pendingCount > 0}
-            disabled={isFuture}
-            micSupported={speech.supported}
-            listening={speech.listening}
-            onMic={toggleMic}
-            showPhoto={addingToday && !isFuture}
-            onPhoto={openPicker}
-          />
+            {/* Macros trend */}
+            <div className="rounded-2xl border border-border/50 bg-card/40 p-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">{t.history.last7Days} · {t.history.macroTrend}</p>
+              <div className="h-40 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                    <CartesianGrid stroke="var(--border)" vertical={false} strokeDasharray="3 3" />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
+                      contentStyle={{
+                        backgroundColor: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '0.75rem',
+                        fontSize: '12px',
+                      }}
+                      labelStyle={{ color: 'var(--foreground)' }}
+                    />
+                    <Bar dataKey="protein" stackId="a" fill="var(--chart-2)" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="carbs" stackId="a" fill="var(--chart-3)" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="fat" stackId="a" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Add input */}
+            <div className="flex items-stretch gap-2">
+              <div className="min-w-0 flex-1">
+                <AddFoodInput
+                  t={t}
+                  value={inputText}
+                  onChange={setInputText}
+                  onSubmit={handleAddFood}
+                  busy={pendingCount > 0}
+                  disabled={isFuture}
+                  micSupported={speech.supported}
+                  listening={speech.listening}
+                  onMic={toggleMic}
+                  showPhoto={addingToday && !isFuture}
+                  onPhoto={openPicker}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setManualOpen(true)}
+                disabled={isFuture}
+                aria-label={t.logForm.manual.foodAria}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 px-0 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <PencilLine size={16} aria-hidden />
+              </button>
+            </div>
+
+            {/* Meal timeline */}
+            <div className="max-h-[34vh] overflow-y-auto overflow-x-hidden rounded-xl pr-1">
+              <AnimatePresence mode="popLayout">
+                <MealTimeline
+                  key={dateStr}
+                  logs={dietData}
+                  userId={timelineUserId}
+                  onChange={() => {
+                    void qc.invalidateQueries({ queryKey: nutritionKey })
+                    void qc.invalidateQueries({ queryKey: ['nutrition', 'range'] })
+                    onChange?.()
+                  }}
+                />
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setManualOpen(true)}
-          disabled={isFuture}
-          aria-label={t.logForm.manual.foodAria}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 px-0 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <PencilLine size={16} aria-hidden />
-        </button>
-      </div>
-
-      <div className="mt-3 max-h-[44vh] overflow-y-auto overflow-x-hidden rounded-xl pr-1">
-        <AnimatePresence mode="popLayout">
-            <MealTimeline
-              key={dateStr}
-              logs={dietData}
-              userId={timelineUserId}
-              onChange={() => {
-                void qc.invalidateQueries({ queryKey: nutritionKey })
-                onChange?.()
-              }}
-            />
-        </AnimatePresence>
-      </div>
+      </SheetContent>
 
       <DietLogEditDialog
         mode="create"
@@ -251,7 +378,7 @@ export function DietDaySection({ date, userId, onChange }: DietDaySectionProps) 
         onClose={() => setManualOpen(false)}
         onSuccess={handleManualCreated}
       />
-    </motion.section>
+    </Sheet>
   )
 }
 
@@ -260,13 +387,11 @@ interface AddFoodInputProps {
   value: string
   onChange: (v: string) => void
   onSubmit: () => void
-  /** At least one parse is in flight — shown as a hint, never blocks input. */
   busy: boolean
   disabled?: boolean
   micSupported?: boolean
   listening?: boolean
   onMic?: () => void
-  /** Photo logs to today only, so it's hidden when viewing other days. */
   showPhoto?: boolean
   onPhoto?: () => void
 }

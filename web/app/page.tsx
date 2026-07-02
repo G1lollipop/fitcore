@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createAuthServerClient } from '@/lib/supabase/server'
 import { DashboardClient } from '@/components/dashboard/dashboard-client'
+import { CoachProvider } from '@/components/ai-chat/coach-context'
 import { getDashboardData } from '@/app/actions/dashboard'
 import { resolveDisplayName } from '@/lib/auth/display-name'
 
@@ -24,10 +25,12 @@ export default async function DashboardPage() {
   const userName = resolveDisplayName(user)
 
   return (
-    <DashboardClient
-      userId={user.id}
-      userName={userName}
-      initialDashboardData={dashboardData}
-    />
+    <CoachProvider>
+      <DashboardClient
+        userId={user.id}
+        userName={userName}
+        initialDashboardData={dashboardData}
+      />
+    </CoachProvider>
   )
 }

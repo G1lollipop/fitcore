@@ -170,6 +170,7 @@ export async function POST(request: Request) {
               persisted,
               loggedActivity: result.loggedActivity,
               assistantMessageId: assistantMessageId ?? undefined,
+              planPreview: result.planPreview,
             },
           })
         )

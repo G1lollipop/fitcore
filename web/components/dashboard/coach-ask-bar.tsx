@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowRight, Bot } from 'lucide-react'
 import { useCoach } from '@/components/ai-chat/coach-context'
 import { useT } from '@/lib/i18n/provider'
 import { cn } from '@/lib/utils'
@@ -24,18 +24,32 @@ export function CoachAskBar({ className }: CoachAskBarProps) {
       type="button"
       onClick={() => coach.open()}
       className={cn(
-        // Intentionally lighter than the Quick Log bar: a slim, single-line
-        // secondary entry (no glass card, no filled tint) so logging stays the
-        // visual protagonist in the thumb zone.
-        'group flex min-h-11 w-full items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-left text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground',
+        // Secondary to the Quick Log bar: a slim, glassy card with a subtle
+        // aurora tint so it feels like part of the home screen family without
+        // competing with logging for attention.
+        'group relative flex min-h-11 w-full items-center gap-3 overflow-hidden rounded-2xl',
+        'border border-border/60 bg-card/50 px-3 py-2.5 text-left text-foreground',
+        'backdrop-blur-sm transition-all hover:border-primary/30 hover:bg-card/70 hover:shadow-sm',
         className
       )}
     >
-      <Sparkles size={15} className="shrink-0 text-primary" />
-      <span className="min-w-0 flex-1 truncate text-xs font-medium">{t.aiChat.home.title}</span>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/5 blur-2xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-5 -left-5 h-20 w-20 rounded-full bg-accent/5 blur-2xl"
+      />
+
+      <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/15 shadow-sm">
+        <Bot size={14} className="text-primary" />
+      </div>
+
+      <span className="relative min-w-0 flex-1 truncate text-xs font-semibold">{t.aiChat.home.title}</span>
       <ArrowRight
         size={14}
-        className="shrink-0 transition-transform group-hover:translate-x-0.5"
+        className="relative shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
       />
     </button>
   )

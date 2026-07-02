@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { LogOut, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { LogOut, Loader2, RefreshCw } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -49,11 +50,12 @@ interface SettingsSheetProps {
 }
 
 /**
- * Account + body profile settings. Nutrition targets ("diet plan") are edited
- * on the Plans tab, not here.
+ * Account + body profile settings. Nutrition targets are reassessed from here
+ * (links to onboarding) and edited on the Plans tab.
  */
 export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProps) {
   const t = useT()
+  const router = useRouter()
   const { toast } = useToast()
   // Shared cache: warmed on home mount, so opening the sheet is instant.
   const { data: settings, isPending } = useUserSettings()
@@ -211,6 +213,22 @@ export function SettingsSheet({ open, onOpenChange, onSaved }: SettingsSheetProp
                 {t.settings.appearanceTitle}
               </h3>
               <ThemeToggle />
+            </section>
+
+            {/* ── Nutrition goals ── */}
+            <section className="space-y-3 border-t border-border pt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t.settings.goalsTitle}
+              </h3>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push('/onboarding?reassess=true')}
+              >
+                <RefreshCw size={15} />
+                {t.settings.reassessGoals}
+              </Button>
             </section>
 
             {/* ── Account ── */}

@@ -1,12 +1,14 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
-import { Clock, Dumbbell, Flame, Mic, Pencil, PencilLine, Sparkles, Target, Trash2 } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChevronDown, Clock, Dumbbell, Flame, Mic, Pencil, PencilLine, Sparkles, Target, Trash2 } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState, useTransition } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { logWorkout, deleteWorkoutLog } from '@/app/actions/logWorkout'
 import { getWorkoutHistory } from '@/app/actions/history'
 import { WorkoutLogEditDialog } from '@/components/log-form/workout-log-edit-dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { useToast } from '@/hooks/use-toast'
 import { useSpeechInput } from '@/lib/hooks/use-speech-input'
 import { useT } from '@/lib/i18n/provider'
@@ -22,17 +24,56 @@ interface WorkoutDaySectionProps {
   date: Date
   userId?: string
   onChange?: () => void
+  weekData?: Record<string, WorkoutLogItem[]>
+  isLoadingWeek?: boolean
 }
 
 const toDateStr = toLocalDateStr
 
+function buildWeekChartData(
+  todayStr: string,
+  weekData: Record<string, WorkoutLogItem[]> | undefined
+) {
+  const data: Array<{
+    date: string
+    label: string
+    sessions: number
+    minutes: number
+    kcal: number
+  }> = []
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(`${todayStr}T12:00:00`)
+    date.setDate(date.getDate() - i)
+    const dateStr = toLocalDateStr(date)
+    const logs = weekData?.[dateStr] ?? []
+    const totals = logs.reduce(
+      (acc, l) => ({
+        sessions: acc.sessions + 1,
+        minutes: acc.minutes + (l.duration_minutes ?? 0),
+        kcal: acc.kcal + (l.calories_burned ?? 0),
+      }),
+      { sessions: 0, minutes: 0, kcal: 0 }
+    )
+    data.push({
+      date: dateStr,
+      label: date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
+      ...totals,
+    })
+  }
+  return data
+}
+
 /**
- * The training slice of the History page for a single (parent-controlled) day:
- * a glanceable summary + add-workout + the day's workout list with inline edit
- * / delete. Mirrors the old per-day drawer but renders inline so diet and
- * training stack under one shared date.
+ * Compact, expandable training card for the Record page. Tapping the card opens
+ * a bottom sheet with the day's workout list and a 7-day training trend chart.
  */
-export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionProps) {
+export function WorkoutDaySection({
+  date,
+  userId,
+  onChange,
+  weekData,
+  isLoadingWeek,
+}: WorkoutDaySectionProps) {
   const { toast } = useToast()
   const t = useT()
   const qc = useQueryClient()
@@ -41,7 +82,7 @@ export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionP
   const [pendingCount, setPendingCount] = useState(0)
   const [editing, setEditing] = useState<WorkoutLogItem | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
-  // Text captured when dictation starts, so speech appends to it.
+  const [expanded, setExpanded] = useState(false)
   const speechBaseRef = useRef('')
 
   const dateStr = toDateStr(date)
@@ -49,6 +90,15 @@ export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionP
   const isFuture = dateStr > todayStr
   const addingToday = dateStr === todayStr
   const canEdit = !!userId && !isFuture
+
+  const rangeLogs = weekData?.[dateStr]
+  const { data: fetchedLogs } = useQuery({
+    queryKey: ['workouts', dateStr],
+    queryFn: () => getWorkoutHistory(dateStr, dateStr).then((g) => g[dateStr] ?? []),
+    enabled: !!userId && !isLoadingWeek && !rangeLogs,
+  })
+  const logs = useMemo(() => rangeLogs ?? fetchedLogs ?? [], [rangeLogs, fetchedLogs])
+  const chartData = useMemo(() => buildWeekChartData(todayStr, weekData), [todayStr, weekData])
 
   const speech = useSpeechInput({
     lang: t.common.locale,
@@ -78,12 +128,6 @@ export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionP
     speech.start()
   }
 
-  const { data: logs = [], isLoading: loading } = useQuery({
-    queryKey: ['workouts', dateStr],
-    queryFn: () => getWorkoutHistory(dateStr, dateStr).then((g) => g[dateStr] ?? []),
-    enabled: !!userId,
-  })
-
   const patchLogs = useCallback(
     (fn: (logs: WorkoutLogItem[]) => WorkoutLogItem[]) => {
       qc.setQueryData<WorkoutLogItem[]>(['workouts', dateStr], (old) => fn(old ?? []))
@@ -93,20 +137,17 @@ export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionP
 
   const refresh = useCallback(() => {
     void qc.invalidateQueries({ queryKey: ['workouts', dateStr] })
+    void qc.invalidateQueries({ queryKey: ['workouts', 'range'] })
     if (addingToday) invalidate()
     onChange?.()
   }, [qc, dateStr, addingToday, invalidate, onChange])
 
-  // Manual structured create resolved server-side already: splice the real row
-  // into the day cache for an instant update, then reconcile in the background.
   const handleManualCreated = (created?: WorkoutLogItem) => {
     if (!created) return
     patchLogs((prev) => [...prev, created])
     refresh()
   }
 
-  // Non-blocking: drop an optimistic `pending` placeholder and clear the input
-  // immediately, then reconcile in the background when the parse resolves.
   const handleAdd = () => {
     const text = inputText.trim()
     if (!text || !canEdit) return
@@ -164,102 +205,170 @@ export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionP
     [logs]
   )
 
+  if (isLoadingWeek) {
+    return <Skeleton className="h-28 w-full rounded-2xl" />
+  }
+
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-      className="glass glass-highlight rounded-2xl p-4 sm:p-5"
-    >
-      <header className="mb-3 flex items-baseline justify-between">
-        <h3 className="font-display text-base font-semibold text-foreground">
-          {t.history.trainingTitle}
-        </h3>
-        {logs.length > 0 && (
-          <span className="text-[11px] text-muted-foreground tabular-nums">
-            {t.training.drawer.minutesValue(totals.minutes)} · {totals.kcal} kcal
-          </span>
-        )}
-      </header>
-
-      {canEdit && (
-        <div className="mb-4 flex items-stretch gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl border border-border bg-secondary/50 px-3 py-2 transition-colors focus-within:border-primary/40 focus-within:bg-card">
-            <Sparkles size={14} className="shrink-0 text-primary" aria-hidden />
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-              placeholder={speech.listening ? t.logForm.quick.micListening : t.training.drawer.placeholder}
-              className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed"
-            />
-            {speech.supported && (
-              <button
-                type="button"
-                onClick={toggleMic}
-                aria-label={speech.listening ? t.logForm.quick.micStop : t.logForm.quick.micStart}
-                aria-pressed={speech.listening}
-                className={cn(
-                  'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors',
-                  speech.listening
-                    ? 'bg-destructive/15 text-destructive'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                )}
-              >
-                <Mic size={15} className={speech.listening ? 'animate-pulse' : undefined} />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={!inputText.trim()}
-              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {pendingCount > 0 ? t.training.drawer.parsing : t.common.add}
-            </button>
+    <Sheet open={expanded} onOpenChange={setExpanded}>
+      <SheetTrigger asChild>
+        <motion.button
+          type="button"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+          className="glass glass-highlight block w-full rounded-2xl p-3 text-left"
+          aria-label={t.history.expandAria}
+        >
+          <div className="flex w-full items-center justify-between">
+            <div>
+              <h3 className="font-display text-sm font-semibold text-foreground">{t.history.trainingTitle}</h3>
+              <p className="text-[11px] text-muted-foreground">{t.history.tapToExpand}</p>
+            </div>
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary/60 text-muted-foreground">
+              <ChevronDown size={14} />
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setManualOpen(true)}
-            aria-label={t.logForm.manual.workoutAria}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 px-0 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-          >
-            <PencilLine size={16} aria-hidden />
-          </button>
-        </div>
-      )}
 
-      {loading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-14 w-full rounded-xl" />
-          <Skeleton className="h-14 w-full rounded-xl" />
+          {/* Compact summary */}
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-border/50 bg-card/40 p-2">
+              <p className="truncate text-[10px] text-muted-foreground">{t.history.sessions}</p>
+              <p className="font-display text-sm font-semibold tabular-nums text-foreground">{totals.sessions}</p>
+            </div>
+            <div className="rounded-xl border border-border/50 bg-card/40 p-2">
+              <p className="truncate text-[10px] text-muted-foreground">{t.training.drawer.duration}</p>
+              <p className="font-display text-sm font-semibold tabular-nums text-foreground">
+                {t.training.drawer.minutesValue(totals.minutes)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-border/50 bg-card/40 p-2">
+              <p className="truncate text-[10px] text-muted-foreground">{t.training.drawer.burned}</p>
+              <p className="font-display text-sm font-semibold tabular-nums text-foreground">{totals.kcal} kcal</p>
+            </div>
+          </div>
+        </motion.button>
+      </SheetTrigger>
+
+      <SheetContent side="bottom" className="h-[85dvh] rounded-t-2xl p-0">
+        <div className="flex h-full flex-col">
+          <SheetHeader className="px-4 pt-5 pb-2">
+            <SheetTitle className="font-display text-lg">
+              {date.toLocaleDateString(t.common.locale, {
+                month: 'short',
+                day: 'numeric',
+                weekday: 'short',
+              })}
+              {' · '}{t.history.trainingTitle}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-6">
+            {/* 7-day training trend */}
+            <div className="rounded-2xl border border-border/50 bg-card/40 p-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">{t.history.last7Days} · {t.history.workoutTrend}</p>
+              <div className="h-40 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                    <CartesianGrid stroke="var(--border)" vertical={false} strokeDasharray="3 3" />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="left" tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
+                      contentStyle={{
+                        backgroundColor: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '0.75rem',
+                        fontSize: '12px',
+                      }}
+                      labelStyle={{ color: 'var(--foreground)' }}
+                    />
+                    <Bar yAxisId="left" dataKey="minutes" name={t.history.durationTrend} fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="right" dataKey="kcal" name={t.common.kcal} fill="var(--chart-5)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Add input */}
+            {canEdit && (
+              <div className="flex items-stretch gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl border border-border bg-secondary/50 px-3 py-2 transition-colors focus-within:border-primary/40 focus-within:bg-card">
+                  <Sparkles size={14} className="shrink-0 text-primary" aria-hidden />
+                  <input
+                    type="text"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                    placeholder={speech.listening ? t.logForm.quick.micListening : t.training.drawer.placeholder}
+                    className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed"
+                  />
+                  {speech.supported && (
+                    <button
+                      type="button"
+                      onClick={toggleMic}
+                      aria-label={speech.listening ? t.logForm.quick.micStop : t.logForm.quick.micStart}
+                      aria-pressed={speech.listening}
+                      className={cn(
+                        'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors',
+                        speech.listening
+                          ? 'bg-destructive/15 text-destructive'
+                          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                      )}
+                    >
+                      <Mic size={15} className={speech.listening ? 'animate-pulse' : undefined} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleAdd}
+                    disabled={!inputText.trim()}
+                    className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {pendingCount > 0 ? t.training.drawer.parsing : t.common.add}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setManualOpen(true)}
+                  aria-label={t.logForm.manual.workoutAria}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 px-0 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+                >
+                  <PencilLine size={16} aria-hidden />
+                </button>
+              </div>
+            )}
+
+            {/* Workout list */}
+            {logs.length === 0 ? (
+              <EmptyState
+                icon={Dumbbell}
+                title={addingToday ? t.training.drawer.emptyTodayTitle : t.training.drawer.emptyOtherTitle}
+                description={addingToday ? t.training.drawer.emptyTodayDesc : undefined}
+                size="inset"
+              />
+            ) : (
+              <div className="max-h-[34vh] overflow-y-auto overflow-x-hidden rounded-xl pr-1">
+                <ul className="space-y-2">
+                  <AnimatePresence initial={false}>
+                    {logs.map((log) => (
+                      <WorkoutRow
+                        key={log.id}
+                        log={log}
+                        canEdit={canEdit}
+                        userId={userId}
+                        onChange={refresh}
+                        onEdit={canEdit ? setEditing : undefined}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
-      ) : logs.length === 0 ? (
-        <EmptyState
-          icon={Dumbbell}
-          title={addingToday ? t.training.drawer.emptyTodayTitle : t.training.drawer.emptyOtherTitle}
-          description={addingToday ? t.training.drawer.emptyTodayDesc : undefined}
-          size="inset"
-        />
-      ) : (
-        <div className="max-h-[44vh] overflow-y-auto overflow-x-hidden rounded-xl pr-1">
-          <ul className="space-y-2">
-            <AnimatePresence initial={false}>
-              {logs.map((log) => (
-                <WorkoutRow
-                  key={log.id}
-                  log={log}
-                  canEdit={canEdit}
-                  userId={userId}
-                  onChange={refresh}
-                  onEdit={canEdit ? setEditing : undefined}
-                />
-              ))}
-            </AnimatePresence>
-          </ul>
-        </div>
-      )}
+      </SheetContent>
 
       <WorkoutLogEditDialog log={editing} onClose={() => setEditing(null)} onSuccess={refresh} />
       <WorkoutLogEditDialog
@@ -269,16 +378,10 @@ export function WorkoutDaySection({ date, userId, onChange }: WorkoutDaySectionP
         onClose={() => setManualOpen(false)}
         onSuccess={handleManualCreated}
       />
-    </motion.section>
+    </Sheet>
   )
 }
 
-/**
- * Strip a trailing "N sets …" clause from a workout name so the row shows just
- * the movement (e.g. "Barbell Bench Press 3 sets 8-12 reps" → "Barbell Bench
- * Press"). Sets/reps are surfaced as separate chips. Falls back to the original
- * name when stripping would empty it (e.g. "3 sets of burpees").
- */
 function cleanWorkoutName(name: string): string {
   const stripped = name.replace(/\s*[·\-–]?\s*\d+\s*sets?\b.*$/i, '').trim()
   return stripped || name
@@ -298,8 +401,6 @@ function WorkoutRow({ log, canEdit, userId, onChange, onEdit }: WorkoutRowProps)
   const [isPending, startTransition] = useTransition()
   const rowPending = !!log.pending
   const rowEditable = canEdit && !rowPending
-  // Older logs saved the whole "Bench Press 3 sets 8-12 reps" string as the
-  // name; sets/reps are shown as separate chips, so strip the trailing clause.
   const displayName = cleanWorkoutName(log.workout_name)
 
   const handleDelete = () => {

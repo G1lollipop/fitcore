@@ -1,4 +1,5 @@
 import type { DietLogItem, WorkoutLogItem } from "@/app/actions/types"
+import type { PlanPreviewPayload } from "@/lib/plans/types"
 
 export type ChatMode = "personal" | "rag" | "hybrid"
 
@@ -26,6 +27,7 @@ export interface AIChatMeta {
   persisted?: boolean        // whether the message was successfully written to the history store
   loggedActivity?: boolean   // whether this turn wrote diet/workout/water via a log_* tool
   assistantMessageId?: string // chat_messages.id of the persisted assistant reply (for feedback)
+  planPreview?: PlanPreviewPayload // plan preview produced by adjust_plan for client confirmation
 }
 
 export interface Citation {

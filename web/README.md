@@ -1,6 +1,6 @@
 # FitCore — AI-Powered Fitness Coaching Platform
 
-> A full-stack AI fitness coaching platform built on RAG + Agent Tool Calling
+> A full-stack AI fitness coaching platform built on RAG + Agent Tool Calling. Mobile-first: every main page fits a single phone viewport; details open in full-screen sheets.
 
 **Live Demo:** [fitcore-web-eight.vercel.app](https://fitcore-web-eight.vercel.app/)
 
@@ -96,10 +96,10 @@ flowchart TD
 ## Key Features
 
 ### 🤖 Agent + Tool Calling
-The AI coach is the product's primary surface. Instead of keyword/rule-based classification, the LLM autonomously decides which tools to call (`lib/ai/agent-tools.ts`):
+The AI coach is a conversational, secondary surface. Instead of keyword/rule-based classification, the LLM autonomously decides which tools to call (`lib/ai/agent-tools.ts`):
 
 - `log_food` / `log_workout` / `log_water` — **AI-first logging**: turn a natural-language message ("had 2 eggs and a banana") straight into structured entries
-- `adjust_plan` — tweak the user's current workout plan in conversation
+- `adjust_plan` — tweak the user's current workout plan in conversation; changes are shown as a preview and only applied after the user confirms
 - `get_user_stats` — reads the user's nutrition / workout / goal data for today
 - `query_knowledge_base` — calls the RAG retrieval endpoint for evidence-grounded fitness knowledge
 - `set_retrieval_params` — the LLM declares how many results to retrieve, k (3 / 5 / 8), based on question complexity
@@ -127,6 +127,9 @@ A golden test set (`rag/eval/golden_dataset_en.json`) covering different difficu
 ### 💾 Data tracking
 - Daily calories / protein / carbs / fat / water logging (natural-language, meal-photo, and quick-log entry)
 - AI-generated and hand-editable training plans (stored as a single JSON `structure`)
+  - Plans are previewed before they are persisted, so users can iterate with the AI before applying changes
+  - Day-level editing supports drag-to-reorder exercises and inline sets/reps/weight edits
+- Record page pre-loads the last 7 days of nutrition + training and shows expandable trend charts
 - Persisted multi-turn conversation history
 
 ---
@@ -153,11 +156,11 @@ A golden test set (`rag/eval/golden_dataset_en.json`) covering different difficu
 Fitcore/
 ├── web/                            # Next.js frontend
 │   ├── app/
-│   │   ├── page.tsx                # single route; 3 tabs via state (Today / Nutrition / Training)
+│   │   ├── page.tsx                # single route; 2 tabs via state (Today / Record)
 │   │   ├── api/ai/chat/route.ts    # SSE streaming AI endpoint
 │   │   └── actions/                # 'use server' business actions (logs / plans / chat / settings)
 │   ├── components/
-│   │   ├── ai-chat/                # streaming AI coach widget (primary surface)
+│   │   ├── ai-chat/                # streaming AI coach widget (secondary surface)
 │   │   ├── dashboard|nutrition|training|plans|log-form|knowledge|settings/
 │   │   └── ui/                     # shadcn/ui base components
 │   └── lib/

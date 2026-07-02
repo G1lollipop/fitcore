@@ -1,5 +1,6 @@
 'use client'
 
+import { useSyncExternalStore } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import {
   Toast,
@@ -10,8 +11,20 @@ import {
   ToastViewport,
 } from '@/components/ui/toast'
 
+const noop = () => () => {}
+
+function useIsClient() {
+  return useSyncExternalStore(noop, () => true, () => false)
+}
+
 export function Toaster() {
   const { toasts } = useToast()
+  const isClient = useIsClient()
+
+  // The viewport is client-only UI. Rendering it only after hydration avoids
+  // hydration mismatches caused by browser extensions (e.g. Trae) injecting
+  // attributes like `data-trae-ref` into the server-rendered DOM.
+  if (!isClient) return null
 
   return (
     <ToastProvider>

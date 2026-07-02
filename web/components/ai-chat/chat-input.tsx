@@ -117,7 +117,7 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
           )}
         </AnimatePresence>
 
-        <div className="flex gap-1.5 overflow-x-auto border-t border-border px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-1.5 overflow-x-auto border-t border-border/60 px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <SlashChip onClick={() => setInput('/')} disabled={isTyping} t={t} />
           {t.aiChat.suggested.map((s) => (
             <button
@@ -125,7 +125,7 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
               type="button"
               onClick={() => onSend(s)}
               disabled={isTyping}
-              className="shrink-0 rounded-full border border-border bg-secondary px-2.5 py-1.5 text-[11px] text-muted-foreground transition-all hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+              className="shrink-0 rounded-full border border-border/70 bg-secondary/70 px-3 py-1.5 text-[11px] text-muted-foreground transition-all hover:border-primary/30 hover:bg-secondary hover:text-foreground hover:shadow-sm disabled:opacity-50"
             >
               {s}
             </button>
@@ -133,34 +133,37 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 px-3 pb-3 pt-2">
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={t.aiChat.inputPlaceholder}
-          disabled={isTyping}
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded={slashOpen}
-          aria-haspopup="listbox"
-          aria-controls={slashOpen ? 'slash-menu' : undefined}
-          className={cn(
-            'flex-1 rounded-xl border border-border bg-secondary px-3.5 py-2.5 text-sm text-foreground transition-all placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60',
-            slashOpen && 'border-primary/40 ring-2 ring-primary/20'
-          )}
-        />
-        <button
-          type="button"
-          onClick={() => onSend(input)}
-          disabled={!input.trim() || isTyping}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-          aria-label={t.aiChat.send}
-        >
-          {isTyping ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-        </button>
+      <div className="flex shrink-0 items-center gap-2 px-3 pb-3 pt-1">
+        <div className="relative flex-1">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={t.aiChat.inputPlaceholder}
+            disabled={isTyping}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={slashOpen}
+            aria-haspopup="listbox"
+            aria-controls={slashOpen ? 'slash-menu' : undefined}
+            className={cn(
+              'h-10 w-full rounded-full border border-border bg-secondary pl-4 pr-11 text-sm text-foreground transition-all',
+              'placeholder:text-muted-foreground focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60',
+              slashOpen && 'border-primary/40 bg-background ring-2 ring-primary/15'
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => onSend(input)}
+            disabled={!input.trim() || isTyping}
+            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted-foreground"
+            aria-label={t.aiChat.send}
+          >
+            {isTyping ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+          </button>
+        </div>
       </div>
     </>
   )

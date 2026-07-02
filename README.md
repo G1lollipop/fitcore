@@ -31,14 +31,18 @@ flowchart TD
 ```
 
 > Note: the frontend never talks to Supabase directly — all data access goes through Server Actions (`web/lib/supabaseClient.ts` is `server-only` + service-role). The frontend calls the backend RAG service via `RAG_SERVICE_URL` (default `http://127.0.0.1:8000`).
-
+>
 > For the full development guide (architecture details, API contracts, ingestion, testing, troubleshooting), see [`DEVELOPMENT.md`](./DEVELOPMENT.md).
+
+### Mobile-first UX principle
+
+FitCore is designed as a phone app first. **Every main page must fit entirely inside one phone viewport without vertical scrolling.** Cards show only the highest-priority summary; longer lists, charts, and detailed editors live behind taps that open full-screen sheets. Cards themselves may be internally scrollable, but the main page scroll is avoided.
 
 ## Subprojects
 
 | Directory | Description | Docs |
 |------|------|------|
-| [`web/`](./web) | Frontend single-page app; the home route `/` contains three tabs: "Today / History / Plans" (Today = daily command center with Quick Log + AI coach; History = past nutrition + training; Plans = diet + training plans). The AI coach is the primary surface for natural-language logging and knowledge Q&A | [`web/README.md`](./web/README.md) |
+| [`web/`](./web) | Frontend single-page app; the home route `/` contains two tabs: **Today / Record** (Today = daily command center with Quick Log + AI coach; Record = past nutrition + training under one shared date, with 7-day trend charts). The app is **AI-logging-first**: the fastest path from "I want to log this" to "it's logged" is the protagonist; the AI coach is a secondary, conversational surface for evidence-grounded Q&A and plan authoring. | [`web/README.md`](./web/README.md) |
 | [`rag/`](./rag) | RAG retrieval service: vector retrieval + BM25 fusion, optional reranking, adaptive topK | [`DEVELOPMENT.md`](./DEVELOPMENT.md) |
 
 ## Local setup

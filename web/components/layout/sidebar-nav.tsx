@@ -5,9 +5,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Leaf,
-  LogOut,
   RefreshCw,
-  Settings,
   type LucideIcon,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -20,7 +18,6 @@ import {
 import { cn } from '@/lib/utils'
 import { useSidebarCollapsed } from '@/hooks/use-sidebar-collapsed'
 import { useT } from '@/lib/i18n/provider'
-import { signOut } from '@/app/actions/auth'
 import { useSettings } from '@/components/settings/settings-context'
 import { NAV_ITEMS } from './nav-items'
 
@@ -44,6 +41,7 @@ export function SidebarNav({ activeNav, onNavChange, userName }: SidebarNavProps
   const router = useRouter()
   const t = useT()
   const [collapsed, toggle] = useSidebarCollapsed()
+  const { open: openSettings } = useSettings()
   const displayName = userName || t.sidebar.myAccount
 
   return (
@@ -89,8 +87,7 @@ export function SidebarNav({ activeNav, onNavChange, userName }: SidebarNavProps
 
         {/* ── User profile + collapse toggle ── */}
         <div className="border-t border-sidebar-border p-2 space-y-1">
-          <UserProfile collapsed={collapsed} userName={displayName} />
-          <SettingsButton collapsed={collapsed} />
+          <UserProfile collapsed={collapsed} userName={displayName} onClick={openSettings} />
           <ReassessButton
             collapsed={collapsed}
             onClick={() => router.push('/onboarding?reassess=true')}
@@ -160,9 +157,10 @@ const NavItem = memo(function NavItem({
 interface UserProfileProps {
   collapsed: boolean
   userName: string
+  onClick: () => void
 }
 
-const UserProfile = memo(function UserProfile({ collapsed, userName }: UserProfileProps) {
+const UserProfile = memo(function UserProfile({ collapsed, userName, onClick }: UserProfileProps) {
   const t = useT()
   const initial = userName.trim().charAt(0).toUpperCase() || '?'
 
@@ -172,43 +170,36 @@ const UserProfile = memo(function UserProfile({ collapsed, userName }: UserProfi
     </span>
   )
 
-  const signOutButton = (
-    <form action={signOut}>
-      <button
-        type="submit"
-        aria-label={t.sidebar.signOut}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-      >
-        <LogOut size={15} className="shrink-0" />
-      </button>
-    </form>
-  )
-
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>{avatar}</TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8} className="text-xs">
-            {userName}
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>{signOutButton}</TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8} className="text-xs">
-            {t.sidebar.signOut}
-          </TooltipContent>
-        </Tooltip>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={onClick}
+            aria-label={t.sidebar.account}
+            className="flex h-9 w-full items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            {avatar}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8} className="text-xs">
+          {userName}
+        </TooltipContent>
+      </Tooltip>
     )
   }
 
   return (
-    <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg">
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={t.sidebar.account}
+      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+    >
       {avatar}
       <p className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{userName}</p>
-      {signOutButton}
-    </div>
+    </button>
   )
 })
 
@@ -239,34 +230,6 @@ const ReassessButton = memo(function ReassessButton({ collapsed, onClick }: Reas
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent side="right" sideOffset={8} className="text-xs">
         {t.sidebar.reassess}
-      </TooltipContent>
-    </Tooltip>
-  )
-})
-
-const SettingsButton = memo(function SettingsButton({ collapsed }: { collapsed: boolean }) {
-  const t = useT()
-  const { open } = useSettings()
-  const button = (
-    <button
-      type="button"
-      onClick={open}
-      className={cn(
-        'w-full flex items-center gap-2 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors',
-        collapsed ? 'h-9 justify-center px-0' : 'h-9 px-3'
-      )}
-    >
-      <Settings size={13} className="shrink-0" />
-      {!collapsed && <span>{t.settings.open}</span>}
-    </button>
-  )
-
-  if (!collapsed) return button
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="right" sideOffset={8} className="text-xs">
-        {t.settings.open}
       </TooltipContent>
     </Tooltip>
   )

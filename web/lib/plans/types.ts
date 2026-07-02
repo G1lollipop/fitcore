@@ -28,6 +28,19 @@ export interface PlanStructure {
   days: PlanDay[]
 }
 
+/** Plan preview payload carried from the AI coach to the plan detail sheet. */
+export interface PlanPreviewPayload {
+  name: string
+  description?: string | null
+  goal?: string | null
+  experience_level?: string | null
+  duration_weeks?: number | null
+  frequency_per_week: number
+  days: PlanDay[]
+  aiPrompt?: string | null
+  isAiGenerated?: boolean
+}
+
 /** A blank 7-day (Mon–Sun) all-rest structure. */
 export function emptyPlanStructure(): PlanStructure {
   return {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Dumbbell, Loader2, Plus, Trash2 } from 'lucide-react'
+import { Dumbbell, GripVertical, Loader2, Plus, Trash2 } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -55,8 +55,9 @@ interface PlanEditorProps {
 
 /**
  * Free-text plan editor (AI-first app, no exercise library): the user names the
- * plan, marks rest days, and types exercise names with optional sets/reps. Saved
- * as a single JSON `structure` via `createCustomPlan`.
+ * plan, marks rest days, and types exercise names with optional sets/reps.
+ * Exercises inside each day can be reordered by dragging the grip handle.
+ * Saved as a single JSON `structure` via `createCustomPlan`.
  */
 export function PlanEditor({ open, onOpenChange, onCreated }: PlanEditorProps) {
   const t = useT()
@@ -66,6 +67,7 @@ export function PlanEditor({ open, onOpenChange, onCreated }: PlanEditorProps) {
   const [name, setName] = useState('')
   const [days, setDays] = useState<DayRow[]>(initialDays)
   const [saving, setSaving] = useState(false)
+  const [dragOverIdx, setDragOverIdx] = useState<{ dayIdx: number; exIdx: number } | null>(null)
 
   const patchDay = (idx: number, patch: Partial<DayRow>) =>
     setDays((prev) => prev.map((d, i) => (i === idx ? { ...d, ...patch } : d)))
@@ -104,9 +106,23 @@ export function PlanEditor({ open, onOpenChange, onCreated }: PlanEditorProps) {
       )
     )
 
+  const moveExercise = (dayIdx: number, from: number, to: number) => {
+    if (from === to) return
+    setDays((prev) =>
+      prev.map((d, i) => {
+        if (i !== dayIdx) return d
+        const exercises = [...d.exercises]
+        const [moved] = exercises.splice(from, 1)
+        exercises.splice(to, 0, moved!)
+        return { ...d, exercises }
+      })
+    )
+  }
+
   const reset = () => {
     setName('')
     setDays(initialDays())
+    setDragOverIdx(null)
   }
 
   const handleSave = async () => {
@@ -192,7 +208,7 @@ export function PlanEditor({ open, onOpenChange, onCreated }: PlanEditorProps) {
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <span className="w-9 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <span className="w-8 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     {weekdays[dayIdx]}
                   </span>
                   <Input
@@ -216,7 +232,39 @@ export function PlanEditor({ open, onOpenChange, onCreated }: PlanEditorProps) {
                 {!day.rest && (
                   <div className="mt-2 space-y-2">
                     {day.exercises.map((ex, exIdx) => (
-                      <div key={exIdx} className="flex items-center gap-1.5">
+                      <div
+                        key={exIdx}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', String(exIdx))
+                          e.dataTransfer.effectAllowed = 'move'
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault()
+                          setDragOverIdx({ dayIdx, exIdx })
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          const from = Number(e.dataTransfer.getData('text/plain'))
+                          moveExercise(dayIdx, from, exIdx)
+                          setDragOverIdx(null)
+                        }}
+                        onDragEnd={() => setDragOverIdx(null)}
+                        onDragLeave={() => setDragOverIdx(null)}
+                        className={cn(
+                          'flex items-center gap-1 rounded-lg border border-transparent p-1 transition-colors',
+                          dragOverIdx?.dayIdx === dayIdx && dragOverIdx?.exIdx === exIdx
+                            ? 'border-primary/60 bg-primary/5'
+                            : 'bg-transparent'
+                        )}
+                      >
+                        <button
+                          type="button"
+                          aria-label={t.plans.editor.dragToReorder}
+                          className="flex shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground active:cursor-grabbing"
+                        >
+                          <GripVertical size={14} />
+                        </button>
                         <Input
                           value={ex.name}
                           onChange={(e) => patchExercise(dayIdx, exIdx, { name: e.target.value })}
@@ -229,7 +277,7 @@ export function PlanEditor({ open, onOpenChange, onCreated }: PlanEditorProps) {
                           type="number"
                           inputMode="numeric"
                           aria-label={t.plans.editor.setsShort}
-                          className="h-8 w-12 px-1 text-center"
+                          className="h-8 w-11 px-1 text-center"
                         />
                         <span className="text-[10px] text-muted-foreground">×</span>
                         <Input
@@ -238,7 +286,7 @@ export function PlanEditor({ open, onOpenChange, onCreated }: PlanEditorProps) {
                           type="number"
                           inputMode="numeric"
                           aria-label={t.plans.editor.repsShort}
-                          className="h-8 w-12 px-1 text-center"
+                          className="h-8 w-11 px-1 text-center"
                         />
                         <span className="text-[10px] text-muted-foreground">-</span>
                         <Input
@@ -247,7 +295,7 @@ export function PlanEditor({ open, onOpenChange, onCreated }: PlanEditorProps) {
                           type="number"
                           inputMode="numeric"
                           aria-label={t.plans.editor.repsShort}
-                          className="h-8 w-12 px-1 text-center"
+                          className="h-8 w-11 px-1 text-center"
                         />
                         <button
                           type="button"

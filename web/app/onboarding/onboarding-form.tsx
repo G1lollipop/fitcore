@@ -31,6 +31,32 @@ import {
 
 const TOTAL_STEPS = 3
 
+interface OnboardingFormState {
+  gender: 'male' | 'female'
+  age: string
+  height: string
+  weight: string
+  activityLevel: 'sedentary' | 'light' | 'moderate' | 'heavy'
+}
+
+const DEFAULT_FORM: OnboardingFormState = {
+  gender: 'male',
+  age: '25',
+  height: '170',
+  weight: '65',
+  activityLevel: 'moderate',
+}
+
+function toOnboardingData(form: OnboardingFormState): OnboardingData {
+  return {
+    gender: form.gender,
+    age: Number(form.age),
+    height: Number(form.height),
+    weight: Number(form.weight),
+    activityLevel: form.activityLevel,
+  }
+}
+
 const GENDER_VALUES = [
   { value: "male", icon: "👨" },
   { value: "female", icon: "👩" },
@@ -55,13 +81,7 @@ export default function OnboardingForm({ userName }: { userName: string }) {
   const isReassess = searchParams.get("reassess") === "true"
   const [isLoadingSettings, setIsLoadingSettings] = useState(isReassess)
 
-  const [formData, setFormData] = useState<OnboardingData>({
-    gender: "male",
-    age: 25,
-    height: 170,
-    weight: 65,
-    activityLevel: "moderate",
-  })
+  const [formData, setFormData] = useState<OnboardingFormState>(DEFAULT_FORM)
 
   // In reassess mode, prefill from saved settings. State is only set after the
   // await, so this is not a synchronous set-state-in-effect.
@@ -74,10 +94,10 @@ export default function OnboardingForm({ userName }: { userName: string }) {
       if (settings) {
         setFormData({
           gender: (settings.gender as "male" | "female") || "male",
-          age: settings.age || 25,
-          height: settings.height || 170,
-          weight: settings.weight || 65,
-          activityLevel: (settings.activity_level as OnboardingData["activityLevel"]) || "moderate",
+          age: settings.age != null ? String(settings.age) : DEFAULT_FORM.age,
+          height: settings.height != null ? String(settings.height) : DEFAULT_FORM.height,
+          weight: settings.weight != null ? String(settings.weight) : DEFAULT_FORM.weight,
+          activityLevel: (settings.activity_level as OnboardingFormState["activityLevel"]) || "moderate",
         })
       }
       setIsLoadingSettings(false)
@@ -87,9 +107,9 @@ export default function OnboardingForm({ userName }: { userName: string }) {
     }
   }, [isReassess])
 
-  const updateFormData = <K extends keyof OnboardingData>(
+  const updateFormData = <K extends keyof OnboardingFormState>(
     key: K,
-    value: OnboardingData[K]
+    value: OnboardingFormState[K]
   ) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
   }
@@ -97,7 +117,7 @@ export default function OnboardingForm({ userName }: { userName: string }) {
   const handleCalculateRecommendation = async () => {
     setIsCalculating(true)
     try {
-      const result = await calculateNutritionRecommendation(formData)
+      const result = await calculateNutritionRecommendation(toOnboardingData(formData))
       if (result.success && result.recommendation) {
         setRecommendation(result.recommendation)
       }
@@ -129,7 +149,7 @@ export default function OnboardingForm({ userName }: { userName: string }) {
 
     setIsLoading(true)
     try {
-      const result = await saveOnboardingData(formData, recommendation)
+      const result = await saveOnboardingData(toOnboardingData(formData), recommendation)
       if (result.success) {
         router.push("/")
       } else {
@@ -251,18 +271,14 @@ export default function OnboardingForm({ userName }: { userName: string }) {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">{t.onboarding.ageLabel}</label>
-                    <Input
-                      type="number"
-                      value={formData.age}
-                      onChange={(e) => updateFormData("age", parseInt(e.target.value) || 0)}
-                      placeholder={t.onboarding.agePlaceholder}
-                      className="h-12 text-base"
-                      min={10}
-                      max={100}
-                    />
-                  </div>
+                  <NumberField
+                    label={t.onboarding.ageLabel}
+                    value={formData.age}
+                    onChange={(value) => updateFormData("age", value)}
+                    placeholder={t.onboarding.agePlaceholder}
+                    min={10}
+                    max={100}
+                  />
                 </div>
               </div>
             )}
@@ -275,31 +291,25 @@ export default function OnboardingForm({ userName }: { userName: string }) {
                 </div>
 
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">{t.onboarding.heightLabel}</label>
-                    <Input
-                      type="number"
-                      value={formData.height}
-                      onChange={(e) => updateFormData("height", parseInt(e.target.value) || 0)}
-                      placeholder={t.onboarding.heightPlaceholder}
-                      className="h-12 text-base"
-                      min={100}
-                      max={250}
-                    />
-                  </div>
+                  <NumberField
+                    label={t.onboarding.heightLabel}
+                    value={formData.height}
+                    onChange={(value) => updateFormData("height", value)}
+                    placeholder={t.onboarding.heightPlaceholder}
+                    unit="cm"
+                    min={100}
+                    max={250}
+                  />
 
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">{t.onboarding.weightLabel}</label>
-                    <Input
-                      type="number"
-                      value={formData.weight}
-                      onChange={(e) => updateFormData("weight", parseInt(e.target.value) || 0)}
-                      placeholder={t.onboarding.weightPlaceholder}
-                      className="h-12 text-base"
-                      min={30}
-                      max={300}
-                    />
-                  </div>
+                  <NumberField
+                    label={t.onboarding.weightLabel}
+                    value={formData.weight}
+                    onChange={(value) => updateFormData("weight", value)}
+                    placeholder={t.onboarding.weightPlaceholder}
+                    unit="kg"
+                    min={30}
+                    max={300}
+                  />
                 </div>
               </div>
             )}
@@ -316,7 +326,7 @@ export default function OnboardingForm({ userName }: { userName: string }) {
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => updateFormData("activityLevel", option.value as OnboardingData["activityLevel"])}
+                      onClick={() => updateFormData("activityLevel", option.value as OnboardingFormState["activityLevel"])}
                       className={cn(
                         "w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left",
                         formData.activityLevel === option.value
@@ -443,6 +453,49 @@ export default function OnboardingForm({ userName }: { userName: string }) {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function NumberField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  unit,
+  min,
+  max,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  unit?: string
+  min?: number
+  max?: number
+}) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-foreground mb-2 block">{label}</label>
+      <div className="relative">
+        <Input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={value}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, '')
+            onChange(digits)
+          }}
+          placeholder={placeholder}
+          className="h-12 text-base pr-10"
+        />
+        {unit ? (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+            {unit}
+          </span>
+        ) : null}
       </div>
     </div>
   )

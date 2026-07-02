@@ -3,7 +3,9 @@
 import { useCallback, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getCurrentPlanLight, deletePlan } from '@/app/actions/plans'
+import { confirmWorkoutPlan } from '@/app/actions/generatePlan'
 import { DASHBOARD_KEY } from '@/lib/queries/dashboard'
+import type { PlanPreviewPayload } from '@/lib/plans/types'
 import { useToast } from '@/hooks/use-toast'
 import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
@@ -49,6 +51,7 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirmingPlan, setConfirmingPlan] = useState(false)
 
   // Full active-plan structure (needed for the expanded sheet). The dashboard
   // payload only carries today's slice, so we fetch the whole plan separately.
@@ -99,6 +102,30 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
     }
   }, [currentPlan, deleting, refreshPlan, t, toast])
 
+  const handleConfirmPlan = useCallback(
+    async (preview: PlanPreviewPayload) => {
+      setConfirmingPlan(true)
+      try {
+        const res = await confirmWorkoutPlan(preview)
+        if (res.success && 'data' in res && res.data) {
+          toast({ title: t.plans.detail.applied })
+          setSheetOpen(false)
+          refreshPlan()
+        } else {
+          const err = (res as { error?: unknown }).error
+          toast({
+            variant: 'destructive',
+            title: t.plans.detail.applyFailed,
+            description: typeof err === 'string' ? tError(t, err) : t.plans.list.tryLater,
+          })
+        }
+      } finally {
+        setConfirmingPlan(false)
+      }
+    },
+    [refreshPlan, t, toast]
+  )
+
   // ── No active plan → create surface ─────────────────────────────────────
   if (!info) {
     return (
@@ -126,6 +153,8 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
         onSaved={refreshPlan}
         onDelete={handleDelete}
         deleting={deleting}
+        onConfirm={handleConfirmPlan}
+        confirming={confirmingPlan}
       />
 
       <PlanEditor open={editorOpen} onOpenChange={setEditorOpen} onCreated={refreshPlan} />

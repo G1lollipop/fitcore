@@ -7,10 +7,10 @@ import { ActionError } from '@/lib/errors';
 import {
   createCustomPlan,
   setCurrentPlan,
-  deletePlan,
   getCurrentPlanLight,
   type CustomPlanDay,
 } from '@/app/actions/plans';
+import { type PlanPreviewPayload } from '@/lib/plans/types';
 
 interface GeneratedExercise {
   name?: string;
@@ -89,6 +89,33 @@ interface BuiltPlanData {
 type BuildResult =
   | { ok: true; planData: BuiltPlanData }
   | { ok: false; error: string };
+
+function builtPlanDataToPreview(
+  planData: BuiltPlanData,
+  aiPrompt?: string | null
+): PlanPreviewPayload {
+  return {
+    name: planData.name,
+    description: planData.description ?? null,
+    goal: planData.goal ?? null,
+    experience_level: planData.experience_level ?? null,
+    duration_weeks: planData.duration_weeks ?? null,
+    frequency_per_week: planData.frequency_per_week,
+    days: planData.days.map((d) => ({
+      name: d.name,
+      rest_day: d.rest_day ?? false,
+      exercises: d.exercises.map((e) => ({
+        name: e.name,
+        sets: e.sets ?? null,
+        reps_min: e.reps_min ?? null,
+        reps_max: e.reps_max ?? null,
+        weight: e.weight ?? null,
+      })),
+    })),
+    aiPrompt,
+    isAiGenerated: true,
+  }
+}
 
 const clampInt = (v: unknown, min: number, max: number, fallback: number): number => {
   const n = Math.round(Number(v));
@@ -181,27 +208,107 @@ async function buildPlanStructureFromGoal(goalText: string): Promise<BuildResult
  * it via `createCustomPlan` with AI provenance.
  */
 export async function generateWorkoutPlan(input: GeneratePlanInput) {
+  const preview = await previewWorkoutPlan(input);
+  if (!preview.success || !('data' in preview) || !preview.data) {
+    return preview;
+  }
+  return confirmWorkoutPlan(preview.data);
+}
+
+export interface PreviewPlanInput {
+  /** Free-text goal for a brand-new plan, e.g. "Build muscle, train 4 days/week". */
+  goalText?: string;
+  /** Conversational adjustment request; if a current plan exists it is used as context. */
+  instruction?: string;
+}
+
+async function buildAdjustmentGoalText(instruction: string): Promise<string | null> {
+  const currentRes = await getCurrentPlanLight();
+  if (!currentRes.success || !currentRes.data?.plan) {
+    // No active plan: treat the instruction itself as the generation prompt.
+    return instruction;
+  }
+
+  const current = currentRes.data.plan as {
+    name?: string | null;
+    goal?: string | null;
+    frequency_per_week?: number | null;
+    ai_prompt?: string | null;
+  };
+
+  return [
+    `Current plan: "${current.name ?? 'Workout plan'}"`,
+    `Goal: ${current.goal ?? 'general'}`,
+    `Training per week: ${current.frequency_per_week ?? 'unknown'} days`,
+    current.ai_prompt ? `Original request: ${current.ai_prompt}` : null,
+    `Adjustment request: ${instruction}`,
+    'Keeping a sensible structure, re-output a complete weekly plan following the adjustment request.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+/**
+ * Build a plan preview from a free-text goal or an adjustment instruction.
+ * Does not persist anything — the caller must confirm via `confirmWorkoutPlan`.
+ */
+export async function previewWorkoutPlan(input: PreviewPlanInput) {
   const a = await authedUserId();
   if (!a.ok) return a.result;
 
+  const instruction = input.instruction?.trim();
   const goalText = input.goalText?.trim();
-  if (!goalText) {
+  if (!instruction && !goalText) {
     return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
-  const built = await buildPlanStructureFromGoal(goalText);
+  const prompt = instruction
+    ? await buildAdjustmentGoalText(instruction)
+    : goalText;
+  if (!prompt) {
+    return { success: false, error: ActionError.PLAN_NOT_FOUND };
+  }
+
+  const built = await buildPlanStructureFromGoal(prompt);
   if (!built.ok) {
     return { success: false, error: built.error };
   }
 
-  const created = await createCustomPlan(built.planData, {
-    isAiGenerated: true,
-    aiPrompt: goalText,
-    aiModelVersion: AI_CHAT_MODEL,
-  });
+  return {
+    success: true,
+    data: builtPlanDataToPreview(built.planData, instruction ?? goalText ?? null),
+  };
+}
 
-  // Auto-activate the freshly generated plan so "today's workout" on the home
-  // tab reflects it immediately, even if the client forgets to set it current.
+/**
+ * Persist a previously-generated plan preview: create the plan, then set it as
+ * the user's current plan so "today's workout" reflects it immediately.
+ */
+export async function confirmWorkoutPlan(preview: PlanPreviewPayload) {
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+
+  if (!preview?.name?.trim() || !Array.isArray(preview.days) || preview.days.length === 0) {
+    return { success: false, error: ActionError.MISSING_PARAMS };
+  }
+
+  const created = await createCustomPlan(
+    {
+      name: preview.name,
+      description: preview.description ?? undefined,
+      goal: preview.goal ?? undefined,
+      experience_level: preview.experience_level ?? undefined,
+      frequency_per_week: preview.frequency_per_week,
+      duration_weeks: preview.duration_weeks ?? undefined,
+      days: preview.days,
+    },
+    {
+      isAiGenerated: preview.isAiGenerated ?? true,
+      aiPrompt: preview.aiPrompt ?? 'AI-generated plan',
+      aiModelVersion: AI_CHAT_MODEL,
+    }
+  );
+
   if (created.success && 'data' in created && created.data?.id) {
     await setCurrentPlan(created.data.id);
   }
@@ -215,62 +322,9 @@ export interface AdjustPlanInput {
 }
 
 /**
- * Conversationally adjust the user's *current* plan: regenerate a fresh
- * structure from the original goal + the new instruction, set it as current,
- * then retire the old plan. Backs the coach's `adjust_plan` tool.
+ * Conversationally adjust the user's workout plan: regenerates a preview from
+ * the current plan + instruction. The caller must confirm via `confirmWorkoutPlan`.
  */
 export async function adjustWorkoutPlan(input: AdjustPlanInput) {
-  const a = await authedUserId();
-  if (!a.ok) return a.result;
-
-  const instruction = input.instruction?.trim();
-  if (!instruction) {
-    return { success: false, error: ActionError.MISSING_PARAMS };
-  }
-
-  const currentRes = await getCurrentPlanLight();
-  if (!currentRes.success || !currentRes.data?.plan) {
-    return { success: false, error: ActionError.PLAN_NOT_FOUND };
-  }
-
-  const current = currentRes.data.plan as {
-    id: string;
-    name?: string | null;
-    goal?: string | null;
-    frequency_per_week?: number | null;
-    ai_prompt?: string | null;
-  };
-
-  const goalText = [
-    `Current plan: "${current.name ?? 'Workout plan'}"`,
-    `Goal: ${current.goal ?? 'general'}`,
-    `Training per week: ${current.frequency_per_week ?? 'unknown'} days`,
-    current.ai_prompt ? `Original request: ${current.ai_prompt}` : null,
-    `Adjustment request: ${instruction}`,
-    'Keeping a sensible structure, re-output a complete weekly plan following the adjustment request.',
-  ]
-    .filter(Boolean)
-    .join('\n');
-
-  const built = await buildPlanStructureFromGoal(goalText);
-  if (!built.ok) {
-    return { success: false, error: built.error };
-  }
-
-  const created = await createCustomPlan(built.planData, {
-    isAiGenerated: true,
-    aiPrompt: `[adjust] ${instruction}`,
-    aiModelVersion: AI_CHAT_MODEL,
-  });
-
-  if (!created.success || !created.data?.id) {
-    return created;
-  }
-
-  await setCurrentPlan(created.data.id);
-  if (current.id && current.id !== created.data.id) {
-    await deletePlan(current.id);
-  }
-
-  return created;
+  return previewWorkoutPlan({ instruction: input.instruction });
 }

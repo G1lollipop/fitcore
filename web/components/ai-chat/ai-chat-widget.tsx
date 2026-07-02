@@ -27,7 +27,7 @@ interface AIChatWidgetProps {
 export function AIChatWidget({ userId }: AIChatWidgetProps) {
   // Open/closed state now lives in CoachProvider so the home hero, the action
   // dock and suggestion chips can all open the coach (and queue a prompt).
-  const { isOpen, close, consumePrompt } = useCoach()
+  const { isOpen, close, consumePrompt, openPlanPreview } = useCoach()
   const [input, setInput] = useState('')
 
   const { invalidate } = useDashboardActions()
@@ -39,6 +39,9 @@ export function AIChatWidget({ userId }: AIChatWidgetProps) {
     // When the coach logs food/workout/water mid-chat, refresh the dashboard
     // so the rings/totals reflect it without a manual reload.
     onLoggedActivity: invalidate,
+    // When the coach produces a plan preview, hand it to the shared coach
+    // context so the dashboard can open the plan detail sheet for confirmation.
+    onPlanPreview: openPlanPreview,
   })
 
   /** Wire the input box, chips and slash commands through one entry point. */

@@ -51,7 +51,7 @@ Key points:
 Fitcore/
 ├── web/                      # Frontend: Next.js 16 (App Router)
 │   ├── app/
-│   │   ├── page.tsx          # Main app (tab-switched across 3 modules: Today / History / Plans)
+│   │   ├── page.tsx          # Main app (tab-switched across 2 modules: Today / Record)
 │   │   ├── layout.tsx        # Root layout (fonts / theme / analytics)
 │   │   ├── onboarding/       # First-run onboarding
 │   │   ├── sign-in/ sign-up/ # Supabase Auth pages (Google + email/password)
@@ -266,9 +266,11 @@ python eval/evaluate.py      # requires the service running on :8000; LLM-as-Jud
 
 ### 7.1 App shape
 
-The home route `/` is a single-page app that switches between 3 modules via tab state (`components/layout/nav-items.ts`): **Today / History / Plans** (the nav `id`s remain `dashboard`/`nutrition`/`training`). Today is the daily command center; History (`components/history/`) shows past nutrition + training under one shared date; Plans (`components/plans/plans-center.tsx`) holds the diet plan (nutrition targets) + training plans. File-based routes are only `/`, `/onboarding`, `/sign-in/*`, `/sign-up/*`.
+The home route `/` is a single-page app that switches between 2 modules via tab state (`components/layout/nav-items.ts`): **Today / Record** (the nav `id`s remain `dashboard`/`nutrition`). Today is the daily command center; Record (`components/history/`) shows past nutrition + training under one shared date and pre-loads the last 7 days for trend charts. File-based routes are only `/`, `/onboarding`, `/sign-in/*`, `/sign-up/*`.
 
-The product is **AI-logging-first**: the AI coach is the primary surface for natural-language logging and Q&A. The earlier standalone **Knowledge Base** tab has been retired; its evidence-grounded Q&A is now folded into the AI coach, and only its seed prompts survive in `components/knowledge/starters.ts` (imported by `components/ai-chat/chat-body.tsx` as one-tap starters). Evidence-grounded retrieval still flows through the Agent's `query_knowledge_base` tool → backend `/v1/retrieve`.
+**Mobile-first UX:** every main page is designed to fit a single phone viewport without vertical scrolling. Cards show only the highest-priority summary; longer lists, charts, and detailed editors live behind taps that open full-screen sheets. Cards themselves may be internally scrollable, but the main page scroll is avoided.
+
+The product is **AI-logging-first**: the fastest path from "I want to log this" to "it's logged" is the protagonist (home Quick Log, meal photo, one-sentence quick log). The AI coach is a secondary, conversational surface for evidence-grounded Q&A and plan authoring/editing. The earlier standalone **Knowledge Base** tab has been retired; its evidence-grounded Q&A is now folded into the AI coach, and only its seed prompts survive in `components/knowledge/starters.ts` (imported by `components/ai-chat/chat-body.tsx` as one-tap starters). Evidence-grounded retrieval still flows through the Agent's `query_knowledge_base` tool → backend `/v1/retrieve`.
 
 ### 7.2 Business data: Server Actions
 
@@ -278,6 +280,7 @@ The product is **AI-logging-first**: the AI coach is the primary surface for nat
 - `logFood.ts` `saveDietLog.ts` `updateDietLog.ts` `parseFoodFromPhoto.ts` nutrition
 - `logWorkout.ts` training; `quickLog.ts` natural-language quick logging
 - `plans.ts` workout plans (plans are a single JSON `structure` column — the relational exercise library was removed)
+- `generatePlan.ts` AI plan generation with a preview → confirm flow; `previewWorkoutPlan` returns a draft, `confirmWorkoutPlan` persists it
 - `onboarding.ts` onboarding; `chat.ts` read / clear chat history; `settings.ts` profile + macro targets; `history.ts` historical logs
 
 ### 7.3 AI layer

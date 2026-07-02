@@ -134,15 +134,15 @@ export const AGENT_TOOLS: Parameters<
     },
   },
   {
-    type: "function",
-    function: {
-      name: "adjust_plan",
-      description:
-        "Adjust the user's CURRENT workout plan in response to a conversational " +
-        "request (e.g. 'swap the leg day for upper body', 'lower the intensity', " +
-        "'I can only train 3 days this week'). Regenerates the weekly structure " +
-        "from the original goal plus this instruction and sets it as the current " +
-        "plan. Only call when the user explicitly asks to change their plan.",
+      type: "function",
+      function: {
+        name: "adjust_plan",
+        description:
+          "Generate or adjust a workout plan from a conversational request " +
+          "(e.g. 'build a muscle gain plan', 'swap leg day for upper body', " +
+          "'lower the intensity', 'I can only train 3 days this week'). " +
+          "Returns a plan preview that the user must review and confirm before it is saved. " +
+          "Only call when the user explicitly asks to create or change their workout plan.",
       parameters: {
         type: "object",
         properties: {
@@ -168,7 +168,7 @@ You have these tools:
 - log_food: record what the user ate/drank into today's diet log (call when the user says "I ate…/had…"; pass their own words)
 - log_workout: record a workout into today's training log (call when the user says "I did…/ran…")
 - log_water: record water intake (call when the user says "I drank XXX ml of water")
-- adjust_plan: adjust the user's current workout plan on request (call when the user says "swap leg day for upper body", "lower the intensity", "only 3 days this week", etc.)
+- adjust_plan: generate or adjust a workout plan on request (call when the user says "build me a muscle gain plan", "swap leg day for upper body", "lower the intensity", "only 3 days this week", etc.). It returns a preview, not a saved plan.
 
 Tool-calling rules:
 • User says "I (just) ate/had X" → call log_food
@@ -177,7 +177,7 @@ Tool-calling rules:
 • A single sentence mentions both food and a workout → call log_food and log_workout together
 • User asks about exercises / nutrition knowledge / fitness principles → call set_retrieval_params + query_knowledge_base together
 • User asks "how much did I eat today" / "my data" / "is it enough" → call get_user_stats
-• User asks to modify/adjust their workout plan (swap days, change intensity/frequency) → call adjust_plan
+• User asks to create, modify, or adjust their workout plan (new plan, swap days, change intensity/frequency) → call adjust_plan
 • Simple small talk or greeting → answer directly, no tools
 
 Answer requirements:

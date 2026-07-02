@@ -14,7 +14,8 @@ import { chatWithRagRetrieve } from "@/lib/ai/rag-client"
 import { logFood } from "@/app/actions/logFood"
 import { logWorkout } from "@/app/actions/logWorkout"
 import { logWater } from "@/app/actions/dashboard"
-import { adjustWorkoutPlan } from "@/app/actions/generatePlan"
+import { previewWorkoutPlan } from "@/app/actions/generatePlan"
+import type { PlanPreviewPayload } from "@/lib/plans/types"
 
 export { AGENT_TOOLS, buildAgentSystemPrompt } from "@/lib/ai/agent-tools"
 export { planAgentStep } from "@/lib/ai/plan-step"
@@ -70,6 +71,8 @@ export interface AgentResult {
     completionChars: number
     completionTokensApprox: number
   }
+  /** Plan preview produced by the coach; the client opens it for confirmation. */
+  planPreview?: PlanPreviewPayload
 }
 
 const LOG_TOOLS = new Set(["log_food", "log_workout", "log_water", "adjust_plan"])
@@ -95,6 +98,7 @@ export async function runAgent(params: {
   const retrievalK = parsed.retrievalK
   const retrievalKReason = parsed.retrievalKReason
   let loggedActivity = false
+  let planPreview: PlanPreviewPayload | undefined
   let toolsMs = 0
 
   if (planChoice.finish_reason === "tool_calls" && planChoice.message.tool_calls?.length) {
@@ -193,20 +197,20 @@ export async function runAgent(params: {
         } else if (toolName === "adjust_plan") {
           const instruction = String(args.instruction ?? "").trim()
           if (!instruction) {
-            content = "No adjustment request provided; cannot modify the plan."
+            content = "No plan request provided; cannot generate a preview."
           } else {
-            const res = await adjustWorkoutPlan({ instruction })
+            const res = await previewWorkoutPlan({ instruction })
             if (res.success && 'data' in res && res.data) {
-              loggedActivity = true
               const p = res.data as { name?: string; frequency_per_week?: number }
               const freq = p.frequency_per_week ? `, ${p.frequency_per_week} days/week` : ""
-              content = `Adjusted the plan per "${instruction}": ${p.name ?? "new plan"}${freq}, set as the current plan. Briefly summarize the change for the user.`
+              content = `Generated a plan preview per "${instruction}": ${p.name ?? "new plan"}${freq}. Tell the user the preview is ready, ask them to review it in the sheet, and invite them to edit or request further changes before applying.`
+              planPreview = res.data as PlanPreviewPayload
             } else {
               const err = (res as { error?: unknown }).error
               content =
                 err === "PLAN_NOT_FOUND"
                   ? "The user has no active plan; suggest generating one before adjusting."
-                  : "Failed to adjust the plan; ask the user to try again or rephrase."
+                  : "Failed to generate a plan preview; ask the user to try again or rephrase."
             }
           }
 
@@ -263,6 +267,7 @@ export async function runAgent(params: {
     retrievalK,
     retrievalKReason,
     loggedActivity,
+    planPreview,
     timings: { planMs, toolsMs, generationMs },
     usage: {
       promptCharsApprox,

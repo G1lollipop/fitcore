@@ -9,13 +9,13 @@ export function CitationsList({ citations }: { citations: Citation[] }) {
   const t = useT()
   if (citations.length === 0) return null
   return (
-    <div className="mt-1 w-full max-w-[320px] rounded-lg border border-border/70 bg-muted/25 px-2 py-1.5 space-y-1.5">
-      <p className="text-[10px] font-medium text-muted-foreground tracking-wide">{t.aiChat.citations}</p>
-      <ul className="space-y-1.5">
+    <div className="mt-1 w-full max-w-[320px] rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm px-2.5 py-2 space-y-1.5 shadow-sm">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t.aiChat.citations}</p>
+      <ul className="space-y-2">
         {citations.map((c, i) => (
           <li
             key={c.id ?? `${c.source}-${i}`}
-            className="text-[10px] leading-snug text-foreground/90"
+            className="text-[11px] leading-snug text-foreground/90"
           >
             <span className="font-medium text-foreground">
               {i + 1}. {c.title}
@@ -27,7 +27,7 @@ export function CitationsList({ citations }: { citations: Citation[] }) {
                     href={c.source.trim()}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline underline-offset-2 hover:text-primary"
+                    className="underline underline-offset-2 hover:text-primary transition-colors"
                   >
                     {c.source}
                   </a>

@@ -90,7 +90,7 @@ export function TodayHero({
         </h2>
         <span
           className={cn(
-            'rounded-full px-2.5 py-1 text-[10px] font-medium',
+            'rounded-full px-2 py-0.5 text-[10px] font-medium',
             overBudget
               ? 'bg-destructive/10 text-destructive'
               : remaining < kcalGoal * 0.1
@@ -106,7 +106,7 @@ export function TodayHero({
         </span>
       </header>
 
-      <div className="relative flex flex-row items-center gap-4">
+      <div className="relative flex flex-row items-center gap-3">
         <div className="relative shrink-0" style={{ width: SVG_SIZE, height: SVG_SIZE }}>
           <svg
             width={SVG_SIZE}
@@ -208,7 +208,7 @@ export function TodayHero({
   )
 
   if (embedded) {
-    return <div className="flex flex-col gap-2.5">{body}</div>
+    return <div className="flex flex-col gap-2">{body}</div>
   }
 
   return (
