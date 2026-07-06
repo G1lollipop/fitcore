@@ -18,34 +18,50 @@ tmux kill-session -t web-dev-server 2>/dev/null || true
 tmux new-session -d -s web-dev-server \
   "cd '$PROJECT_DIR/web' && npm run dev"
 
-# --- Wait and verify ---
+# --- Poll until servers respond (up to 30s) ---
 echo ""
 echo "Waiting for servers to start..."
-sleep 4
 
 RAG_OK=false
 WEB_OK=false
+TRIES=0
+MAX_TRIES=30
 
-if curl -sf --max-time 3 http://127.0.0.1:8000/v1/health > /dev/null 2>&1; then
-  RAG_OK=true
-fi
+while [ $TRIES -lt $MAX_TRIES ]; do
+  TRIES=$((TRIES + 1))
 
-if curl -sf --max-time 3 -o /dev/null http://127.0.0.1:3000 2>&1; then
-  WEB_OK=true
-fi
+  if ! $RAG_OK && curl -sf --noproxy '*' --max-time 2 http://127.0.0.1:8000/v1/health > /dev/null 2>&1; then
+    RAG_OK=true
+  fi
+
+  if ! $WEB_OK && curl -sf --noproxy '*' --max-time 2 -o /dev/null http://127.0.0.1:3000 2>&1; then
+    WEB_OK=true
+  fi
+
+  if $RAG_OK && $WEB_OK; then
+    break
+  fi
+
+  printf "\r  ... waiting (%ds) " "$TRIES"
+  sleep 1
+done
+
+printf "\r%-30s\n" ""
 
 echo ""
 echo "=== Status ==="
 if $RAG_OK; then
-  echo "  ✓ RAG service   → http://localhost:8000"
+  echo "  \033[0;32m✓\033[0m RAG service   → http://localhost:8000"
 else
-  echo "  ✗ RAG service   → not ready (check: tmux attach -t rag-dev-server)"
+  echo "  \033[0;31m✗\033[0m RAG service   → not ready (check: tmux attach -t rag-dev-server)"
+  echo "                         (ensure rag/.env has GOOGLE_AI_STUDIO_API_KEY)"
 fi
 
 if $WEB_OK; then
-  echo "  ✓ Next.js       → http://localhost:3000"
+  echo "  \033[0;32m✓\033[0m Next.js       → http://localhost:3000"
 else
-  echo "  ✗ Next.js       → not ready (check: tmux attach -t web-dev-server)"
+  echo "  \033[0;31m✗\033[0m Next.js       → not ready (check: tmux attach -t web-dev-server)"
+  echo "                         (ensure web/.env.local has Supabase keys)"
 fi
 
 echo ""
