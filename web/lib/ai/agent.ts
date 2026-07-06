@@ -11,11 +11,6 @@ import { AI_CHAT_MODEL } from "@/lib/ai/model"
 import { createAgentPlan } from "@/lib/ai/plan-step"
 import type { Citation, AgentMode, UserContextPayload, CoachChatMessage } from "@/lib/ai/types"
 import { chatWithRagRetrieve } from "@/lib/ai/rag-client"
-import { logFood } from "@/app/actions/logFood"
-import { logWorkout } from "@/app/actions/logWorkout"
-import { logWater } from "@/app/actions/dashboard"
-import { previewWorkoutPlan } from "@/app/actions/generatePlan"
-import type { PlanPreviewPayload } from "@/lib/plans/types"
 
 export { AGENT_TOOLS, buildAgentSystemPrompt } from "@/lib/ai/agent-tools"
 export { planAgentStep } from "@/lib/ai/plan-step"
@@ -61,8 +56,6 @@ export interface AgentResult {
   toolsUsed: string[]
   retrievalK?: number
   retrievalKReason?: string
-  /** True if a log_* tool wrote to the DB — signals the client to refresh. */
-  loggedActivity?: boolean
   /** Per-stage latency (ms), for the observability trace. */
   timings?: { planMs: number; toolsMs: number; generationMs: number }
   /** Coarse token accounting (≈ chars/4), for cost/latency dashboards. */
@@ -71,8 +64,6 @@ export interface AgentResult {
     completionChars: number
     completionTokensApprox: number
   }
-  /** Plan preview produced by the coach; the client opens it for confirmation. */
-  planPreview?: PlanPreviewPayload
 }
 
 const LOG_TOOLS = new Set(["log_food", "log_workout", "log_water", "adjust_plan"])
@@ -97,8 +88,6 @@ export async function runAgent(params: {
   let citations: Citation[] = []
   const retrievalK = parsed.retrievalK
   const retrievalKReason = parsed.retrievalKReason
-  let loggedActivity = false
-  let planPreview: PlanPreviewPayload | undefined
   let toolsMs = 0
 
   if (planChoice.finish_reason === "tool_calls" && planChoice.message.tool_calls?.length) {
@@ -149,71 +138,6 @@ export async function runAgent(params: {
         } else if (toolName === "get_user_stats") {
           content = formatUserContext(userContext)
 
-        } else if (toolName === "log_food") {
-          const description = String(args.description ?? "").trim()
-          if (!description) {
-            content = "No food description provided; cannot log."
-          } else {
-            const res = await logFood(description)
-            if (res.success && res.data) {
-              loggedActivity = true
-              const d = res.data
-              content = `Logged food: ${d.food_name} ≈ ${d.calories} kcal (protein ${d.protein}g / carbs ${d.carbs}g / fat ${d.fat}g).`
-            } else {
-              content = "Failed to log food; ask the user to try again or rephrase."
-            }
-          }
-
-        } else if (toolName === "log_workout") {
-          const description = String(args.description ?? "").trim()
-          if (!description) {
-            content = "No workout description provided; cannot log."
-          } else {
-            const res = await logWorkout(description)
-            if (res.success && res.data) {
-              loggedActivity = true
-              const w = res.data
-              const setsPart = w.sets ? `${w.sets} sets · ` : ""
-              content = `Logged workout: ${w.workout_name} (${setsPart}${w.duration_minutes} min · ~${w.calories_burned} kcal burned).`
-            } else {
-              content = "Failed to log workout; ask the user to try again or rephrase."
-            }
-          }
-
-        } else if (toolName === "log_water") {
-          const amountMl = Math.round(Number(args.amount_ml) || 0)
-          if (amountMl <= 0) {
-            content = "Invalid water amount; cannot log."
-          } else {
-            const res = await logWater(amountMl)
-            if (res.success) {
-              loggedActivity = true
-              content = `Logged water: +${amountMl} ml, today's total ${res.newAmount ?? amountMl} ml.`
-            } else {
-              content = "Failed to log water; ask the user to try again later."
-            }
-          }
-
-        } else if (toolName === "adjust_plan") {
-          const instruction = String(args.instruction ?? "").trim()
-          if (!instruction) {
-            content = "No plan request provided; cannot generate a preview."
-          } else {
-            const res = await previewWorkoutPlan({ instruction })
-            if (res.success && 'data' in res && res.data) {
-              const p = res.data as { name?: string; frequency_per_week?: number }
-              const freq = p.frequency_per_week ? `, ${p.frequency_per_week} days/week` : ""
-              content = `Generated a plan preview per "${instruction}": ${p.name ?? "new plan"}${freq}. Tell the user the preview is ready, ask them to review it in the sheet, and invite them to edit or request further changes before applying.`
-              planPreview = res.data as PlanPreviewPayload
-            } else {
-              const err = (res as { error?: unknown }).error
-              content =
-                err === "PLAN_NOT_FOUND"
-                  ? "The user has no active plan; suggest generating one before adjusting."
-                  : "Failed to generate a plan preview; ask the user to try again or rephrase."
-            }
-          }
-
         } else {
           content = `Unknown tool: ${toolName}`
         }
@@ -255,7 +179,7 @@ export async function runAgent(params: {
   const generationMs = Date.now() - genStart
 
   const hasKnowledge = toolsUsed.includes("query_knowledge_base")
-  const hasPersonal = toolsUsed.includes("get_user_stats") || toolsUsed.some((tn) => LOG_TOOLS.has(tn))
+  const hasPersonal = toolsUsed.includes("get_user_stats")
   const mode: AgentMode =
     hasKnowledge && hasPersonal ? "hybrid" : hasKnowledge ? "knowledge" : hasPersonal ? "personal" : "direct"
 
@@ -266,8 +190,6 @@ export async function runAgent(params: {
     toolsUsed,
     retrievalK,
     retrievalKReason,
-    loggedActivity,
-    planPreview,
     timings: { planMs, toolsMs, generationMs },
     usage: {
       promptCharsApprox,

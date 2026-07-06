@@ -168,9 +168,7 @@ export async function POST(request: Request) {
               retrievalK: result.retrievalK,
               retrievalKReason: result.retrievalKReason,
               persisted,
-              loggedActivity: result.loggedActivity,
               assistantMessageId: assistantMessageId ?? undefined,
-              planPreview: result.planPreview,
             },
           })
         )
