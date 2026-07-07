@@ -118,7 +118,7 @@ function MobileSheet({
           </>
         }
       />
-      <div className="flex min-h-0 flex-1 flex-col pb-14">
+      <div className="flex min-h-0 flex-1 flex-col rounded-b-2xl bg-background pb-14">
         {isLoadingHistory ? (
           <Spinner />
         ) : (
