@@ -2,10 +2,11 @@
 
 import { useCallback, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { AnimatePresence } from 'framer-motion'
 import { getCurrentPlanLight, deletePlan } from '@/app/actions/plans'
 import { confirmWorkoutPlan } from '@/app/actions/generatePlan'
 import { DASHBOARD_KEY } from '@/lib/queries/dashboard'
-import type { PlanPreviewPayload } from '@/lib/plans/types'
+import type { PlanPreviewPayload, PlanDay } from '@/lib/plans/types'
 import { useToast } from '@/hooks/use-toast'
 import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
@@ -14,6 +15,7 @@ import { TodayPlanCard } from '@/components/dashboard/today-plan-card'
 import { PlanGeneratorCard } from '@/components/plans/plan-generator-card'
 import { PlanEditor } from '@/components/plans/plan-editor'
 import { PlanDetailSheet, type DetailPlan } from '@/components/plans/plan-detail-sheet'
+import { TrainingMode } from '@/components/training/training-mode'
 
 /** Loose shape for the active plan row (body lives in `structure`). */
 interface PlanRow {
@@ -50,6 +52,7 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
   const { toast } = useToast()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
+  const [trainingOpen, setTrainingOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmingPlan, setConfirmingPlan] = useState(false)
 
@@ -144,6 +147,7 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
         userId={userId}
         onLogged={onLogged}
         onExpand={() => setSheetOpen(true)}
+        onStartTraining={() => setTrainingOpen(true)}
         onCreate={() => setEditorOpen(true)}
       />
 
@@ -158,6 +162,30 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
       />
 
       <PlanEditor open={editorOpen} onOpenChange={setEditorOpen} onCreated={refreshPlan} />
+
+      <AnimatePresence>
+        {trainingOpen && info?.plan && info?.todayDay && (
+          <TrainingMode
+            planId={info.plan.id}
+            day={{
+              name: info.todayDay.name,
+              rest_day: info.todayDay.isRestDay,
+              exercises: info.exercises.map((e) => ({
+                name: e.text,
+                sets: e.sets ?? null,
+                reps_min: e.repsMin ?? null,
+                reps_max: e.repsMax ?? null,
+                weight: e.weight ?? null,
+              })),
+            } as PlanDay}
+            onClose={() => setTrainingOpen(false)}
+            onFinish={() => {
+              setTrainingOpen(false)
+              refreshPlan()
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronRight, Coffee, Dumbbell } from 'lucide-react'
+import { ChevronRight, Coffee, Dumbbell, Play } from 'lucide-react'
 import { useT } from '@/lib/i18n/provider'
 import type { TodayWorkoutInfo } from '@/app/actions/types'
 import { cn } from '@/lib/utils'
@@ -12,6 +12,8 @@ interface TodayPlanCardProps {
   onLogged?: () => void
   /** Expand the active plan into the full-week detail sheet. */
   onExpand?: () => void
+  /** Launch the full-screen training mode for today's workout. */
+  onStartTraining?: () => void
   /** Start the create-a-plan flow when there's no active plan. */
   onCreate?: () => void
   className?: string
@@ -32,6 +34,7 @@ export function TodayPlanCard({
   userId: _userId,
   onLogged: _onLogged,
   onExpand,
+  onStartTraining,
   onCreate,
   className,
 }: TodayPlanCardProps) {
@@ -163,6 +166,20 @@ export function TodayPlanCard({
                 </li>
               )}
             </ul>
+          )}
+
+          {onStartTraining && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onStartTraining()
+              }}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Play size={16} />
+              Start Training
+            </button>
           )}
         </div>
       </button>
