@@ -8,7 +8,7 @@ import type {
   DietLogItem,
   WorkoutLogItem,
 } from '@/app/actions/types'
-import type { QuickLogResult } from '@/app/actions/quickLog'
+import type { QuickLogFoodResult } from '@/app/actions/quickLog'
 
 /**
  * Single cache key for the home dashboard payload (always "today" scoped).
@@ -55,44 +55,29 @@ export function useDashboardActions() {
     [qc]
   )
 
-  /** Apply parsed quick-log items (food + workout) to today's totals + logs. */
+  /** Apply parsed quick-log items (food) to today's totals + logs. */
   const applyQuickLogItems = useCallback(
-    (items: QuickLogResult[]) => {
+    (items: QuickLogFoodResult[]) => {
       patchToday((today) => {
         const next = { ...today }
         const dietLogs = [...next.diet_logs]
-        const workoutLogs = [...next.workout_logs]
         const nowIso = new Date().toISOString()
         for (const item of items) {
-          if (item.kind === 'food') {
-            dietLogs.push({
-              id: item.id,
-              food_name: item.name,
-              calories: item.calories,
-              protein: item.protein,
-              carbs: item.carbs,
-              fat: item.fat,
-              logged_at: nowIso,
-            })
-            next.total_calories += item.calories
-            next.total_protein += item.protein
-            next.total_carbs += item.carbs
-            next.total_fat += item.fat
-          } else {
-            workoutLogs.push({
-              id: item.id,
-              workout_name: item.name,
-              sets: item.sets,
-              duration_minutes: item.durationMinutes,
-              calories_burned: item.caloriesBurned,
-              logged_at: nowIso,
-            })
-            next.calories_burned += item.caloriesBurned
-            next.workout_duration += item.durationMinutes
-          }
+          dietLogs.push({
+            id: item.id,
+            food_name: item.name,
+            calories: item.calories,
+            protein: item.protein,
+            carbs: item.carbs,
+            fat: item.fat,
+            logged_at: nowIso,
+          })
+          next.total_calories += item.calories
+          next.total_protein += item.protein
+          next.total_carbs += item.carbs
+          next.total_fat += item.fat
         }
         next.diet_logs = dietLogs
-        next.workout_logs = workoutLogs
         return next
       })
     },

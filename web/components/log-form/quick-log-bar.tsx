@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useQuickLog } from '@/hooks/use-quick-log'
 import { useT } from '@/lib/i18n/provider'
 import { tError, type Dictionary } from '@/lib/i18n'
-import { quickLog, type QuickLogResult } from '@/app/actions/quickLog'
+import { quickLog, type QuickLogFoodResult } from '@/app/actions/quickLog'
 import { useDashboardActions } from '@/lib/queries/dashboard'
 import { useSpeechInput } from '@/lib/hooks/use-speech-input'
 import { cn } from '@/lib/utils'
@@ -374,19 +374,7 @@ function Kbd({ children }: { children: React.ReactNode }) {
   )
 }
 
-function summarizeResults(items: QuickLogResult[], t: Dictionary): string {
-  const parts: string[] = []
-  const foods = items.filter((i): i is Extract<QuickLogResult, { kind: 'food' }> => i.kind === 'food')
-  const workouts = items.filter(
-    (i): i is Extract<QuickLogResult, { kind: 'workout' }> => i.kind === 'workout'
-  )
-  if (foods.length) {
-    const total = foods.reduce((acc, f) => acc + f.calories, 0)
-    parts.push(t.logForm.quick.summaryFood(foods.length, total))
-  }
-  if (workouts.length) {
-    const total = workouts.reduce((acc, w) => acc + w.caloriesBurned, 0)
-    parts.push(t.logForm.quick.summaryWorkout(workouts.length, total))
-  }
-  return parts.join(' · ')
+function summarizeResults(items: QuickLogFoodResult[], t: Dictionary): string {
+  const total = items.reduce((acc, f) => acc + f.calories, 0)
+  return t.logForm.quick.summaryFood(items.length, total)
 }

@@ -1,15 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Camera, Check, CornerDownLeft, Loader2, Mic, PencilLine, RotateCcw } from 'lucide-react'
+import { Camera, Check, CornerDownLeft, Loader2, PencilLine, RotateCcw } from 'lucide-react'
 import { useT } from '@/lib/i18n/provider'
 import { tError, type Dictionary } from '@/lib/i18n'
-import { quickLog, type QuickLogResult } from '@/app/actions/quickLog'
+import { quickLog, type QuickLogFoodResult } from '@/app/actions/quickLog'
 import { useDashboardActions } from '@/lib/queries/dashboard'
 import { useHistoryActions } from '@/lib/queries/history'
 import { useMealPhoto } from '@/components/log-form/meal-photo-context'
 import { DietLogEditDialog } from '@/components/log-form/diet-log-edit-dialog'
-import { useSpeechInput } from '@/lib/hooks/use-speech-input'
 import { getTodayDate } from '@/lib/utils/date'
 import type { DietLogItem } from '@/app/actions/types'
 import { cn } from '@/lib/utils'
@@ -45,8 +44,6 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
   const { openPicker } = useMealPhoto()
   const inputRef = useRef<HTMLInputElement>(null)
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Text captured when voice input starts, so dictation appends to it.
-  const speechBaseRef = useRef('')
 
   const [text, setText] = useState('')
   const [pendingCount, setPendingCount] = useState(0)
@@ -123,34 +120,6 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
     [userId, applyQuickLogItems, history, onLogged, showFeedback, t]
   )
 
-  const speech = useSpeechInput({
-    lang: t.common.locale,
-    onTranscript: (transcript) => {
-      const base = speechBaseRef.current
-      setText(base ? `${base} ${transcript}`.trim() : transcript)
-    },
-    onError: (error) => {
-      if (error === 'no-speech' || error === 'aborted') return
-      showFeedback({
-        kind: 'error',
-        text:
-          error === 'not-allowed' || error === 'service-not-allowed'
-            ? t.logForm.quick.micDenied
-            : t.logForm.quick.micError,
-      })
-    },
-  })
-
-  const toggleMic = useCallback(() => {
-    if (speech.listening) {
-      speech.stop()
-      return
-    }
-    speechBaseRef.current = text.trim()
-    speech.start()
-    inputRef.current?.focus()
-  }, [speech, text])
-
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -191,68 +160,51 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
           e.preventDefault()
           submit(text)
         }}
-        className="relative flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-2 transition-shadow focus-within:border-primary/60"
+        className="relative flex flex-col gap-1.5"
       >
-        <input
-          ref={inputRef}
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={speech.listening ? t.logForm.quick.micListening : t.logForm.quick.homeSubtitle}
-          aria-label={t.logForm.quick.homeTitle}
-          className="min-w-0 flex-1 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
-        />
+        {/* Line 1: Input + Send */}
+        <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-2 transition-shadow focus-within:border-primary/60">
+          <input
+            ref={inputRef}
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder={t.logForm.quick.homeSubtitle}
+            aria-label={t.logForm.quick.homeTitle}
+            className="min-w-0 flex-1 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
+          />
 
-        {speech.supported && (
+          {text.trim() && (
+            <button
+              type="submit"
+              aria-label={t.logForm.quick.submit}
+              className="inline-flex h-7 shrink-0 items-center justify-center rounded-lg bg-primary px-2 text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <CornerDownLeft size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Line 2: Secondary entry points */}
+        <div className="flex gap-2">
           <button
             type="button"
-            onClick={toggleMic}
-            aria-label={speech.listening ? t.logForm.quick.micStop : t.logForm.quick.micStart}
-            aria-pressed={speech.listening}
-            className={cn(
-              'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors',
-              speech.listening
-                ? 'bg-destructive/15 text-destructive'
-                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-            )}
+            onClick={openPicker}
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
           >
-            <Mic size={15} className={speech.listening ? 'animate-pulse' : undefined} />
+            <Camera size={13} />
+            Photo
           </button>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setManualOpen(true)}
-          aria-label={t.logForm.manual.foodAria}
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          <PencilLine size={15} />
-        </button>
-
-        <button
-          type="button"
-          onClick={openPicker}
-          aria-label={t.logForm.quick.photoAria}
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          <Camera size={15} />
-        </button>
-
-        <button
-          type="submit"
-          disabled={!text.trim()}
-          aria-label={t.logForm.quick.submit}
-          className={cn(
-            'inline-flex h-7 shrink-0 items-center gap-1 rounded-lg px-2.5 text-xs font-medium transition-colors',
-            text.trim()
-              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-              : 'bg-secondary text-muted-foreground'
-          )}
-        >
-          {t.logForm.quick.submit}
-          <CornerDownLeft size={12} />
-        </button>
+          <button
+            type="button"
+            onClick={() => setManualOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+          >
+            <PencilLine size={13} />
+            Manual
+          </button>
+        </div>
       </form>
 
       {feedback ? (
@@ -297,19 +249,7 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
   )
 }
 
-function summarize(items: QuickLogResult[], t: Dictionary): string {
-  const parts: string[] = []
-  const foods = items.filter((i): i is Extract<QuickLogResult, { kind: 'food' }> => i.kind === 'food')
-  const workouts = items.filter(
-    (i): i is Extract<QuickLogResult, { kind: 'workout' }> => i.kind === 'workout'
-  )
-  if (foods.length) {
-    const total = foods.reduce((acc, f) => acc + f.calories, 0)
-    parts.push(t.logForm.quick.summaryFood(foods.length, total))
-  }
-  if (workouts.length) {
-    const total = workouts.reduce((acc, w) => acc + w.caloriesBurned, 0)
-    parts.push(t.logForm.quick.summaryWorkout(workouts.length, total))
-  }
-  return `${t.logForm.quick.logged} · ${parts.join(' · ')}`
+function summarize(items: QuickLogFoodResult[], t: Dictionary): string {
+  const total = items.reduce((acc, f) => acc + f.calories, 0)
+  return `${t.logForm.quick.logged} · ${t.logForm.quick.summaryFood(items.length, total)}`
 }
