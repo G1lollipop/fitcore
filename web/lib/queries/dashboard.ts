@@ -125,13 +125,6 @@ export function useDashboardActions() {
     [patchToday]
   )
 
-  const setWater = useCallback(
-    (amountMl: number) => {
-      patchToday((today) => ({ ...today, water_intake: amountMl }))
-    },
-    [patchToday]
-  )
-
   /** Background refetch — used when we don't have the delta locally. */
   const invalidate = useCallback(() => {
     void qc.invalidateQueries({ queryKey: DASHBOARD_KEY })
@@ -142,7 +135,6 @@ export function useDashboardActions() {
     applyQuickLogItems,
     applyDietLog,
     applyWorkoutLog,
-    setWater,
     invalidate,
   }
 }

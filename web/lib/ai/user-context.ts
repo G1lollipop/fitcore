@@ -62,7 +62,7 @@ export async function buildUserContext(userId: string): Promise<UserContextPaylo
       protein: dailyStats?.total_protein ?? null,
       carbs: dailyStats?.total_carbs ?? null,
       fat: dailyStats?.total_fat ?? null,
-      water: dailyStats?.water_intake ?? null,
+
       caloriesBurned: dailyStats?.calories_burned ?? null,
       workoutDuration: dailyStats?.workout_duration ?? null,
     },

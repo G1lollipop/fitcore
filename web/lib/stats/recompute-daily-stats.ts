@@ -72,7 +72,6 @@ export async function recomputeDailyStats(userId: string, date: string): Promise
     await supabase.from('daily_stats').insert({
       user_id: userId,
       date,
-      water_intake: 0,
       ...aggregate,
     });
   }

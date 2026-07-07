@@ -66,7 +66,7 @@ export interface AgentResult {
   }
 }
 
-const LOG_TOOLS = new Set(["log_food", "log_workout", "log_water", "adjust_plan"])
+const LOG_TOOLS = new Set(["log_food", "log_workout", "adjust_plan"])
 
 export async function runAgent(params: {
   message: string
