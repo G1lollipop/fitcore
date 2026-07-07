@@ -169,17 +169,25 @@ export function TodayPlanCard({
           )}
 
           {onStartTraining && (
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
                 e.stopPropagation()
                 onStartTraining()
               }}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onStartTraining()
+                }
+              }}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
             >
               <Play size={16} />
               Start Training
-            </button>
+            </div>
           )}
         </div>
       </button>
