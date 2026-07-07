@@ -1,8 +1,9 @@
 'use client'
 
-import { ArrowUpRight, Bot } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import type { RefObject } from 'react'
 import { useT } from '@/lib/i18n/provider'
+import { CoachAvatar } from './coach-avatar'
 import { KNOWLEDGE_TOPICS } from '@/components/knowledge/starters'
 import { ChatInput } from './chat-input'
 import { ChatMessage } from './chat-message'
@@ -57,8 +58,8 @@ export function ChatBody({
         {showStarters && <ChatStarters onPick={onSend} />}
         {showWaiting && (
           <div className="flex gap-2.5">
-            <div className="shrink-0 w-7 h-7 rounded-xl bg-gradient-to-br from-primary/25 to-accent/20 flex items-center justify-center mt-0.5 shadow-sm">
-              <Bot size={13} className="text-primary" />
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/25 to-accent/20 text-primary">
+              <CoachAvatar size={20} />
             </div>
             <div className="glass-highlight bg-card/70 border border-border/50 rounded-2xl rounded-tl-md backdrop-blur-sm">
               <TypingIndicator />

@@ -1,8 +1,9 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { Bot, ChevronDown, MessageSquarePlus } from 'lucide-react'
+import { ChevronDown, MessageSquarePlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CoachAvatar } from './coach-avatar'
 import { useT } from '@/lib/i18n/provider'
 import type { ChatConversationSummary } from '@/app/actions/chat'
 import { sessionSelectLabel } from './utils'
@@ -49,12 +50,11 @@ export function ChatHeader({
     >
       <div
         className={cn(
-          'relative flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/25 to-accent/20 shadow-sm shrink-0 overflow-hidden',
+          'relative flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/25 to-accent/20 shadow-sm shrink-0 overflow-hidden text-primary',
           compact ? 'w-7 h-7' : 'w-9 h-9'
         )}
       >
-        <div className="absolute inset-0 bg-primary/5" />
-        <Bot size={compact ? 14 : 17} className="relative text-primary" />
+        <CoachAvatar size={compact ? 20 : 24} />
       </div>
 
       <div className={cn('flex-1 min-w-0 flex flex-col', compact ? 'gap-0.5' : 'gap-1')}>

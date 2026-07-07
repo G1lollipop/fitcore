@@ -1,9 +1,10 @@
 'use client'
 
-import { ArrowRight, Bot } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useCoach } from '@/components/ai-chat/coach-context'
 import { useT } from '@/lib/i18n/provider'
 import { cn } from '@/lib/utils'
+import { CoachAvatar } from '@/components/ai-chat/coach-avatar'
 
 interface CoachAskBarProps {
   className?: string
@@ -42,8 +43,8 @@ export function CoachAskBar({ className }: CoachAskBarProps) {
         className="pointer-events-none absolute -bottom-5 -left-5 h-20 w-20 rounded-full bg-accent/5 blur-2xl"
       />
 
-      <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/15 shadow-sm">
-        <Bot size={14} className="text-primary" />
+      <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/15 shadow-sm text-primary">
+        <CoachAvatar size={20} />
       </div>
 
       <span className="relative min-w-0 flex-1 truncate text-xs font-semibold">{t.aiChat.home.title}</span>
