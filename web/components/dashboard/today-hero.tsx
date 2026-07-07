@@ -1,29 +1,24 @@
 'use client'
 
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
-import { Flame, UtensilsCrossed, Timer } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n/provider'
 
 interface TodayHeroProps {
   kcalIntake?: number
-  kcalBurn?: number
   kcalGoal?: number
-  workoutMinutes?: number
   className?: string
   /** Render without the outer glass card (for embedding in a combined card). */
   embedded?: boolean
 }
 
-const RADIUS_OUTER = 56
-const RADIUS_INNER = 43
+const RADIUS = 56
 const STROKE = 10
 const SVG_SIZE = 132
 const CENTER = SVG_SIZE / 2
 
-const CIRC_OUTER = 2 * Math.PI * RADIUS_OUTER
-const CIRC_INNER = 2 * Math.PI * RADIUS_INNER
+const CIRC = 2 * Math.PI * RADIUS
 
 function clamp01(v: number) {
   if (!isFinite(v) || v <= 0) return 0
@@ -58,29 +53,24 @@ function useTickUp(target: number, duration = 1.1) {
 
 export function TodayHero({
   kcalIntake = 0,
-  kcalBurn = 0,
   kcalGoal = 2500,
-  workoutMinutes = 0,
   className,
   embedded = false,
 }: TodayHeroProps) {
   const t = useT()
   const intakePct = clamp01(kcalIntake / Math.max(1, kcalGoal))
-  // Burn ring is sized against half of intake goal — keeps a 500 kcal burn from
-  // looking trivial next to a 2500 kcal intake target.
-  const burnPct = clamp01(kcalBurn / Math.max(1, kcalGoal * 0.4))
 
-  const net = kcalIntake - kcalBurn
-  const remaining = Math.max(0, kcalGoal - net)
-  const overBudget = net > kcalGoal
-
-  const displayNet = useTickUp(net)
   const displayIntake = useTickUp(kcalIntake)
-  const displayBurn = useTickUp(kcalBurn)
-  const displayMinutes = useTickUp(workoutMinutes)
 
-  const offsetOuter = CIRC_OUTER * (1 - intakePct)
-  const offsetInner = CIRC_INNER * (1 - burnPct)
+  const offset = CIRC * (1 - intakePct)
+
+  // Color shifts green → orange → red as intake approaches / exceeds goal
+  const ringColor =
+    intakePct > 1
+      ? 'var(--chart-5)'
+      : intakePct >= 0.7
+        ? 'var(--chart-3)'
+        : 'var(--chart-2)'
 
   const body = (
     <>
@@ -88,25 +78,9 @@ export function TodayHero({
         <h2 className="font-display text-sm font-semibold text-foreground">
           {formatDate(new Date(), t.common.locale)}
         </h2>
-        <span
-          className={cn(
-            'rounded-full px-2 py-0.5 text-[10px] font-medium',
-            overBudget
-              ? 'bg-destructive/10 text-destructive'
-              : remaining < kcalGoal * 0.1
-                ? 'bg-accent/20 text-accent-foreground'
-                : 'bg-primary/10 text-primary'
-          )}
-        >
-          {overBudget
-            ? t.dashboard.hero.statusOver
-            : remaining < kcalGoal * 0.1
-              ? t.dashboard.hero.statusClose
-              : t.dashboard.hero.statusOk}
-        </span>
       </header>
 
-      <div className="relative flex flex-row items-center gap-3">
+      <div className="relative flex items-center justify-center">
         <div className="relative shrink-0" style={{ width: SVG_SIZE, height: SVG_SIZE }}>
           <svg
             width={SVG_SIZE}
@@ -118,7 +92,7 @@ export function TodayHero({
             <circle
               cx={CENTER}
               cy={CENTER}
-              r={RADIUS_OUTER}
+              r={RADIUS}
               fill="none"
               stroke="var(--color-secondary)"
               strokeWidth={STROKE}
@@ -126,82 +100,26 @@ export function TodayHero({
             <motion.circle
               cx={CENTER}
               cy={CENTER}
-              r={RADIUS_OUTER}
+              r={RADIUS}
               fill="none"
-              stroke="var(--color-primary)"
+              stroke={ringColor}
               strokeWidth={STROKE}
               strokeLinecap="round"
-              strokeDasharray={CIRC_OUTER}
-              initial={{ strokeDashoffset: CIRC_OUTER }}
-              animate={{ strokeDashoffset: offsetOuter }}
+              strokeDasharray={CIRC}
+              initial={{ strokeDashoffset: CIRC }}
+              animate={{ strokeDashoffset: offset }}
               transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            />
-
-            <circle
-              cx={CENTER}
-              cy={CENTER}
-              r={RADIUS_INNER}
-              fill="none"
-              stroke="var(--color-muted)"
-              strokeWidth={STROKE - 4}
-            />
-            <motion.circle
-              cx={CENTER}
-              cy={CENTER}
-              r={RADIUS_INNER}
-              fill="none"
-              stroke="var(--color-accent)"
-              strokeWidth={STROKE - 4}
-              strokeLinecap="round"
-              strokeDasharray={CIRC_INNER}
-              initial={{ strokeDashoffset: CIRC_INNER }}
-              animate={{ strokeDashoffset: offsetInner }}
-              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
             />
           </svg>
 
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-1 text-center">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-              {t.dashboard.hero.netIntake}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-bold tabular-nums text-foreground">
+              {displayIntake.toLocaleString()}
             </span>
-            <span
-              className={cn(
-                'font-display text-[34px] font-semibold leading-none tabular-nums',
-                overBudget ? 'text-destructive' : 'text-foreground'
-              )}
-            >
-              {displayNet}
-            </span>
-            <span className="mt-1 text-[10px] leading-tight text-muted-foreground">
-              {overBudget
-                ? t.dashboard.hero.over(displayNet - kcalGoal)
-                : t.dashboard.hero.remaining(Math.max(0, kcalGoal - displayNet))}
+            <span className="text-[11px] text-muted-foreground">
+              / {kcalGoal.toLocaleString()} kcal
             </span>
           </div>
-        </div>
-
-        <div className="flex flex-1 flex-col gap-1">
-          <Stat
-            tone="primary"
-            icon={<UtensilsCrossed size={14} />}
-            label={t.dashboard.hero.todayIntake}
-            value={displayIntake}
-            unit="kcal"
-          />
-          <Stat
-            tone="accent"
-            icon={<Flame size={14} />}
-            label={t.dashboard.hero.todayBurn}
-            value={displayBurn}
-            unit="kcal"
-          />
-          <Stat
-            tone="muted"
-            icon={<Timer size={14} />}
-            label={t.dashboard.hero.workoutDuration}
-            value={displayMinutes}
-            unit={t.common.minutes}
-          />
         </div>
       </div>
     </>
