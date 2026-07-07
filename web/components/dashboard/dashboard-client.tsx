@@ -120,9 +120,6 @@ export function DashboardClient({
           carbsGoal={dashboardData?.goals.target_carbs}
           fat={dashboardData?.today.total_fat}
           fatGoal={dashboardData?.goals.target_fat}
-          waterMl={dashboardData?.today.water_intake}
-          waterGoalMl={dashboardData?.goals.water_goal}
-          onWaterLogged={handleLogSuccess}
           onTargetsSaved={handleLogSuccess}
           className="shrink-0"
         />

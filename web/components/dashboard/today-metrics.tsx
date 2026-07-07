@@ -13,13 +13,6 @@ interface TodayMetricsProps {
   carbsGoal?: number
   fat?: number
   fatGoal?: number
-  /**
-   * Water props are still accepted so callers (the dashboard) don't need to
-   * change, but water is no longer surfaced on the home card.
-   */
-  waterMl?: number
-  waterGoalMl?: number
-  onWaterLogged?: () => void
   /** Render without its own glass card (for the combined overview). */
   embedded?: boolean
 }

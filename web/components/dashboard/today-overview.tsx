@@ -26,9 +26,6 @@ interface TodayOverviewProps {
   carbsGoal?: number
   fat?: number
   fatGoal?: number
-  waterMl?: number
-  waterGoalMl?: number
-  onWaterLogged?: () => void
   /** Refresh dashboard goals/rings after the user edits nutrition targets. */
   onTargetsSaved?: () => void
   /**

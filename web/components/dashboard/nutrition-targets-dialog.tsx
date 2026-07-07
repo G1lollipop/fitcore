@@ -19,7 +19,7 @@ import { tError } from '@/lib/i18n'
 import { calculateNutritionRecommendation } from '@/app/actions/onboarding'
 import { updateDietPlan } from '@/app/actions/settings'
 import { useUserSettings, useInvalidateUserSettings } from '@/lib/queries/settings'
-import { DEFAULT_WATER_GOAL_ML, mlToLiters } from '@/lib/metrics/water'
+
 
 interface NutritionTargetsDialogProps {
   open: boolean
@@ -33,10 +33,9 @@ interface FormState {
   protein: string
   carbs: string
   fat: string
-  water: string
 }
 
-const EMPTY: FormState = { calories: '', protein: '', carbs: '', fat: '', water: '' }
+const EMPTY: FormState = { calories: '', protein: '', carbs: '', fat: '' }
 
 /**
  * Dialog for editing the user's daily nutrition targets (calories / macros /
@@ -85,7 +84,6 @@ export function NutritionTargetsDialog({ open, onOpenChange, onSaved }: Nutritio
             protein: settings.target_protein != null ? String(settings.target_protein) : '',
             carbs: settings.target_carbs != null ? String(settings.target_carbs) : '',
             fat: settings.target_fat != null ? String(settings.target_fat) : '',
-            water: mlToLiters(settings.water_goal ?? DEFAULT_WATER_GOAL_ML),
           }
         : EMPTY
     )
@@ -135,7 +133,7 @@ export function NutritionTargetsDialog({ open, onOpenChange, onSaved }: Nutritio
         targetProtein: Number(form.protein),
         targetCarbs: Number(form.carbs),
         targetFat: Number(form.fat),
-        waterGoalMl: Math.round(Number(form.water) * 1000),
+        waterGoalMl: 0,
       })
       if (res.success) {
         invalidateUserSettings()
@@ -188,17 +186,6 @@ export function NutritionTargetsDialog({ open, onOpenChange, onSaved }: Nutritio
               </Field>
               <Field label={t.plans.dietPlan.fat}>
                 <Input className="h-9 text-sm" type="number" inputMode="numeric" value={form.fat} onChange={(e) => set('fat', e.target.value)} />
-              </Field>
-              <Field label={t.plans.dietPlan.waterGoal}>
-                <Input
-                  className="h-9 text-sm"
-                  type="number"
-                  inputMode="decimal"
-                  step="0.1"
-                  min="0.25"
-                  value={form.water}
-                  onChange={(e) => set('water', e.target.value)}
-                />
               </Field>
             </div>
 
