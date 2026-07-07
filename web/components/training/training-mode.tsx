@@ -116,15 +116,13 @@ export function TrainingMode({ planId, day, onClose, onFinish }: TrainingModePro
       {/* ── Scrollable body ── */}
       <div className="flex-1 overflow-y-auto px-4">
         {/* Exercise tabs */}
-        <div className="flex gap-1 overflow-x-auto py-2 [scrollbar-width:none]">
+        <div className="flex gap-1 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {session.exercises.map((ex, idx) => {
             const done = ex.completedSets.length >= (ex.exercise.sets ?? 0)
             return (
               <button
                 key={idx}
-                onClick={() => {
-                  if (!showingRest) setCurrentExerciseIdx(idx)
-                }}
+                onClick={() => setCurrentExerciseIdx(idx)}
                 className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
                   idx === currentExerciseIdx
                     ? 'bg-primary text-primary-foreground'

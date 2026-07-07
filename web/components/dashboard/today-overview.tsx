@@ -82,34 +82,34 @@ export function TodayOverview({
         kcalGoal={kcalGoal}
       />
 
-      {/* Macros continue the same stat-row language as the energy stats above,
-          so the ring + all six stats read as one list. Targets are editable
-          inline right where the goals are shown. */}
-      <div className="relative mt-2 border-t border-border/50 pt-2 md:mt-3 md:pt-3">
-        <div className="mb-1.5 flex items-center justify-between md:mb-2">
-          <span className="text-[11px] font-medium text-muted-foreground">
-            {t.dashboard.targets.label}
-          </span>
-          <button
-            type="button"
-            onClick={() => setTargetsOpen(true)}
-            aria-label={t.dashboard.targets.edit}
-            className="-my-2 -mr-1.5 inline-flex h-10 items-center gap-1 rounded-lg px-1.5 text-[11px] font-medium text-primary transition-colors hover:text-primary/80"
-          >
-            <Pencil size={12} />
-            {t.dashboard.targets.edit}
-          </button>
-        </div>
+      {/* Ring + macros side-by-side to fill the empty space around the ring */}
+      <div className="relative mt-2 flex items-center gap-4 border-t border-border/50 pt-2 md:mt-3 md:pt-3">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1.5 flex items-center justify-between md:mb-2">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {t.dashboard.targets.label}
+            </span>
+            <button
+              type="button"
+              onClick={() => setTargetsOpen(true)}
+              aria-label={t.dashboard.targets.edit}
+              className="-my-2 -mr-1.5 inline-flex h-10 items-center gap-1 rounded-lg px-1.5 text-[11px] font-medium text-primary transition-colors hover:text-primary/80"
+            >
+              <Pencil size={12} />
+              {t.dashboard.targets.edit}
+            </button>
+          </div>
 
-        <TodayMetrics
-          embedded
-          protein={protein}
-          proteinGoal={proteinGoal}
-          carbs={carbs}
-          carbsGoal={carbsGoal}
-          fat={fat}
-          fatGoal={fatGoal}
-        />
+          <TodayMetrics
+            embedded
+            protein={protein}
+            proteinGoal={proteinGoal}
+            carbs={carbs}
+            carbsGoal={carbsGoal}
+            fat={fat}
+            fatGoal={fatGoal}
+          />
+        </div>
       </div>
 
       <Sheet>

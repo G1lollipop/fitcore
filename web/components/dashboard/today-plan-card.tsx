@@ -98,27 +98,6 @@ export function TodayPlanCard({
   const visibleExercises = exercises.slice(0, VISIBLE_EXERCISE_COUNT)
   const overflowCount = Math.max(0, exercises.length - VISIBLE_EXERCISE_COUNT)
 
-  function formatSetsReps(exercise: (typeof exercises)[number]) {
-    const reps =
-      exercise.repsMin != null || exercise.repsMax != null
-        ? t.dashboard.todayPlan.repsRange(
-            exercise.repsMin ?? exercise.repsMax ?? 0,
-            exercise.repsMax ?? exercise.repsMin ?? 0
-          )
-        : null
-
-    if (exercise.sets != null && reps != null) {
-      return t.dashboard.todayPlan.setsReps(exercise.sets, reps)
-    }
-    if (exercise.sets != null) {
-      return t.dashboard.todayPlan.setsN(exercise.sets)
-    }
-    if (reps != null) {
-      return `${reps} reps`
-    }
-    return null
-  }
-
   return (
     <Shell className={className}>
       <button
@@ -145,21 +124,18 @@ export function TodayPlanCard({
 
           {exercises.length > 0 && (
             <ul className="mt-1.5 space-y-0.5">
-              {visibleExercises.map((exercise) => {
-                const setsReps = formatSetsReps(exercise)
-                return (
-                  <li key={exercise.id} className="flex items-center justify-between gap-2">
-                    <span className="truncate text-[11px] text-muted-foreground">
-                      {exercise.text}
-                    </span>
-                    {setsReps && (
-                      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/80">
-                        {setsReps}
-                      </span>
-                    )}
-                  </li>
-                )
-              })}
+              {visibleExercises.map((exercise) => (
+                <li key={exercise.id} className="flex items-center justify-between gap-2">
+                  <span className="truncate text-[11px] text-muted-foreground">
+                    {exercise.exerciseName}
+                  </span>
+                  <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/80">
+                    {exercise.sets != null && `${exercise.sets}×`}
+                    {exercise.repsMin != null &&
+                      `${exercise.repsMin}${exercise.repsMax != null && exercise.repsMax !== exercise.repsMin ? `-${exercise.repsMax}` : ''}`}
+                  </span>
+                </li>
+              ))}
               {overflowCount > 0 && (
                 <li className="text-[11px] font-medium text-primary">
                   {t.dashboard.todayPlan.moreExercises(overflowCount)}

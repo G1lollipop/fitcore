@@ -162,8 +162,16 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
         }}
         className="relative flex flex-col gap-1.5"
       >
-        {/* Line 1: Input + Send */}
+        {/* Line 1: Camera + Input + Send */}
         <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-2 transition-shadow focus-within:border-primary/60">
+          <button
+            type="button"
+            onClick={openPicker}
+            aria-label="Take meal photo"
+            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+          >
+            <Camera size={15} />
+          </button>
           <input
             ref={inputRef}
             type="text"
@@ -186,24 +194,28 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
           )}
         </div>
 
-        {/* Line 2: Secondary entry points */}
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={openPicker}
-            className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
-          >
-            <Camera size={13} />
-            Photo
-          </button>
+        {/* Line 2: Manual + quick-add suggestions */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setManualOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
           >
             <PencilLine size={13} />
             Manual
           </button>
+          <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {['2 eggs', 'chicken breast', 'protein shake', 'rice bowl'].map((food) => (
+              <button
+                key={food}
+                type="button"
+                onClick={() => submit(food)}
+                className="shrink-0 rounded-full border border-border/50 bg-card/40 px-2.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+              >
+                {food}
+              </button>
+            ))}
+          </div>
         </div>
       </form>
 

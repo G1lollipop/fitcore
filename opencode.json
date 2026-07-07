@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "lsp": {
+    "typescript": {
+      "extensions": [".ts", ".tsx", ".js", ".jsx"],
+      "command": ["typescript-language-server", "--stdio"],
+      "initialization": {
+        "preferences": {
+          "includeInlayParameterNameHints": "all",
+          "includeInlayVariableTypeHints": true,
+          "includeInlayFunctionLikeReturnTypeHints": true
+        }
+      }
+    },
+    "python": {
+      "extensions": [".py"],
+      "command": ["basedpyright-langserver", "--stdio"],
+      "initialization": {
+        "pythonPath": "/home/herbert/projects/fitcore/rag/.venv/bin/python"
+      }
+    }
+  }
+}

@@ -60,7 +60,7 @@ export type WeeklyTrendData = {
 export type TodayWorkoutInfo = {
   plan: { id: string; name: string } | null;
   todayDay: { id: string; name: string; isRestDay: boolean } | null;
-  exercises: { id: string; text: string; sets?: number; repsMin?: number; repsMax?: number; weight?: number }[];
+  exercises: { id: string; text: string; exerciseName: string; sets?: number; repsMin?: number; repsMax?: number; weight?: number }[];
 } | null;
 
 export type DashboardData = {

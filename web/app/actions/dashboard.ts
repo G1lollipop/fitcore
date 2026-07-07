@@ -102,6 +102,7 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
       exercises: result.exercises.map((e) => ({
         id: e.id,
         text: e.text,
+        exerciseName: e.exerciseName,
         sets: e.sets ?? undefined,
         repsMin: e.repsMin ?? undefined,
         repsMax: e.repsMax ?? undefined,

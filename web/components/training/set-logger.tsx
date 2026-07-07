@@ -66,7 +66,7 @@ export function SetLogger({
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
             placeholder="kg"
-            className="w-14 rounded-md border border-border/50 bg-background px-1.5 py-1 text-center text-xs tabular-nums"
+            className="w-14 rounded-md border border-border/50 bg-background px-1.5 py-1 text-center text-xs tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           <span className="text-[11px] text-muted-foreground">×</span>
           <input
@@ -74,7 +74,7 @@ export function SetLogger({
             value={reps}
             onChange={(e) => setReps(e.target.value)}
             placeholder="reps"
-            className="w-14 rounded-md border border-border/50 bg-background px-1.5 py-1 text-center text-xs tabular-nums"
+            className="w-14 rounded-md border border-border/50 bg-background px-1.5 py-1 text-center text-xs tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           <button
             type="submit"
