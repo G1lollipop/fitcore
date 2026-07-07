@@ -28,7 +28,6 @@ export type UserGoals = {
   target_protein: number;
   target_carbs: number;
   target_fat: number;
-  water_goal: number;
 };
 
 export type TodayStats = {
@@ -38,7 +37,6 @@ export type TodayStats = {
   total_fat: number;
   calories_burned: number;
   workout_duration: number;
-  water_intake: number;
   diet_logs: DietLogItem[];
   workout_logs: WorkoutLogItem[];
 };

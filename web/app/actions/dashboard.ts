@@ -7,7 +7,6 @@ import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
 import { calculateTodayWorkout } from '@/lib/plans/today-workout';
-import { DEFAULT_WATER_GOAL_ML } from '@/lib/metrics/water';
 import type {
   DashboardData,
   DietLogItem,
@@ -115,80 +114,6 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
   }
 }
 
-export async function logWater(
-  amountMl: number
-): Promise<{ success: boolean; newAmount?: number; error?: string }> {
-  const a = await authedUserId();
-  if (!a.ok) return a.result;
-  const userId = a.userId;
-  if (amountMl <= 0) {
-    return { success: false, error: ActionError.MISSING_PARAMS };
-  }
-
-  const today = getTodayDate();
-
-  const queryResult = await supabase
-    .from('daily_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .single();
-
-  const existingRecord = queryResult.data as DailyStatsRow | null;
-  const queryError = queryResult.error;
-
-  if (queryError && queryError.code !== 'PGRST116') {
-    console.error('[logWater] Query error:', JSON.stringify(queryError, null, 2));
-    return { success: false, error: ActionError.DB_QUERY_FAILED };
-  }
-
-  if (existingRecord) {
-    const newWaterIntake = (existingRecord.water_intake ?? 0) + amountMl;
-
-    const updateResult = await supabase
-      .from('daily_stats')
-      .update({ water_intake: newWaterIntake })
-      .eq('id', existingRecord.id);
-
-    const updateError = updateResult.error;
-
-    if (updateError) {
-      console.error('[logWater] Update error:', JSON.stringify(updateError, null, 2));
-      return { success: false, error: ActionError.DB_UPDATE_FAILED };
-    }
-
-    revalidatePath('/');
-    return { success: true, newAmount: newWaterIntake };
-  } else {
-    const insertData: Omit<DailyStatsInsert, 'id'> = {
-      user_id: userId,
-      date: today,
-      total_calories: 0,
-      total_protein: 0,
-      total_carbs: 0,
-      total_fat: 0,
-      calories_burned: 0,
-      workout_duration: 0,
-      water_intake: amountMl,
-    };
-
-    const insertResult = await supabase
-      .from('daily_stats')
-      .insert(insertData)
-      .select();
-
-    const insertError = insertResult.error;
-
-    if (insertError) {
-      console.error('[logWater] Insert error:', JSON.stringify(insertError, null, 2));
-      return { success: false, error: ActionError.DB_INSERT_FAILED };
-    }
-
-    revalidatePath('/');
-    return { success: true, newAmount: amountMl };
-  }
-}
-
 export async function getUserGoals(): Promise<UserGoals | null> {
   const userId = await getUserIdOrNull();
   if (!userId) return null;
@@ -213,7 +138,6 @@ export async function getUserGoals(): Promise<UserGoals | null> {
       target_protein: 150,
       target_carbs: 300,
       target_fat: 80,
-      water_goal: DEFAULT_WATER_GOAL_ML,
     };
   }
 
@@ -222,7 +146,6 @@ export async function getUserGoals(): Promise<UserGoals | null> {
     target_protein: row.target_protein || 150,
     target_carbs: row.target_carbs || 300,
     target_fat: row.target_fat || 80,
-    water_goal: row.water_goal || DEFAULT_WATER_GOAL_ML,
   };
 }
 
@@ -357,7 +280,6 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       target_protein: 150,
       target_carbs: 300,
       target_fat: 80,
-      water_goal: DEFAULT_WATER_GOAL_ML,
     },
     today: {
       total_calories: dailyStats?.total_calories || 0,
@@ -366,7 +288,6 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       total_fat: dailyStats?.total_fat || 0,
       calories_burned: dailyStats?.calories_burned || 0,
       workout_duration: dailyStats?.workout_duration || 0,
-      water_intake: dailyStats?.water_intake || 0,
       diet_logs: (dietLogsResult.data as DietLogItem[] | null) ?? [],
       workout_logs: (workoutLogsResult.data as WorkoutLogItem[] | null) ?? [],
     },
