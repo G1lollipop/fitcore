@@ -111,9 +111,7 @@ export function DashboardClient({
         <TodayOverview
           userId={userId}
           kcalIntake={dashboardData?.today.total_calories}
-          kcalBurn={dashboardData?.today.calories_burned}
           kcalGoal={dashboardData?.goals.target_calories}
-          workoutMinutes={dashboardData?.today.workout_duration}
           protein={dashboardData?.today.total_protein}
           proteinGoal={dashboardData?.goals.target_protein}
           carbs={dashboardData?.today.total_carbs}

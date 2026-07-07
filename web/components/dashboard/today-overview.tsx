@@ -17,9 +17,7 @@ import { getTodayDate } from '@/lib/utils/date'
 interface TodayOverviewProps {
   userId?: string
   kcalIntake?: number
-  kcalBurn?: number
   kcalGoal?: number
-  workoutMinutes?: number
   protein?: number
   proteinGoal?: number
   carbs?: number
@@ -46,9 +44,7 @@ interface TodayOverviewProps {
 export function TodayOverview({
   userId,
   kcalIntake,
-  kcalBurn,
   kcalGoal,
-  workoutMinutes,
   protein,
   proteinGoal,
   carbs,
@@ -83,9 +79,7 @@ export function TodayOverview({
       <TodayHero
         embedded
         kcalIntake={kcalIntake}
-        kcalBurn={kcalBurn}
         kcalGoal={kcalGoal}
-        workoutMinutes={workoutMinutes}
       />
 
       {/* Macros continue the same stat-row language as the energy stats above,
