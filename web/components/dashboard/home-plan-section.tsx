@@ -167,6 +167,7 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
         {trainingOpen && info?.plan && info?.todayDay && (
           <TrainingMode
             planId={info.plan.id}
+            userId={userId ?? ''}
             day={{
               name: info.todayDay.name,
               rest_day: info.todayDay.isRestDay,

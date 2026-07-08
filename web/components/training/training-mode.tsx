@@ -2,31 +2,53 @@
 'use client'
 
 import { ArrowLeft, Dumbbell, Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { PlanDay } from '@/lib/plans/types'
 import {
   createTrainingSession,
   logSet,
+  removeSet,
+  loadTrainingSession,
+  saveTrainingSession,
+  clearTrainingSession,
   type TrainingSession,
 } from '@/lib/training/session-state'
 import { finishTrainingSession } from '@/app/actions/training'
+import { getTodayDate } from '@/lib/utils/date'
 import { SetLogger } from './set-logger'
 import { RestTimer } from './rest-timer'
 
 interface TrainingModeProps {
   planId: string
+  userId: string
   day: PlanDay
   onClose: () => void
   onFinish: () => void
 }
 
-export function TrainingMode({ planId, day, onClose, onFinish }: TrainingModeProps) {
-  const [session, setSession] = useState<TrainingSession>(() => createTrainingSession(planId, day))
-  const [currentExerciseIdx, setCurrentExerciseIdx] = useState(0)
+export function TrainingMode({ planId, userId, day, onClose, onFinish }: TrainingModeProps) {
+  const today = getTodayDate()
+  const dayId = (day as { id?: string }).id ?? ''
+
+  const [session, setSession] = useState<TrainingSession>(() => {
+    const saved = loadTrainingSession({ userId, planId, dayId, date: today })
+    return saved ?? createTrainingSession(planId, day)
+  })
   const [showingRest, setShowingRest] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [saving, setSaving] = useState(false)
+  const sessionRef = useRef(session)
+
+  // Keep sessionRef in sync with latest session
+  useEffect(() => {
+    sessionRef.current = session
+  }, [session])
+
+  // Persist session to localStorage on every change
+  useEffect(() => {
+    saveTrainingSession(session, { userId, planId, dayId, date: today })
+  }, [session, userId, planId, dayId, today])
 
   // Elapsed timer — ticks every second
   useEffect(() => {
@@ -36,32 +58,34 @@ export function TrainingMode({ planId, day, onClose, onFinish }: TrainingModePro
     return () => clearInterval(id)
   }, [session.startedAt])
 
-  const currentEx = session.exercises[currentExerciseIdx]
-  const isLastExercise = currentExerciseIdx >= session.exercises.length - 1
-  const isCurrentExerciseDone =
-    currentEx.completedSets.length >= (currentEx.exercise.sets ?? 0)
+  const totalSetsLogged = session.exercises.reduce(
+    (sum, ex) => sum + ex.completedSets.length,
+    0
+  )
 
   const handleLogSet = useCallback(
-    (weightKg: number | null, reps: number | null) => {
-      const nextSet = session.exercises[currentExerciseIdx].completedSets.length + 1
-      setSession((s) => logSet(s, currentExerciseIdx, nextSet, weightKg, reps))
+    (exerciseIdx: number) => (setNumber: number, weightKg: number | null, reps: number | null) => {
+      setSession((s) => logSet(s, exerciseIdx, setNumber, weightKg, reps))
       setShowingRest(true)
     },
-    [currentExerciseIdx, session.exercises],
+    [],
+  )
+
+  const handleRemoveSet = useCallback(
+    (exerciseIdx: number) => (setNumber: number) => {
+      setSession((s) => removeSet(s, exerciseIdx, setNumber))
+    },
+    [],
   )
 
   const handleRestComplete = useCallback(() => {
     setShowingRest(false)
-    // Auto-advance if current exercise is now complete
-    const ex = session.exercises[currentExerciseIdx]
-    if (ex.completedSets.length >= (ex.exercise.sets ?? 0) && !isLastExercise) {
-      setCurrentExerciseIdx((i) => i + 1)
-    }
-  }, [currentExerciseIdx, isLastExercise, session.exercises])
+  }, [])
 
   const handleFinish = useCallback(async () => {
     setSaving(true)
-    const exercises = session.exercises.map((ex) => ({
+    const current = sessionRef.current
+    const exercises = current.exercises.map((ex) => ({
       name: ex.exercise.name,
       completedSets: ex.completedSets.map((s) => ({
         setNumber: s.setNumber,
@@ -71,16 +95,17 @@ export function TrainingMode({ planId, day, onClose, onFinish }: TrainingModePro
     }))
 
     await finishTrainingSession({
-      planId: session.planId,
-      dayId: session.dayId,
-      workoutName: session.dayName,
-      startedAt: session.startedAt.toISOString(),
+      planId: current.planId,
+      dayId: current.dayId,
+      workoutName: current.dayName,
+      startedAt: current.startedAt.toISOString(),
       exercises,
     })
 
+    clearTrainingSession({ userId, planId, dayId, date: today })
     setSaving(false)
     onFinish()
-  }, [session, onFinish])
+  }, [userId, planId, dayId, today, onFinish])
 
   const formatElapsed = (s: number) => {
     const m = Math.floor(s / 60)
@@ -100,9 +125,10 @@ export function TrainingMode({ planId, day, onClose, onFinish }: TrainingModePro
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <button
           onClick={onClose}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft size={16} />
+          Exit
         </button>
         <div className="flex items-center gap-2">
           <Dumbbell size={16} className="text-primary" />
@@ -113,52 +139,27 @@ export function TrainingMode({ planId, day, onClose, onFinish }: TrainingModePro
         </span>
       </div>
 
-      {/* ── Scrollable body ── */}
-      <div className="flex-1 overflow-y-auto px-4">
-        {/* Exercise tabs */}
-        <div className="flex gap-1 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {session.exercises.map((ex, idx) => {
-            const done = ex.completedSets.length >= (ex.exercise.sets ?? 0)
-            return (
-              <button
-                key={idx}
-                onClick={() => setCurrentExerciseIdx(idx)}
-                className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
-                  idx === currentExerciseIdx
-                    ? 'bg-primary text-primary-foreground'
-                    : done
-                      ? 'bg-primary/10 text-primary'
-                      : 'bg-secondary text-muted-foreground'
-                }`}
-              >
-                {done ? '✓ ' : ''}
-                {ex.exercise.name}
-              </button>
-            )
-          })}
-        </div>
+      {/* ── All exercises stacked vertically ── */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
+        <div className="space-y-6">
+          {session.exercises.map((ex, idx) => (
+            <div key={idx}>
+              <h2 className="font-display text-lg text-foreground">{ex.exercise.name}</h2>
 
-        {/* Current exercise detail */}
-        <div className="mt-4">
-          <h2 className="font-display text-lg text-foreground">{currentEx.exercise.name}</h2>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Target: {currentEx.exercise.sets} sets
-            {currentEx.exercise.reps_min != null &&
-              ` × ${currentEx.exercise.reps_min}${currentEx.exercise.reps_max != null ? `-${currentEx.exercise.reps_max}` : ''} reps`}
-            {currentEx.exercise.weight != null && ` @ ${currentEx.exercise.weight}kg`}
-          </p>
-
-          <div className="mt-4">
-            <SetLogger
-              exerciseName={currentEx.exercise.name}
-              targetSets={currentEx.exercise.sets ?? 1}
-              targetWeight={currentEx.exercise.weight}
-              targetRepsMin={currentEx.exercise.reps_min}
-              targetRepsMax={currentEx.exercise.reps_max}
-              completedSets={currentEx.completedSets}
-              onLogSet={handleLogSet}
-            />
-          </div>
+              <div className="mt-2">
+                <SetLogger
+                  exerciseName={ex.exercise.name}
+                  targetSets={ex.exercise.sets ?? 1}
+                  targetWeight={ex.exercise.weight}
+                  targetRepsMin={ex.exercise.reps_min}
+                  targetRepsMax={ex.exercise.reps_max}
+                  completedSets={ex.completedSets}
+                  onLogSet={handleLogSet(idx)}
+                  onRemoveSet={handleRemoveSet(idx)}
+                />
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Rest timer — animated in/out */}
@@ -174,16 +175,6 @@ export function TrainingMode({ planId, day, onClose, onFinish }: TrainingModePro
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Next exercise hint */}
-        {isCurrentExerciseDone && !showingRest && !isLastExercise && (
-          <button
-            onClick={() => setCurrentExerciseIdx((i) => i + 1)}
-            className="mt-4 w-full rounded-xl bg-primary/10 py-3 text-center text-sm font-medium text-primary hover:bg-primary/15 transition-colors"
-          >
-            Next: {session.exercises[currentExerciseIdx + 1].exercise.name} →
-          </button>
-        )}
       </div>
 
       {/* ── Finish footer ── */}
