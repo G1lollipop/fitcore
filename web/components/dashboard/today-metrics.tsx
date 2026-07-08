@@ -47,29 +47,41 @@ export function TodayMetrics({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
-      className="flex flex-col gap-1.5"
+      className="flex flex-col gap-2"
     >
       {macros.map(({ label, value, goal, color }) => {
         const pct = goal && goal > 0 ? Math.min((value / goal) * 100, 100) : 0
+        const overGoal = goal > 0 && value > goal
         return (
           <div key={label} className="flex items-center gap-2">
-            <span className="w-14 text-[10px] font-medium text-muted-foreground">
-              {label}
+            <span className="w-9 shrink-0 text-[10px] font-semibold tracking-wide uppercase text-muted-foreground/80">
+              {label.slice(0, 1)}
             </span>
-            <div
-              className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden"
-              role="progressbar"
-              aria-valuenow={pct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
+            <div className="relative flex-1 h-2 rounded-full bg-secondary/60 overflow-hidden shadow-inner">
               <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{ width: `${pct}%`, backgroundColor: color }}
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent to-transparent"
+                style={{
+                  background: `linear-gradient(to right, ${color}, ${color}88)`,
+                  width: `${Math.min(pct, 100)}%`,
+                  boxShadow: `0 0 6px ${color}40`,
+                }}
               />
+              {overGoal && (
+                <div
+                  className="absolute inset-y-0 right-0 rounded-r-full bg-destructive/60"
+                  style={{ left: `${(goal / value) * 100}%` }}
+                />
+              )}
             </div>
-            <span className="text-[10px] tabular-nums text-muted-foreground w-16 text-right">
-              {value} / {goal ?? '—'}g
+            <span
+              className={`text-[10px] tabular-nums w-14 text-right font-medium ${
+                overGoal ? 'text-destructive' : 'text-muted-foreground'
+              }`}
+            >
+              {value}
+              <span className="text-[9px] font-normal text-muted-foreground/60">
+                /{goal ?? '—'}g
+              </span>
             </span>
           </div>
         )

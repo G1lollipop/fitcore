@@ -76,14 +76,17 @@ export function TodayOverview({
       <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/5 blur-3xl" aria-hidden />
       <div className="absolute -bottom-24 -left-12 h-48 w-48 rounded-full bg-accent/10 blur-3xl" aria-hidden />
 
-      <TodayHero
-        embedded
-        kcalIntake={kcalIntake}
-        kcalGoal={kcalGoal}
-      />
+      <div className="flex items-start gap-3 md:gap-4">
+        {/* Left: calorie ring */}
+        <div className="shrink-0">
+          <TodayHero
+            embedded
+            kcalIntake={kcalIntake}
+            kcalGoal={kcalGoal}
+          />
+        </div>
 
-      {/* Ring + macros side-by-side to fill the empty space around the ring */}
-      <div className="relative mt-2 flex items-center gap-4 border-t border-border/50 pt-2 md:mt-3 md:pt-3">
+        {/* Right: macro targets */}
         <div className="min-w-0 flex-1">
           <div className="mb-1.5 flex items-center justify-between md:mb-2">
             <span className="text-[11px] font-medium text-muted-foreground">
