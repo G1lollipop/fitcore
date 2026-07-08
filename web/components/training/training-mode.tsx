@@ -4,6 +4,7 @@
 import { ArrowLeft, Dumbbell, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useT } from '@/lib/i18n/provider'
 import type { PlanDay } from '@/lib/plans/types'
 import {
   createTrainingSession,
@@ -30,6 +31,7 @@ interface TrainingModeProps {
 export function TrainingMode({ planId, userId, day, onClose, onFinish }: TrainingModeProps) {
   const today = getTodayDate()
   const dayId = (day as { id?: string }).id ?? ''
+  const t = useT()
 
   const [session, setSession] = useState<TrainingSession>(() => {
     const saved = loadTrainingSession({ userId, planId, dayId, date: today })
@@ -107,6 +109,12 @@ export function TrainingMode({ planId, userId, day, onClose, onFinish }: Trainin
     onFinish()
   }, [userId, planId, dayId, today, onFinish])
 
+  const handleDiscard = useCallback(() => {
+    if (!confirm(t.training.mode.discardConfirm)) return
+    clearTrainingSession({ userId, planId, dayId, date: today })
+    onClose()
+  }, [userId, planId, dayId, today, onClose, t])
+
   const formatElapsed = (s: number) => {
     const m = Math.floor(s / 60)
     const sec = s % 60
@@ -128,18 +136,26 @@ export function TrainingMode({ planId, userId, day, onClose, onFinish }: Trainin
           className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft size={16} />
-          Exit
+          {t.training.mode.back}
         </button>
         <div className="flex items-center gap-2">
           <Dumbbell size={16} className="text-primary" />
           <span className="text-sm font-medium text-foreground">{session.dayName}</span>
         </div>
-        <span className="text-sm tabular-nums text-muted-foreground">
-          {formatElapsed(elapsed)}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {formatElapsed(elapsed)}
+          </span>
+          <button
+            onClick={handleDiscard}
+            className="text-sm font-medium text-destructive/80 hover:text-destructive"
+          >
+            {t.training.mode.exit}
+          </button>
+        </div>
       </div>
 
-      {/* ── All exercises stacked vertically ── */}
+      {/* ── All exercises stacked vertically (scrollable) ── */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <div className="space-y-6">
           {session.exercises.map((ex, idx) => (
@@ -161,21 +177,23 @@ export function TrainingMode({ planId, userId, day, onClose, onFinish }: Trainin
             </div>
           ))}
         </div>
-
-        {/* Rest timer — animated in/out */}
-        <AnimatePresence>
-          {showingRest && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="mt-4"
-            >
-              <RestTimer onSkip={handleRestComplete} onComplete={handleRestComplete} />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* ── Rest timer — always visible (outside scroll, above finish) ── */}
+      <AnimatePresence>
+        {showingRest && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="shrink-0 px-4 pb-2"
+          >
+            <div className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-2">
+              <RestTimer onSkip={handleRestComplete} onComplete={handleRestComplete} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Finish footer ── */}
       <div className="shrink-0 px-4 pb-6 pt-2">

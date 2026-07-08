@@ -107,4 +107,21 @@ describe('SetLogger — pre-rendered empty set rows', () => {
     const firstRepsInput = screen.getAllByPlaceholderText('reps')[0] as HTMLInputElement
     expect(firstRepsInput.value).toBe('8')
   })
+
+  it('adds a deletable extra input row when Add Set is clicked', () => {
+    const completed: CompletedSet[] = [
+      { setNumber: 1, weightKg: 60, reps: 8, loggedAt: new Date() },
+      { setNumber: 2, weightKg: 60, reps: 8, loggedAt: new Date() },
+      { setNumber: 3, weightKg: 60, reps: 8, loggedAt: new Date() },
+    ]
+    render(<SetLogger {...baseProps} completedSets={completed} />)
+    fireEvent.click(screen.getByText('Add Set'))
+    expect(screen.getByText(/Set 4/)).toBeInTheDocument()
+
+    const deleteBtn = screen.queryByLabelText('Remove set')
+    expect(deleteBtn).toBeTruthy()
+
+    fireEvent.click(deleteBtn!)
+    expect(screen.queryByLabelText('Remove set')).not.toBeInTheDocument()
+  })
 })

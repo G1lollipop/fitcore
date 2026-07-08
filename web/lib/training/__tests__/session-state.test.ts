@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { TrainingSession } from '@/lib/training/session-state'
 import {
   createTrainingSession,
+  logSet,
+  removeSet,
   serializeSession,
   deserializeSession,
   buildTrainingSessionKey,
@@ -77,6 +79,41 @@ describe('session-state persistence helpers', () => {
     it('builds expected key format', () => {
       const key = buildTrainingSessionKey({ userId, planId, dayId: 'day-1', date })
       expect(key).toBe('fitcore-training-session:user-1:plan-1:day-1:2026-07-08')
+    })
+  })
+
+  describe('logSet — sequential set numbering', () => {
+    it('assigns setNumber = length + 1 regardless of passed setNumber', () => {
+      const session = makeSession()
+      const s1 = logSet(session, 0, 99, 60, 8) // pass 99, should get setNumber 1
+      expect(s1.exercises[0].completedSets[0].setNumber).toBe(1)
+
+      const s2 = logSet(s1, 0, 99, 65, 10) // pass 99 again, should get setNumber 2
+      expect(s2.exercises[0].completedSets[1].setNumber).toBe(2)
+    })
+  })
+
+  describe('removeSet — reindexes remaining sets', () => {
+    it('renumbers sets sequentially after removing a middle set', () => {
+      const session = makeSession()
+      let s = logSet(session, 0, 1, 60, 8)   // setNumber 1
+      s = logSet(s, 0, 2, 65, 10)             // setNumber 2
+      s = logSet(s, 0, 3, 70, 12)             // setNumber 3
+      expect(s.exercises[0].completedSets.map(x => x.setNumber)).toEqual([1, 2, 3])
+
+      // Remove the set that currently has setNumber 2
+      s = removeSet(s, 0, 2)
+      expect(s.exercises[0].completedSets.map(x => x.setNumber)).toEqual([1, 2])
+      expect(s.exercises[0].completedSets[1].weightKg).toBe(70) // was set 3, now set 2
+    })
+
+    it('renumbers after removing the first set', () => {
+      const session = makeSession()
+      let s = logSet(session, 0, 1, 60, 8)
+      s = logSet(s, 0, 2, 65, 10)
+      s = removeSet(s, 0, 1)
+      expect(s.exercises[0].completedSets.map(x => x.setNumber)).toEqual([1])
+      expect(s.exercises[0].completedSets[0].weightKg).toBe(65)
     })
   })
 

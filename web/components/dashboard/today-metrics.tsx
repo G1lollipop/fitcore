@@ -47,17 +47,17 @@ export function TodayMetrics({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
-      className="flex flex-col gap-2"
+      className="flex h-full flex-col justify-between gap-2"
     >
       {macros.map(({ label, value, goal, color }) => {
         const pct = goal && goal > 0 ? Math.min((value / goal) * 100, 100) : 0
         const overGoal = goal > 0 && value > goal
         return (
           <div key={label} className="flex items-center gap-2">
-            <span className="w-9 shrink-0 text-[10px] font-semibold tracking-wide uppercase text-muted-foreground/80">
-              {label.slice(0, 1)}
+            <span className="w-14 shrink-0 text-[10px] font-semibold tracking-wide uppercase text-muted-foreground/80">
+              {label}
             </span>
-            <div className="relative flex-1 h-2 rounded-full bg-secondary/60 overflow-hidden shadow-inner">
+            <div className="relative h-3 flex-1 rounded-full bg-secondary/60 overflow-hidden shadow-inner">
               <div
                 className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent to-transparent"
                 style={{

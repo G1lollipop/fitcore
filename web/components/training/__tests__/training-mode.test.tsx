@@ -1,6 +1,6 @@
 /// <reference types="@testing-library/jest-dom" />
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TrainingMode } from '@/components/training/training-mode'
 import type { PlanDay } from '@/lib/plans/types'
 import {
@@ -27,6 +27,18 @@ vi.mock('@/components/training/rest-timer', () => ({
       <button onClick={onComplete}>Complete</button>
     </div>
   ),
+}))
+
+vi.mock('@/lib/i18n/provider', () => ({
+  useT: () => ({
+    training: {
+      mode: {
+        back: 'Back',
+        exit: 'Exit',
+        discardConfirm: 'Discard workout progress?',
+      },
+    },
+  }),
 }))
 
 vi.mock('framer-motion', async (importOriginal) => {
@@ -152,5 +164,84 @@ describe('TrainingMode — stacked exercises + persistence', () => {
     await vi.waitFor(() => {
       expect(onFinish).toHaveBeenCalled()
     })
+  })
+
+  it('rest timer container is a shrink-0 sibling, not inside the overflow-y-auto scroll area', async () => {
+    const { container } = render(<TrainingMode {...baseProps} />)
+
+    const scrollArea = container.querySelector('.overflow-y-auto')
+    expect(scrollArea).toBeTruthy()
+
+    const weightInput = container.querySelector('input[placeholder="kg"]') as HTMLInputElement
+    expect(weightInput).toBeTruthy()
+    fireEvent.change(weightInput, { target: { value: '70' } })
+
+    const repsInput = container.querySelector('input[placeholder="reps"]') as HTMLInputElement
+    expect(repsInput).toBeTruthy()
+    fireEvent.change(repsInput, { target: { value: '10' } })
+
+    const form = weightInput.closest('form')!
+    fireEvent.submit(form)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rest-timer')).toBeInTheDocument()
+    })
+
+    expect(scrollArea!.contains(screen.getByTestId('rest-timer'))).toBe(false)
+    expect(scrollArea!.children.length).toBe(1)
+  })
+
+  it('renders a Back button (minimize) and an Exit button (discard)', () => {
+    render(<TrainingMode {...baseProps} />)
+    expect(screen.getByText('Back')).toBeInTheDocument()
+    expect(screen.getByText('Exit')).toBeInTheDocument()
+  })
+
+  it('Back button calls onClose without clearing localStorage (minimize)', () => {
+    const onClose = vi.fn()
+    render(<TrainingMode {...baseProps} onClose={onClose} />)
+
+    // Session should be saved on mount
+    const today = getTodayDate()
+    const key = `fitcore-training-session:user-1:plan-1::${today}`
+    expect(localStorage.getItem(key)).toBeTruthy()
+
+    screen.getByText('Back').click()
+    expect(onClose).toHaveBeenCalledTimes(1)
+    // Session should STILL be in localStorage (minimize, not discard)
+    expect(localStorage.getItem(key)).toBeTruthy()
+  })
+
+  it('Exit button clears localStorage after confirm and calls onClose (discard)', async () => {
+    const onClose = vi.fn()
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<TrainingMode {...baseProps} onClose={onClose} />)
+
+    const today = getTodayDate()
+    const key = `fitcore-training-session:user-1:plan-1::${today}`
+    expect(localStorage.getItem(key)).toBeTruthy()
+
+    screen.getByText('Exit').click()
+
+    await vi.waitFor(() => {
+      expect(localStorage.getItem(key)).toBeNull()
+    })
+    expect(confirmSpy).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+    confirmSpy.mockRestore()
+  })
+
+  it('Exit button does NOT clear if user cancels confirm', () => {
+    const onClose = vi.fn()
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<TrainingMode {...baseProps} onClose={onClose} />)
+
+    const today = getTodayDate()
+    const key = `fitcore-training-session:user-1:plan-1::${today}`
+
+    screen.getByText('Exit').click()
+    expect(localStorage.getItem(key)).toBeTruthy()
+    expect(onClose).not.toHaveBeenCalled()
+    confirmSpy.mockRestore()
   })
 })

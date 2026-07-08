@@ -2,7 +2,7 @@
 'use client'
 
 import { Check, Plus, X } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import type { CompletedSet } from '@/lib/training/session-state'
 
 interface SetLoggerProps {
@@ -21,14 +21,14 @@ function SetRowInput({
   isExtra,
   targetWeight,
   targetRepsMin,
-  inputRef,
+  onRemove,
   onConfirm,
 }: {
   setNumber: number
   isExtra: boolean
   targetWeight?: number | null
   targetRepsMin?: number | null
-  inputRef?: React.RefObject<HTMLInputElement | null>
+  onRemove?: () => void
   onConfirm: (weightKg: number | null, reps: number | null) => void
 }) {
   const [weight, setWeight] = useState(targetWeight?.toString() ?? '')
@@ -58,7 +58,6 @@ function SetRowInput({
         value={weight}
         onChange={(e) => setWeight(e.target.value)}
         placeholder="kg"
-        ref={inputRef}
         className="w-14 rounded-md border border-border/50 bg-background px-1.5 py-1 text-center text-xs tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
       <span className="text-[11px] text-muted-foreground">×</span>
@@ -75,6 +74,19 @@ function SetRowInput({
       >
         <Check size={14} />
       </button>
+      {onRemove && (
+        <button
+          type="button"
+          aria-label="Remove set"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove()
+          }}
+          className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <X size={12} />
+        </button>
+      )}
     </form>
   )
 }
@@ -123,9 +135,9 @@ export function SetLogger({
   onLogSet,
   onRemoveSet,
 }: SetLoggerProps) {
-  const addSetInputRef = useRef<HTMLInputElement>(null)
+  const [extraSlotIds, setExtraSlotIds] = useState<string[]>([])
 
-  const totalRows = Math.max(targetSets, completedSets.length + 1)
+  const baseRows = Math.max(targetSets, completedSets.length + 1)
 
   const handleConfirm =
     (setNumber: number) => (weightKg: number | null, reps: number | null) => {
@@ -141,7 +153,7 @@ export function SetLogger({
         Target: {targetSets} set{targetSets !== 1 ? 's' : ''}
       </p>
 
-      {Array.from({ length: totalRows }, (_, i) => {
+      {Array.from({ length: baseRows }, (_, i) => {
         if (isSlotCompleted(i)) {
           return (
             <CompletedSetRow
@@ -158,15 +170,28 @@ export function SetLogger({
             isExtra={isExtraSlot(i)}
             targetWeight={targetWeight}
             targetRepsMin={targetRepsMin}
-            inputRef={i === totalRows - 1 ? addSetInputRef : undefined}
             onConfirm={handleConfirm(i + 1)}
           />
         )
       })}
 
+      {extraSlotIds.map((id, idx) => (
+        <SetRowInput
+          key={id}
+          setNumber={baseRows + idx + 1}
+          isExtra
+          targetWeight={targetWeight}
+          targetRepsMin={targetRepsMin}
+          onRemove={() => setExtraSlotIds((ids) => ids.filter((x) => x !== id))}
+          onConfirm={handleConfirm(baseRows + idx + 1)}
+        />
+      ))}
+
       <button
         type="button"
-        onClick={() => addSetInputRef.current?.focus()}
+        onClick={() =>
+          setExtraSlotIds((ids) => [...ids, 'extra-' + Date.now() + '-' + ids.length])
+        }
         className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border/50 py-2 text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
       >
         <Plus size={12} />

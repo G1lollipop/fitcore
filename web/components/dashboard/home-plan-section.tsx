@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
 import { getCurrentPlanLight, deletePlan } from '@/app/actions/plans'
@@ -16,6 +16,9 @@ import { PlanGeneratorCard } from '@/components/plans/plan-generator-card'
 import { PlanEditor } from '@/components/plans/plan-editor'
 import { PlanDetailSheet, type DetailPlan } from '@/components/plans/plan-detail-sheet'
 import { TrainingMode } from '@/components/training/training-mode'
+import { loadTrainingSession, type TrainingSession } from '@/lib/training/session-state'
+import { getTodayDate } from '@/lib/utils/date'
+import { ActiveSessionBanner } from '@/components/dashboard/active-session-banner'
 
 /** Loose shape for the active plan row (body lives in `structure`). */
 interface PlanRow {
@@ -55,6 +58,27 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
   const [trainingOpen, setTrainingOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmingPlan, setConfirmingPlan] = useState(false)
+  const [activeSession, setActiveSession] = useState<TrainingSession | null>(null)
+
+  // Detect an in-progress training session in localStorage (minimized workout).
+  // Re-check whenever the training modal closes (user minimized) or plan data changes.
+  useEffect(() => {
+    if (trainingOpen) {
+      setActiveSession(null)
+      return
+    }
+    if (!userId || !info?.plan) {
+      setActiveSession(null)
+      return
+    }
+    const session = loadTrainingSession({
+      userId,
+      planId: info.plan.id,
+      dayId: '',
+      date: getTodayDate(),
+    })
+    setActiveSession(session)
+  }, [trainingOpen, userId, info])
 
   // Full active-plan structure (needed for the expanded sheet). The dashboard
   // payload only carries today's slice, so we fetch the whole plan separately.
@@ -142,6 +166,14 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
   // ── Has active plan → today slice + expandable full week ────────────────
   return (
     <div className={className}>
+      {activeSession && !trainingOpen && (
+        <ActiveSessionBanner
+          startedAt={activeSession.startedAt}
+          dayName={activeSession.dayName}
+          onResume={() => setTrainingOpen(true)}
+        />
+      )}
+
       <TodayPlanCard
         info={info}
         userId={userId}

@@ -37,13 +37,13 @@ export function createTrainingSession(planId: string, day: PlanDay): TrainingSes
 export function logSet(
   session: TrainingSession,
   exerciseIdx: number,
-  setNumber: number,
+  _setNumber: number,
   weightKg: number | null,
   reps: number | null
 ): TrainingSession {
   const updated = { ...session, exercises: [...session.exercises] }
   const ex = { ...updated.exercises[exerciseIdx], completedSets: [...updated.exercises[exerciseIdx].completedSets] }
-  ex.completedSets.push({ setNumber, weightKg, reps, loggedAt: new Date() })
+  ex.completedSets.push({ setNumber: ex.completedSets.length + 1, weightKg, reps, loggedAt: new Date() })
   updated.exercises[exerciseIdx] = ex
   return updated
 }
@@ -55,7 +55,9 @@ export function removeSet(
 ): TrainingSession {
   const updated = { ...session, exercises: [...session.exercises] }
   const ex = { ...updated.exercises[exerciseIdx], completedSets: [...updated.exercises[exerciseIdx].completedSets] }
-  ex.completedSets = ex.completedSets.filter((s) => s.setNumber !== setNumber)
+  ex.completedSets = ex.completedSets
+    .filter((s) => s.setNumber !== setNumber)
+    .map((s, idx) => ({ ...s, setNumber: idx + 1 }))
   updated.exercises[exerciseIdx] = ex
   return updated
 }

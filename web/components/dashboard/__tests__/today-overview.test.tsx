@@ -124,11 +124,11 @@ describe('TodayOverview — food card layout', () => {
     expect(screen.getByText('/ 2,500 kcal')).toBeInTheDocument()
   })
 
-  it('renders macro labels P, C, F', () => {
+  it('renders macro labels Protein, Carbs, Fat (full words)', () => {
     renderWithQuery(<TodayOverview {...baseProps} />)
-    expect(screen.getByText('P')).toBeInTheDocument()
-    expect(screen.getByText('C')).toBeInTheDocument()
-    expect(screen.getByText('F')).toBeInTheDocument()
+    expect(screen.getByText('Protein')).toBeInTheDocument()
+    expect(screen.getByText('Carbs')).toBeInTheDocument()
+    expect(screen.getByText('Fat')).toBeInTheDocument()
   })
 
   it('renders "Today\'s meals" button', () => {
