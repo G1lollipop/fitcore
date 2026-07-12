@@ -77,6 +77,7 @@ A few "counterintuitive" spots that trip people up on first read:
 - **The middleware file is `web/proxy.ts`, not `middleware.ts`**: Supabase session refresh + route protection + onboarding redirects live here. Identity resolution goes through `lib/auth/require-user.ts` (`requireUserId()` returns the Supabase user id); the cookie client used for auth is in `lib/supabase/{server,client}.ts`, kept separate from the service-role client `lib/supabaseClient.ts` used for data access.
 - **All data access goes through server actions**: `web/app/actions/*`. Frontend components never connect to Supabase directly; `web/lib/supabaseClient.ts` is `server-only` + service-role and importing it into a client component will break the build. Auth resolution uses `authedUserId()` / `getUserIdOrNull()` from `web/lib/auth/require-user.ts`; actions read `userId` internally and callers don't pass it.
 - **AI chat path**: browser → `web/app/api/ai/chat/route.ts` (SSE) → (personal data `lib/ai/user-context.ts` + RAG `lib/ai/rag-client.ts`) → `rag/` service.
+- **Nutrition parsing path**: food logging (`quickLog.ts`, `logFood.ts`) → `lib/ai/nutrition-client.ts` (fetch + 60s timeout) → Modal endpoint (fine-tuned Qwen2.5-3B). A warmup ping fires on dashboard load via `actions/nutritionWarmup.ts` (throttled via localStorage, max 1 per 10 min) to absorb Modal cold-start latency.
 - **"Today's workout" single source of truth**: `web/lib/plans/today-workout.ts` is a pure function; several actions fetch data and then call it — don't reimplement it elsewhere.
 
 ## Conventions

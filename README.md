@@ -17,13 +17,15 @@ flowchart TD
     Actions["Server Actions<br/>(web/app/actions/*)"]
     ChatAPI["/api/ai/chat (SSE)<br/>route.ts"]
     Supabase[("Supabase<br/>Auth + logs/plans/stats/chat")]
-    LLM["Google Gemini<br/>(chat / parsing / vision / embedding)"]
+    LLM["Google Gemini<br/>(chat / vision / embedding)"]
+    NutritionAPI["Modal · Qwen2.5-3B<br/>(food nutrition parsing)"]
     RAG["RAG service FastAPI (rag/)<br/>/v1/retrieve · /v1/chat · /v1/chat/stream"]
 
     Browser -->|"protected routes"| Auth
     Browser -->|"data read/write<br/>(userId injected server-side via requireUserId())"| Actions
     Browser -->|"chat"| ChatAPI
     Actions --> Supabase
+    Actions -->|"food logging<br/>(quickLog / logFood)"| NutritionAPI
     ChatAPI -->|"personal context user-context.ts"| Supabase
     ChatAPI -->|"generation"| LLM
     ChatAPI -->|"knowledge retrieval rag-client.ts"| RAG
@@ -91,4 +93,5 @@ secrets marked `sync: false` (`GOOGLE_AI_STUDIO_API_KEY`, `SUPABASE_*`, `UPSTASH
 ## Tech stack
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, Supabase (Auth + data)
-- **Backend**: Python 3.11, FastAPI, LangChain 1.x, Google Gemini (gemini-2.5-flash + gemini-embedding-001), Chroma / Supabase pgvector
+- **AI models**: Google Gemini (gemini-2.5-flash — chat, vision, embeddings) + Qwen2.5-3B fine-tuned for food nutrition parsing (Modal serverless)
+- **Backend**: Python 3.11, FastAPI, LangChain 1.x, Chroma / Supabase pgvector
