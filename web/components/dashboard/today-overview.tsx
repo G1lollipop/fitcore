@@ -119,6 +119,7 @@ export function TodayOverview({
         <SheetTrigger asChild>
           <button
             type="button"
+            suppressHydrationWarning
             className="relative mt-3 flex w-full items-center justify-between rounded-xl border border-border/50 bg-card/40 px-3 py-2 text-left transition-colors hover:border-primary/40 md:py-2.5"
           >
             <span className="inline-flex items-center gap-2 text-xs font-medium text-foreground">
