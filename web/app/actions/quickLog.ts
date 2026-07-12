@@ -2,9 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
-import { openai } from '@/lib/openaiClient';
 import { supabase } from '@/lib/supabaseClient';
-import { AI_FAST_MODEL } from '@/lib/ai/model';
+import { fetchNutritionApi } from '@/lib/ai/nutrition-client';
 import { Database } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId } from '@/lib/auth/require-user';
@@ -37,62 +36,23 @@ interface ParsedSegment {
   fat?: number;
 }
 
-const SYSTEM_PROMPT = `You are FitCore's quick-log parser. From a natural-language sentence describing what the user ate, extract structured nutritional data.
-
-Return JSON: { "items": { kind: "food", food_name: string, calories: int, protein: int, carbs: int, fat: int }[] }
-
-Each food item shape:
-- kind: "food" — required
-- food_name: string — keep the portion from the user's wording (e.g. "30g whey protein")
-- calories: int (kcal)
-- protein: int (g)
-- carbs: int (g)
-- fat: int (g)
-
-Nutrition references (60kg adult):
-- Chicken breast 100g≈165kcal/31P/0C/4F; whey protein 100g≈380kcal/75P/8C/3F; cooked rice 100g≈130kcal/3P/28C/0F; egg 1≈70kcal/6P/1C/5F
-
-Rules:
-1) A single input may contain multiple food items — identify all of them.
-2) Scale by weight proportionally.
-3) Only output credible structured data; for vague inputs still give a reasonable estimate — never return empty.
-`;
-
 async function parseQuickLog(userInput: string): Promise<ParsedSegment[]> {
-  const response = await openai.chat.completions.create({
-    model: AI_FAST_MODEL,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: userInput },
-    ],
-    response_format: { type: 'json_object' },
-  });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) return [];
-
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(content);
-  } catch {
+    const parsed = await fetchNutritionApi(userInput);
+    return [
+      {
+        kind: 'food' as const,
+        food_name: userInput.trim() || 'Unknown food',
+        calories: Math.round(Number(parsed.calories)) || 0,
+        protein: Math.round(Number(parsed.protein)) || 0,
+        carbs: Math.round(Number(parsed.carbs)) || 0,
+        fat: Math.round(Number(parsed.fat)) || 0,
+      },
+    ];
+  } catch (error) {
+    console.error('[parseQuickLog] Nutrition API error:', error);
     return [];
   }
-
-  // Accept either { items: [...] } or a bare array, and tolerate single-object
-  // returns from less-disciplined models.
-  let items: ParsedSegment[] = [];
-  if (Array.isArray(parsed)) {
-    items = parsed as ParsedSegment[];
-  } else if (parsed && typeof parsed === 'object') {
-    const obj = parsed as { items?: unknown; kind?: unknown };
-    if (Array.isArray(obj.items)) {
-      items = obj.items as ParsedSegment[];
-    } else if (typeof obj.kind === 'string') {
-      items = [obj as ParsedSegment];
-    }
-  }
-
-  return items.filter((it) => it && it.kind === 'food');
 }
 
 /**

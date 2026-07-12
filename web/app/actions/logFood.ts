@@ -2,9 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
-import { openai } from '@/lib/openaiClient';
 import { supabase } from '@/lib/supabaseClient';
-import { AI_FAST_MODEL } from '@/lib/ai/model';
+import { fetchNutritionApi } from '@/lib/ai/nutrition-client';
 import { getTodayDate, resolveLogTimestamp } from '@/lib/utils/date';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
@@ -13,55 +12,18 @@ import type { DietLogItem } from './types';
 
 async function parseFoodWithAI(userInput: string): Promise<DietLogItem | null> {
   try {
-    const response = await openai.chat.completions.create({
-      model: AI_FAST_MODEL,
-      messages: [
-        {
-          role: 'system',
-          content: `You are a professional nutritionist assistant. Based on the food the user describes, accurately compute its nutritional content.
-
-Key rules:
-1. Pay attention to the food's weight/portion and compute nutrition from the actual amount.
-2. Keep the specifics from the user's input in the food name (e.g. "30g whey protein", not just "whey protein").
-3. Reference values for common foods:
-   - Whey protein: ~70-80g protein per 100g, ~350-400 kcal
-   - Chicken breast: ~31g protein per 100g, ~165 kcal
-   - Cooked rice: ~28g carbs per 100g, ~130 kcal
-   - Egg: ~6g protein each, ~70 kcal
-4. Scale proportionally to the weight the user specifies.
-
-Return JSON: {food_name, calories, protein, carbs, fat}
-- food_name: keep the user's food description (e.g. "30g whey protein")
-- calories: total calories (kcal), integer
-- protein: protein (g), integer
-- carbs: carbohydrates (g), integer
-- fat: fat (g), integer`,
-        },
-        {
-          role: 'user',
-          content: userInput,
-        },
-      ],
-      response_format: { type: 'json_object' },
-    });
-
-    const content = response.choices[0]?.message?.content;
-    if (!content) return null;
-
-    const parsed = JSON.parse(content);
-    const result = {
+    const parsed = await fetchNutritionApi(userInput);
+    return {
       id: randomUUID(),
-      food_name: parsed.food_name || 'Unknown food',
+      food_name: userInput.trim() || 'Unknown food',
       calories: Math.round(Number(parsed.calories)) || 0,
       protein: Math.round(Number(parsed.protein)) || 0,
       carbs: Math.round(Number(parsed.carbs)) || 0,
       fat: Math.round(Number(parsed.fat)) || 0,
       logged_at: new Date().toISOString(),
     };
-
-    return result;
   } catch (error) {
-    console.error('AI parsing error:', error);
+    console.error('[parseFoodWithAI] Nutrition API error:', error);
     return null;
   }
 }

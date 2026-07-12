@@ -14,6 +14,7 @@ import { useDashboardData, useDashboardActions } from '@/lib/queries/dashboard'
 import { useHistoryActions } from '@/lib/queries/history'
 import { usePrefetchUserSettings } from '@/lib/queries/settings'
 import { getTodayDate } from '@/lib/utils/date'
+import { warmupNutritionApi } from '@/app/actions/nutritionWarmup'
 import type { DashboardData } from '@/app/actions/types'
 import { useT } from '@/lib/i18n/provider'
 
@@ -73,6 +74,28 @@ export function DashboardClient({
   useEffect(() => {
     prefetchUserSettings()
   }, [prefetchUserSettings])
+
+  // Warm the nutrition Modal API on first dashboard visit so the quick-log
+  // and food-log actions don't pay the cold-start latency on the first real
+  // parse. Throttled via localStorage to ≤ 1 ping per 10 min across tabs.
+  useEffect(() => {
+    let shouldWarmup = true
+    try {
+      const WARMUP_KEY = 'nutrition_api_last_warmup'
+      const lastWarmup = localStorage.getItem(WARMUP_KEY)
+      const now = Date.now()
+      if (lastWarmup && now - Number(lastWarmup) < 10 * 60 * 1000) {
+        shouldWarmup = false
+      } else {
+        localStorage.setItem(WARMUP_KEY, String(now))
+      }
+    } catch {
+      // localStorage unavailable — warmup anyway (non-blocking)
+    }
+    if (shouldWarmup) {
+      warmupNutritionApi()
+    }
+  }, [])
 
   const displayName = userName || t.greeting.defaultUserName
 
