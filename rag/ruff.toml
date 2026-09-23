@@ -1,8 +1,12 @@
 # Lint config for the FastAPI RAG backend.
-# CI runs `ruff check .` (lint only); formatting is not enforced via ruff —
-# the codebase predates ruff-format and uses its own style.
+# CI and local development use the version pinned in requirements-dev.txt.
+# CI enforces both lint and formatting.
 
 target-version = "py311"
+
+[lint]
+# Keep the established correctness rules explicit across tool upgrades.
+select = ["E4", "E7", "E9", "F"]
 
 [lint.per-file-ignores]
 # E402: imports deliberately placed after runtime setup (sys.path tweaks,

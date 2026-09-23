@@ -60,8 +60,14 @@ def _hf_plan(endpoint: str, repo: str, revision: str):
         api = f"{endpoint}/api/models/{repo}/revision/{revision}"
         resp = requests.get(api, timeout=15, allow_redirects=False)
         if resp.status_code >= 300:
-            raise RuntimeError(f"mirror redirects api to the blocked hub (status {resp.status_code})")
-        files = [s["rfilename"] for s in resp.json().get("siblings", []) if s.get("rfilename")]
+            raise RuntimeError(
+                f"mirror redirects api to the blocked hub (status {resp.status_code})"
+            )
+        files = [
+            s["rfilename"]
+            for s in resp.json().get("siblings", [])
+            if s.get("rfilename")
+        ]
         print(f"[fetch] HF API listing: {len(files)} files")
     except Exception as exc:  # noqa: BLE001
         print(f"[fetch] HF API listing unavailable ({exc}); using fallback file list")
@@ -92,11 +98,7 @@ def _modelscope_plan(repo: str, revision: str):
 
 def _select_files(files: list[str]) -> list[str]:
     """Drop boilerplate; if safetensors exist, skip the redundant .bin weights."""
-    keep = [
-        f
-        for f in files
-        if f not in _SKIP_NAMES and not f.endswith(_SKIP_SUFFIXES)
-    ]
+    keep = [f for f in files if f not in _SKIP_NAMES and not f.endswith(_SKIP_SUFFIXES)]
     has_safetensors = any(f.endswith(".safetensors") for f in keep)
     if has_safetensors:
         keep = [f for f in keep if not f.endswith((".bin",))]
