@@ -167,9 +167,7 @@ class ProcessInRetriever:
             # LOCAL_RERANKER_MODEL_PATH), so a base vs fine-tuned comparison is
             # just two runs with different model env vars. Falls back to the
             # base ensemble when the reranker is disabled/unavailable.
-            retriever = (
-                self.rag._get_compression_retriever() or self.rag.base_retriever
-            )
+            retriever = self.rag._get_compression_retriever() or self.rag.base_retriever
         elif variant == "vector":
             retriever = self._vector_only_retriever()
         elif variant == "bm25":
@@ -324,6 +322,7 @@ def _eval_one_variant(
     per_query: list[dict] = []
     agg: dict[str, float] = {}
     judged_n = 0
+    error_count = 0
 
     for item in in_scope:
         qrels = {
@@ -333,6 +332,7 @@ def _eval_one_variant(
         try:
             chunks = retriever.retrieve(item["question"], depth)
         except Exception as exc:  # noqa: BLE001
+            error_count += 1
             per_query.append({"id": item["id"], "error": str(exc)})
             if verbose:
                 print(f"{item['id']:<10} ERROR: {exc}")
@@ -429,6 +429,7 @@ def _eval_one_variant(
         try:
             chunks = retriever.retrieve(item["question"], depth)
         except Exception as exc:  # noqa: BLE001
+            error_count += 1
             detail.append({"id": item["id"], "error": str(exc)})
             continue
         top1 = chunks[0]["score"] if chunks else None
@@ -441,6 +442,7 @@ def _eval_one_variant(
             }
         )
     frr = rm.false_retrieval_rate(top1s, threshold)
+    summary["_n_errors"] = error_count
 
     return (
         summary,
@@ -464,8 +466,8 @@ def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
     if not baseline_path.is_absolute():
         baseline_path = _EVAL_DIR / baseline_path
     if not baseline_path.exists():
-        print(f"\n[gate] Baseline file not found: {baseline_path} (skipping gate)")
-        return 0
+        print(f"\n[gate] Baseline file not found: {baseline_path}")
+        return 1
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     thresholds: dict[str, float] = baseline.get("thresholds", {})
     if gate_variant not in results:
@@ -474,6 +476,8 @@ def _run_gate(results: dict, gate_variant: str, baseline_path: Path) -> int:
 
     summary = results[gate_variant]["summary"]
     failures: list[str] = []
+    if int(summary.get("_n_errors", 0)):
+        failures.append(f"retrieval_errors {int(summary['_n_errors'])} > 0")
     rows = [
         "",
         "## Retrieval regression gate — variant=" + gate_variant,

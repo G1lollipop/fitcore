@@ -32,7 +32,6 @@ lerna-debug.log*
 
 # Package manager locks
 pnpm-lock.yaml
-package-lock.json
 yarn.lock
 
 # TypeScript
