@@ -66,7 +66,9 @@ def _embed_documents_throttled(
                     "PerDay" in msg or "limit: 1000" in msg
                 )
                 if is_daily_quota:
-                    print(f"[kb] Daily embedding quota exhausted on chunks {start}-{start + len(batch)}! Stopping immediately.")
+                    print(
+                        f"[kb] Daily embedding quota exhausted on chunks {start}-{start + len(batch)}! Stopping immediately."
+                    )
                     raise exc
                 is_quota = "RESOURCE_EXHAUSTED" in msg or "429" in msg
                 is_transient = any(sig in msg for sig in _EMBED_TRANSIENT_SIGNALS)

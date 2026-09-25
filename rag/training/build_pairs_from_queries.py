@@ -61,13 +61,13 @@ def main() -> int:
         _abs(args.out),
     )
 
-    chunks = {
-        c["uid"]: c for c in json.loads(chunks_path.read_text(encoding="utf-8"))
-    }
+    chunks = {c["uid"]: c for c in json.loads(chunks_path.read_text(encoding="utf-8"))}
     raw = json.loads(queries_path.read_text(encoding="utf-8"))
-    items = raw.items() if isinstance(raw, dict) else [
-        (r["uid"], r.get("query", "")) for r in raw
-    ]
+    items = (
+        raw.items()
+        if isinstance(raw, dict)
+        else [(r["uid"], r.get("query", "")) for r in raw]
+    )
 
     done = _load_done_uids(out_path)
     written = skipped_done = missing = empty = 0

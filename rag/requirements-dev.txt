@@ -7,6 +7,7 @@
 
 pytest>=9.0.3
 pytest-asyncio>=1.3.0
+ruff==0.15.17
 
 # Knowledge-base source fetching (scripts/fetch_sources.py)
 trafilatura>=1.6.0

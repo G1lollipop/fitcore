@@ -175,13 +175,14 @@ Output JSON only, in the format:
             "completeness": 0.0,
             "accuracy": 0.0,
             "comment": f"Evaluation failed: {exc}",
+            "error": str(exc),
         }
 
 
 # ─── Main evaluation flow ─────────────────────────────────────────────────────
 
 
-def evaluate():
+def evaluate() -> int:
     dataset: list[dict] = json.loads(DATASET_PATH.read_text(encoding="utf-8"))
     results: list[dict] = []
 
@@ -213,6 +214,21 @@ def evaluate():
             q, rag_result["answer"], item.get("expected_keywords", [])
         )
 
+        if scores.get("error"):
+            print(
+                f"{item['id']:<12} {q[:20]:<22} {'ERROR':>6} - "
+                f"judge failed: {scores['error']}"
+            )
+            results.append(
+                {
+                    "id": item["id"],
+                    "question": q,
+                    "error": scores["error"],
+                    "error_stage": "judge",
+                }
+            )
+            continue
+
         result = {
             "id": item["id"],
             "question": q,
@@ -236,15 +252,18 @@ def evaluate():
 
     # ── Summary ───────────────────────────────────────────────────────────
     valid = [r for r in results if "error" not in r]
+    errors = [r for r in results if "error" in r]
     if not valid:
-        print("\nNo valid results. Check whether the RAG service is running.")
-        return
+        print(
+            "\nNo valid results. Check the RAG service, API quota, and judge configuration."
+        )
 
-    avg_rel = sum(r["relevance"] for r in valid) / len(valid)
-    avg_com = sum(r["completeness"] for r in valid) / len(valid)
-    avg_acc = sum(r["accuracy"] for r in valid) / len(valid)
-    avg_lat = sum(r["latency_ms"] for r in valid) / len(valid)
-    avg_cit = sum(r["citation_count"] for r in valid) / len(valid)
+    denominator = max(len(valid), 1)
+    avg_rel = sum(r["relevance"] for r in valid) / denominator
+    avg_com = sum(r["completeness"] for r in valid) / denominator
+    avg_acc = sum(r["accuracy"] for r in valid) / denominator
+    avg_lat = sum(r["latency_ms"] for r in valid) / denominator
+    avg_cit = sum(r["citation_count"] for r in valid) / denominator
 
     print("-" * 75)
     print(
@@ -259,6 +278,7 @@ def evaluate():
         "summary": {
             "total_cases": len(dataset),
             "valid_cases": len(valid),
+            "error_cases": len(errors),
             "avg_relevance": round(avg_rel, 3),
             "avg_completeness": round(avg_com, 3),
             "avg_accuracy": round(avg_acc, 3),
@@ -278,7 +298,11 @@ def evaluate():
     print(
         f"\n[Summary] relevance {avg_rel:.3f} | completeness {avg_com:.3f} | accuracy {avg_acc:.3f} | avg latency {avg_lat:.0f}ms"
     )
+    if errors or not valid:
+        print(f"\nEvaluation failed: {len(errors)} case(s) returned errors.")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    evaluate()
+    raise SystemExit(evaluate())

@@ -128,7 +128,9 @@ def main() -> int:
             if ("RESOURCE_EXHAUSTED" in msg or "429" in msg) and (
                 "PerDay" in msg or "limit: 1000" in msg
             ):
-                print("[ingest] Daily embedding quota exhausted. Aborting ingestion loop.")
+                print(
+                    "[ingest] Daily embedding quota exhausted. Aborting ingestion loop."
+                )
                 return 3
 
     print(

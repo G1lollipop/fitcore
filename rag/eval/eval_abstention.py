@@ -89,6 +89,7 @@ def evaluate_abstention(
     should: list[bool] = []
     pred: list[bool] = []
     rows: list[dict] = []
+    error_count = 0
 
     for item in dataset:
         q = item["question"]
@@ -103,6 +104,8 @@ def evaluate_abstention(
             )
         except Exception as exc:  # noqa: BLE001
             print(f"{item['id']}: ERROR {exc}")
+            error_count += 1
+            rows.append({"id": item["id"], "error": str(exc)})
             continue
 
         meta = result.get("retrieval_meta") or {}
@@ -138,6 +141,9 @@ def evaluate_abstention(
                 "evaluated_at": datetime.now().isoformat(),
                 "retrieval_min_score": min_score,
                 "summary": metrics,
+                "total_cases": len(dataset),
+                "evaluated_cases": len(should),
+                "error_cases": error_count,
                 "results": rows,
             },
             ensure_ascii=False,
@@ -154,11 +160,15 @@ def evaluate_abstention(
         baseline_path = _EVAL_DIR / baseline_path
     if not baseline_path.exists():
         print(f"[gate] baseline missing: {baseline_path}")
-        return 0
+        return 1
 
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     thresholds = baseline.get("thresholds", {})
     failures: list[str] = []
+    if error_count:
+        failures.append(f"chat_errors {error_count} > 0")
+    if not should:
+        failures.append("evaluated_cases 0")
     for metric, floor in thresholds.items():
         actual = float(metrics.get(metric, 0))
         if actual + 1e-9 < float(floor):

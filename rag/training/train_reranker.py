@@ -58,9 +58,7 @@ def _load_examples(path: Path):
         q, p = row.get("query"), row.get("passage")
         if not q or not p:
             continue
-        examples.append(
-            InputExample(texts=[q, p], label=float(row.get("label", 0)))
-        )
+        examples.append(InputExample(texts=[q, p], label=float(row.get("label", 0))))
     return examples
 
 
