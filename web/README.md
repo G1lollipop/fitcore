@@ -19,8 +19,7 @@ flowchart TD
     end
 
     subgraph Tools ["Agent tool layer"]
-        T1["set_retrieval_params\ndeclare k value (LLM decision)"]
-        T2["query_knowledge_base\ncalls /v1/retrieve"]
+        T2["query_knowledge_base\nchooses k; calls /v1/retrieve"]
         T3["get_user_stats\nreads Supabase user data"]
     end
 
@@ -53,9 +52,8 @@ flowchart TD
     Route --> Agent
 
     Agent -->|"Step 1: planning\ntool_choice=auto"| Qwen1
-    Qwen1 -->|"parallel tool_calls"| T1 & T2 & T3
+    Qwen1 -->|"parallel tool_calls"| T2 & T3
 
-    T1 -->|"k value written to context"| Agent
     T2 --> Retrieve
     T3 --> Supabase
 
@@ -87,7 +85,7 @@ flowchart TD
 | **Vector database** | Supabase pgvector (production) · Chroma (local) |
 | **Embedding model** | Gemini gemini-embedding-001 (default 768 dims, tunable via EMBEDDING_DIM) |
 | **Chat model** | Google Gemini (default gemini-2.5-flash, switchable via environment variable) through an OpenAI-compatible endpoint |
-| **Nutrition parsing** | Fine-tuned Qwen2.5-3B (LoRA) on Modal serverless GPU — replaces Gemini for food logging (quickLog, logFood) |
+| **Nutrition parsing** | Fine-tuned Qwen2.5-3B (LoRA) on Modal serverless GPU estimates food nutrition. Quick Log uses Gemini to split food/workout input before calling Qwen for each food segment; `logFood` calls Qwen directly. |
 | **Reranking** | HuggingFace CrossEncoder (bge-reranker-base) |
 | **Database** | Supabase PostgreSQL |
 | **Deployment** | Vercel (frontend) · Render Blueprint (RAG backend) |
@@ -97,15 +95,12 @@ flowchart TD
 ## Key Features
 
 ### 🤖 Agent + Tool Calling
-The AI coach is a conversational, secondary surface. Instead of keyword/rule-based classification, the LLM autonomously decides which tools to call (`lib/ai/agent-tools.ts`):
+The AI coach is a conversational, read-only secondary surface. The LLM decides which tools to call (`lib/ai/agent-tools.ts`):
 
-- `log_food` / `log_workout` / `log_water` — **AI-first logging**: turn a natural-language message ("had 2 eggs and a banana") straight into structured entries
-- `adjust_plan` — tweak the user's current workout plan in conversation; changes are shown as a preview and only applied after the user confirms
 - `get_user_stats` — reads the user's nutrition / workout / goal data for today
-- `query_knowledge_base` — calls the RAG retrieval endpoint for evidence-grounded fitness knowledge
-- `set_retrieval_params` — the LLM declares how many results to retrieve, k (3 / 5 / 8), based on question complexity
+- `query_knowledge_base` — calls the RAG retrieval endpoint for evidence-grounded fitness knowledge, with `k` (3 / 5 / 8) chosen by question complexity
 
-Complex requests (e.g. "log my lunch and tell me if I still have protein left for today") → the LLM calls multiple tools in one planning pass, then streams a single grounded answer.
+Questions that need both personal numbers and general knowledge can use both tools in one planning pass. Food and workout logging use the home Quick Log and meal-photo actions; plan creation and editing live in the Home plan section.
 
 ### ⚡ Streaming output (SSE)
 The API route returns a `ReadableStream`, and the Chat Widget appends tokens one by one, with a time-to-first-token under 1s.

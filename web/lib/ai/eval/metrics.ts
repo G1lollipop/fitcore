@@ -35,9 +35,8 @@ export interface PerToolCounts {
   fn: number
 }
 
-const KNOWLEDGE_TOOLS = ["set_retrieval_params", "query_knowledge_base"]
+const KNOWLEDGE_TOOLS = ["query_knowledge_base"]
 const ALL_TOOLS = [
-  "set_retrieval_params",
   "query_knowledge_base",
   "get_user_stats",
 ] as const

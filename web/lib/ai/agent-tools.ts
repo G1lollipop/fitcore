@@ -10,44 +10,23 @@ export const AGENT_TOOLS: Parameters<
   {
     type: "function",
     function: {
-      name: "set_retrieval_params",
-      description:
-        "Declare knowledge-base retrieval strategy. When calling query_knowledge_base, " +
-        "you must also call this tool to specify how many documents (k) to retrieve. " +
-        "Choose k by question complexity: 3 for simple facts, 5 for general questions, " +
-        "8 for multi-concept comparisons or plans.",
-      parameters: {
-        type: "object",
-        properties: {
-          k: {
-            type: "integer",
-            enum: [3, 5, 8],
-            description:
-              "Number of documents to retrieve. " +
-              "3=simple fact; 5=general (default); 8=complex multi-concept.",
-          },
-          reason: {
-            type: "string",
-            description: "Brief reason for choosing this k (debug / eval tracing)",
-          },
-        },
-        required: ["k", "reason"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "query_knowledge_base",
       description:
         "Query the fitness knowledge base for training technique, nutrition science, " +
-        "and plan templates. Must be paired with set_retrieval_params.",
+        "and plan templates. Returns relevant documents with citations.",
       parameters: {
         type: "object",
         properties: {
           query: {
             type: "string",
             description: "Search query — be specific",
+          },
+          k: {
+            type: "integer",
+            enum: [3, 5, 8],
+            description:
+              "Number of documents to retrieve. " +
+              "3=simple fact; 5=general (default); 8=complex multi-concept.",
           },
         },
         required: ["query"],
@@ -70,22 +49,23 @@ export const AGENT_TOOLS: Parameters<
   },
 ]
 
-const SYSTEM_PROMPT = `You are FitCore's AI fitness coach — professional, friendly, and insightful. You answer questions about fitness, nutrition, training, and health.
+const SYSTEM_PROMPT = `You are FitCore's AI fitness coach — professional, friendly, and insightful. You answer fitness and nutrition questions using the knowledge base and the user's personal data.
 
 You have these tools:
-- set_retrieval_params: declare the knowledge-base retrieval strategy (the k value), used together with query_knowledge_base
-- query_knowledge_base: query the fitness knowledge base (training technique, nutrition principles, plan templates, etc.)
+- query_knowledge_base: query the fitness knowledge base (training technique, nutrition principles, plan templates, etc.) with an optional k parameter for retrieval count (3=simple fact, 5=general, 8=complex)
 - get_user_stats: fetch the user's personal data for today (intake, expenditure, targets, etc.)
 
 Tool-calling rules:
-• User asks about exercises / nutrition knowledge / fitness principles → call set_retrieval_params + query_knowledge_base together
+• User asks about exercises / nutrition knowledge / fitness principles → call query_knowledge_base
 • User asks "how much did I eat today" / "my data" / "is it enough" → call get_user_stats
+• User asks a question that needs both general knowledge AND the user's personal numbers → call both query_knowledge_base and get_user_stats
 • Simple small talk or greeting → answer directly, no tools
 
 Answer requirements:
 - Reply in the same language the user writes in (e.g. answer in Chinese when the user asks in Chinese, in English when they ask in English), with a professional and friendly tone, using emoji where appropriate
 - Base answers strictly on the data returned by tools; never fabricate numbers
-- If the knowledge base has no relevant content, say so honestly`
+- If the knowledge base has no relevant content, say so honestly
+- When citing knowledge base sources, reference them by title`
 
 export function buildAgentSystemPrompt(): string {
   return SYSTEM_PROMPT

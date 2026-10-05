@@ -11,17 +11,17 @@ FitCore is a **mobile-first, AI-logging-first fitness app**. Every product/UX/ar
 The product's core job is to make tracking food/workouts/water effortless by **letting AI turn a photo or a single natural-language sentence into structured logs** — manual, field-by-field entry is the fallback, never the default.
 
 - The fastest path from "I want to log this" to "it's logged" must always win. Target: a meal/workout captured in **a few seconds, without leaving the home screen**.
-- Logging entry points are first-class and prominent: the home Quick Log bar (`components/dashboard/home-log-bar.tsx`), one-sentence quick log (`actions/quickLog.ts`), meal photo (`actions/parseFoodFromPhoto.ts`), and in-chat `log_*` tools.
+- Logging entry points are first-class and prominent: the home Quick Log bar (`components/dashboard/home-log-bar.tsx`), one-sentence quick log (`actions/quickLog.ts`), and meal photo (`actions/parseFoodFromPhoto.ts`). The coach is read-only and does not write logs.
 - AI parsing should be optimistic and forgiving: show instant feedback, patch the dashboard cache immediately (`lib/queries/dashboard.ts`), let users correct results afterwards rather than blocking on a perfect parse.
 - When adding features, ask "does this reduce logging friction?" first. Don't bury logging behind menus, modals, or extra taps.
 
-### 2. Secondary: the AI coach (RAG-grounded Q&A + plan/diet authoring)
+### 2. Secondary: the AI coach (RAG-grounded Q&A)
 
-The AI coach is the **supporting** surface, not the protagonist. It does two things:
+The AI coach is the **supporting** surface, not the protagonist. It answers questions and can use the user's personal stats as context:
 
 - **Evidence-grounded Q&A**: complex fitness questions retrieve relevant chunks from the RAG knowledge base (`web/lib/ai/rag-client.ts` → `rag/` `/v1/retrieve`); answers cite sources. There is intentionally **no standalone Knowledge tab** — that capability is folded into the coach (its seed prompts live in `components/knowledge/starters.ts`).
-- **Plan authoring & editing**: the coach can generate and modify **training plans and diet/nutrition plans** in conversation (`actions/generatePlan.ts`, `adjust_plan` tool). Keep this conversational and forgiving.
-- Keep the coach discoverable but secondary: it lives in the floating widget + the home "AI Coach" bar (ask/plan focused), and must never crowd out the logging surfaces.
+- Training plan creation and editing remain available from the Home plan section. The conversational coach does not create or edit plans.
+- Keep the coach discoverable but secondary: it lives in the floating widget + the home "AI Coach" bar (question-focused), and must never crowd out the logging surfaces.
 
 ### 3. Mobile-first UX: single-screen pages, expand for detail
 
@@ -77,7 +77,7 @@ A few "counterintuitive" spots that trip people up on first read:
 - **The middleware file is `web/proxy.ts`, not `middleware.ts`**: Supabase session refresh + route protection + onboarding redirects live here. Identity resolution goes through `lib/auth/require-user.ts` (`requireUserId()` returns the Supabase user id); the cookie client used for auth is in `lib/supabase/{server,client}.ts`, kept separate from the service-role client `lib/supabaseClient.ts` used for data access.
 - **All data access goes through server actions**: `web/app/actions/*`. Frontend components never connect to Supabase directly; `web/lib/supabaseClient.ts` is `server-only` + service-role and importing it into a client component will break the build. Auth resolution uses `authedUserId()` / `getUserIdOrNull()` from `web/lib/auth/require-user.ts`; actions read `userId` internally and callers don't pass it.
 - **AI chat path**: browser → `web/app/api/ai/chat/route.ts` (SSE) → (personal data `lib/ai/user-context.ts` + RAG `lib/ai/rag-client.ts`) → `rag/` service.
-- **Nutrition parsing path**: food logging (`quickLog.ts`, `logFood.ts`) → `lib/ai/nutrition-client.ts` (fetch + 60s timeout) → Modal endpoint (fine-tuned Qwen2.5-3B). A warmup ping fires on dashboard load via `actions/nutritionWarmup.ts` (throttled via localStorage, max 1 per 10 min) to absorb Modal cold-start latency.
+- **Nutrition parsing path**: Quick Log uses Gemini to split food/workout input, then calls `lib/ai/nutrition-client.ts` (fetch + 60s timeout) for each food segment → Modal endpoint (fine-tuned Qwen2.5-3B). `logFood.ts` calls the nutrition client directly. Quick Log commits all segments through `commit_quick_log`; its migration must be applied before deployment. A warmup ping fires on dashboard load via `actions/nutritionWarmup.ts` (throttled via localStorage, max 1 per 10 min) to absorb Modal cold-start latency.
 - **"Today's workout" single source of truth**: `web/lib/plans/today-workout.ts` is a pure function; several actions fetch data and then call it — don't reimplement it elsewhere.
 
 ## Conventions

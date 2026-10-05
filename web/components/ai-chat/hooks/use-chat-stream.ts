@@ -10,7 +10,6 @@ import { nowHHMM } from '../utils'
 interface UseChatStreamArgs {
   conversationId: string
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
-  /** Called once the stream completes successfully (used to refresh sidebar summaries). */
   onAssistantDone?: () => void
 }
 

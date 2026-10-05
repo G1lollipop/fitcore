@@ -40,6 +40,7 @@ Browser
 Key points:
 
 - **Business data** goes through Next.js Server Actions straight to Supabase — no custom REST layer.
+- **Quick Log** uses Gemini to split food/workout descriptions, then the Modal Qwen nutrition API for each food segment. A service-role RPC commits every segment and refreshes daily totals atomically; retries reuse the request ID. Apply `web/supabase/migrations/20260925010041_quick_log_atomic_idempotency.sql` before deploying this path. The migration is included in source; this does not establish that it has been deployed or verified against a database.
 - **AI chat** goes through `POST /api/ai/chat` (SSE streaming). The server-side Agent uses tool calling to decide whether to query the knowledge base and whether to read user data.
 - **Knowledge retrieval** is provided by a standalone FastAPI service (`rag/`); the frontend calls its `/v1/retrieve` via `RAG_SERVICE_URL`.
 
@@ -270,7 +271,7 @@ The home route `/` is a single-page app that switches between 2 modules via tab 
 
 **Mobile-first UX:** every main page is designed to fit a single phone viewport without vertical scrolling. Cards show only the highest-priority summary; longer lists, charts, and detailed editors live behind taps that open full-screen sheets. Cards themselves may be internally scrollable, but the main page scroll is avoided.
 
-The product is **AI-logging-first**: the fastest path from "I want to log this" to "it's logged" is the protagonist (home Quick Log, meal photo, one-sentence quick log). The AI coach is a secondary, conversational surface for evidence-grounded Q&A and plan authoring/editing. The earlier standalone **Knowledge Base** tab has been retired; its evidence-grounded Q&A is now folded into the AI coach, and only its seed prompts survive in `components/knowledge/starters.ts` (imported by `components/ai-chat/chat-body.tsx` as one-tap starters). Evidence-grounded retrieval still flows through the Agent's `query_knowledge_base` tool → backend `/v1/retrieve`.
+The product is **AI-logging-first**: the fastest path from "I want to log this" to "it's logged" is the protagonist (home Quick Log, meal photo, one-sentence quick log). The AI coach is a secondary, read-only surface for evidence-grounded Q&A and personal-stats questions; plan creation and editing live in the Home plan section. The earlier standalone **Knowledge Base** tab has been retired; its evidence-grounded Q&A is now folded into the AI coach, and only its seed prompts survive in `components/knowledge/starters.ts` (imported by `components/ai-chat/chat-body.tsx` as one-tap starters). Evidence-grounded retrieval still flows through the Agent's `query_knowledge_base` tool → backend `/v1/retrieve`.
 
 ### 7.2 Business data: Server Actions
 
@@ -285,7 +286,7 @@ The product is **AI-logging-first**: the fastest path from "I want to log this" 
 
 ### 7.3 AI layer
 
-- `lib/ai/agent.ts`: tool-calling Agent; tools include `set_retrieval_params`, `query_knowledge_base` (calls `/v1/retrieve`), `get_user_stats`.
+- `lib/ai/agent.ts`: read-only tool-calling Agent; tools are `query_knowledge_base` (calls `/v1/retrieve` with a chosen `k`) and `get_user_stats`.
 - `lib/ai/rag-client.ts`: wraps `fetch` to the backend RAG service.
 - `lib/ai/user-context.ts`: assembles personalized user context.
 - `app/api/ai/chat/route.ts`: SSE route that runs the Agent and writes the conversation back to Supabase.

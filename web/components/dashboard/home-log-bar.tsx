@@ -1,17 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Camera, Check, CornerDownLeft, Loader2, PencilLine, RotateCcw } from 'lucide-react'
+import { Camera, Check, CornerDownLeft, Loader2, Mic, PencilLine, RotateCcw } from 'lucide-react'
 import { useT } from '@/lib/i18n/provider'
 import { tError, type Dictionary } from '@/lib/i18n'
-import { quickLog, type QuickLogFoodResult } from '@/app/actions/quickLog'
+import { quickLog, type QuickLogResult } from '@/app/actions/quickLog'
 import { useDashboardActions } from '@/lib/queries/dashboard'
 import { useHistoryActions } from '@/lib/queries/history'
 import { useMealPhoto } from '@/components/log-form/meal-photo-context'
 import { DietLogEditDialog } from '@/components/log-form/diet-log-edit-dialog'
 import { getTodayDate } from '@/lib/utils/date'
+import { useSpeechInput } from '@/lib/hooks/use-speech-input'
 import type { DietLogItem } from '@/app/actions/types'
 import { cn } from '@/lib/utils'
+import { elapsedLoggingMs, trackLoggingEvent } from '@/lib/analytics/logging-events'
 
 interface HomeLogBarProps {
   userId?: string
@@ -22,7 +24,7 @@ interface HomeLogBarProps {
 
 type Feedback =
   | { kind: 'success'; text: string }
-  | { kind: 'error'; text: string; retry?: string }
+  | { kind: 'error'; text: string; retry?: { text: string; requestId: string } }
 
 /**
  * Always-visible natural-language logging bar for the home tab — the product's
@@ -34,8 +36,7 @@ type Feedback =
  * success the placeholder is swapped for the parsed food/workout rows and the
  * dashboard rings are patched, on failure it's removed and a retry is offered.
  *
- * A camera button reuses the existing meal-photo picker, and a mic button
- * (auto-hidden when the Web Speech API is unavailable) dictates into the input.
+ * A camera button reuses the existing meal-photo picker.
  */
 export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
   const t = useT()
@@ -43,6 +44,7 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
   const history = useHistoryActions()
   const { openPicker } = useMealPhoto()
   const inputRef = useRef<HTMLInputElement>(null)
+  const speechBaseRef = useRef('')
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [text, setText] = useState('')
@@ -60,17 +62,38 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
   const showFeedback = useCallback((fb: Feedback) => {
     setFeedback(fb)
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current)
+    // Keep an actionable retry visible until the user retries or submits
+    // something else; an ambiguous server response can arrive after 5 seconds.
+    if (fb.kind === 'error' && fb.retry) {
+      feedbackTimer.current = null
+      return
+    }
     feedbackTimer.current = setTimeout(() => setFeedback(null), 5000)
   }, [])
 
   const submit = useCallback(
-    (raw: string) => {
+    (raw: string, retryRequestId?: string) => {
       const trimmed = raw.trim()
       if (!trimmed) return
+      const requestId = retryRequestId ?? crypto.randomUUID()
+      const startedAt = performance.now()
+      trackLoggingEvent('FitCore Logging Attempt', {
+        source: 'text',
+        entry_point: 'home_log_bar',
+      })
       if (!userId) {
+        trackLoggingEvent('FitCore Logging Failed', {
+          source: 'text',
+          entry_point: 'home_log_bar',
+          failure_reason: 'authentication_required',
+          elapsed_ms: elapsedLoggingMs(startedAt),
+        })
         showFeedback({ kind: 'error', text: t.logForm.quick.loginFirst })
         return
       }
+
+      setFeedback(null)
+      if (feedbackTimer.current) clearTimeout(feedbackTimer.current)
 
       // Clear + keep the input usable immediately — the user can log again
       // without waiting for the model.
@@ -92,13 +115,32 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
       setPendingCount((c) => c + 1)
 
       void (async () => {
+        let outcomeTracked = false
         try {
-          const res = await quickLog(trimmed)
+          const res = await quickLog(trimmed, requestId)
           if (!res.success) {
+            trackLoggingEvent('FitCore Logging Failed', {
+              source: 'text',
+              entry_point: 'home_log_bar',
+              failure_reason: 'request_failed',
+              elapsed_ms: elapsedLoggingMs(startedAt),
+            })
+            outcomeTracked = true
             history.removeFood(today, tempId)
-            showFeedback({ kind: 'error', text: tError(t, res.error), retry: trimmed })
+            showFeedback({
+              kind: 'error',
+              text: tError(t, res.error),
+              retry: { text: trimmed, requestId },
+            })
             return
           }
+          trackLoggingEvent('FitCore Logging Completed', {
+            source: 'text',
+            entry_point: 'home_log_bar',
+            elapsed_ms: elapsedLoggingMs(startedAt),
+            item_count: res.items.length,
+          })
+          outcomeTracked = true
           // Patch the dashboard rings/totals + splice the resolved rows into
           // today's History caches, then reconcile against the server.
           applyQuickLogItems(res.items)
@@ -106,11 +148,19 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
           onLogged?.()
           showFeedback({ kind: 'success', text: summarize(res.items, t) })
         } catch (err) {
+          if (!outcomeTracked) {
+            trackLoggingEvent('FitCore Logging Failed', {
+              source: 'text',
+              entry_point: 'home_log_bar',
+              failure_reason: 'request_failed',
+              elapsed_ms: elapsedLoggingMs(startedAt),
+            })
+          }
           history.removeFood(today, tempId)
           showFeedback({
             kind: 'error',
             text: err instanceof Error ? err.message : t.logForm.quick.tryLater,
-            retry: trimmed,
+            retry: { text: trimmed, requestId },
           })
         } finally {
           setPendingCount((c) => Math.max(0, c - 1))
@@ -119,6 +169,28 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
     },
     [userId, applyQuickLogItems, history, onLogged, showFeedback, t]
   )
+
+  const speech = useSpeechInput({
+    lang: t.common.locale,
+    onTranscript: (transcript) => {
+      const base = speechBaseRef.current
+      setText(base ? `${base} ${transcript}` : transcript)
+    },
+    onError: (error) => {
+      if (error === 'no-speech' || error === 'aborted') return
+      showFeedback({ kind: 'error', text: t.logForm.quick.micError })
+    },
+  })
+
+  const toggleMic = () => {
+    if (speech.listening) {
+      speech.stop()
+      return
+    }
+    speechBaseRef.current = text.trim()
+    speech.start()
+    inputRef.current?.focus()
+  }
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -178,11 +250,25 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder={t.logForm.quick.homeSubtitle}
+            placeholder={speech.listening ? t.logForm.quick.micListening : t.logForm.quick.homeSubtitle}
             aria-label={t.logForm.quick.homeTitle}
             className="min-w-0 flex-1 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
           />
 
+          {speech.supported && (
+            <button
+              type="button"
+              onClick={toggleMic}
+              aria-label={speech.listening ? t.logForm.quick.micStop : t.logForm.quick.micStart}
+              aria-pressed={speech.listening}
+              className={cn(
+                'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors',
+                speech.listening ? 'bg-destructive/15 text-destructive' : 'text-muted-foreground hover:bg-secondary'
+              )}
+            >
+              <Mic size={15} className={speech.listening ? 'animate-pulse' : undefined} />
+            </button>
+          )}
           {text.trim() && (
             <button
               type="submit"
@@ -232,7 +318,7 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
             {feedback.kind === 'error' && feedback.retry ? (
               <button
                 type="button"
-                onClick={() => submit(feedback.retry as string)}
+                onClick={() => submit(feedback.retry!.text, feedback.retry!.requestId)}
                 className="ml-1 inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
               >
                 <RotateCcw size={10} />
@@ -261,7 +347,21 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
   )
 }
 
-function summarize(items: QuickLogFoodResult[], t: Dictionary): string {
-  const total = items.reduce((acc, f) => acc + f.calories, 0)
-  return `${t.logForm.quick.logged} · ${t.logForm.quick.summaryFood(items.length, total)}`
+function summarize(items: QuickLogResult[], t: Dictionary): string {
+  const parts: string[] = []
+  const foods = items.filter(
+    (i): i is Extract<QuickLogResult, { kind: 'food' }> => i.kind === 'food'
+  )
+  const workouts = items.filter(
+    (i): i is Extract<QuickLogResult, { kind: 'workout' }> => i.kind === 'workout'
+  )
+  if (foods.length) {
+    const total = foods.reduce((acc, f) => acc + f.calories, 0)
+    parts.push(t.logForm.quick.summaryFood(foods.length, total))
+  }
+  if (workouts.length) {
+    const total = workouts.reduce((acc, w) => acc + w.caloriesBurned, 0)
+    parts.push(t.logForm.quick.summaryWorkout(workouts.length, total))
+  }
+  return `${t.logForm.quick.logged} · ${parts.join(' · ')}`
 }

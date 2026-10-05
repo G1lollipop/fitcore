@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { NutritionDayData } from '@/app/actions/history'
 import type { DietLogItem, WorkoutLogItem } from '@/app/actions/types'
-import type { QuickLogFoodResult } from '@/app/actions/quickLog'
+import type { QuickLogResult } from '@/app/actions/quickLog'
 
 /**
  * React Query keys for the History page, matched to the queries in
@@ -107,23 +107,43 @@ export function useHistoryActions() {
    * items are visible (and editable) the instant the user opens History.
    */
   const applyResolvedQuickLog = useCallback(
-    (dateStr: string, tempId: string, items: QuickLogFoodResult[]) => {
+    (dateStr: string, tempId: string, items: QuickLogResult[]) => {
       const nowIso = new Date().toISOString()
       const foods: DietLogItem[] = []
+      const workouts: WorkoutLogItem[] = []
       for (const item of items) {
-        foods.push({
-          id: item.id,
-          food_name: item.name,
-          calories: item.calories,
-          protein: item.protein,
-          carbs: item.carbs,
-          fat: item.fat,
-          logged_at: nowIso,
-        })
+        if (item.kind === 'food') {
+          foods.push({
+            id: item.id,
+            food_name: item.name,
+            calories: item.calories,
+            protein: item.protein,
+            carbs: item.carbs,
+            fat: item.fat,
+            logged_at: nowIso,
+          })
+        } else {
+          workouts.push({
+            id: item.id,
+            workout_name: item.name,
+            sets: item.sets,
+            duration_minutes: item.durationMinutes,
+            calories_burned: item.caloriesBurned,
+            logged_at: nowIso,
+          })
+        }
       }
-      patchNutrition(dateStr, (logs) => [...logs.filter((d) => d.id !== tempId), ...foods])
+      patchNutrition(dateStr, (logs) => {
+        const existing = logs.filter((log) => log.id !== tempId)
+        const ids = new Set(existing.map((log) => log.id))
+        return [...existing, ...foods.filter((log) => !ids.has(log.id))]
+      })
+      if (workouts.length) patchWorkouts(dateStr, (logs) => {
+        const ids = new Set(logs.map((log) => log.id))
+        return [...logs, ...workouts.filter((log) => !ids.has(log.id))]
+      })
     },
-    [patchNutrition]
+    [patchNutrition, patchWorkouts]
   )
 
   /** Background refetch of both day caches to reconcile against the server. */

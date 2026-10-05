@@ -925,7 +925,7 @@ export const en = {
     },
     suggested: [
       'What should I eat to build muscle?',
-      'How do I fix lower back pain when squatting?',
+      'How many calories should I eat?',
       'Am I getting enough protein?',
     ],
     home: {
@@ -935,9 +935,8 @@ export const en = {
       cta: 'Ask coach',
       chips: [
         'Is creatine worth taking?',
-        'How much protein do I need?',
-        'Am I getting enough protein today?',
         'How do I fix lower back pain when squatting?',
+        'Am I getting enough protein today?',
       ],
     },
     inputPlaceholder: 'Ask the AI coach a fitness question…',

@@ -1,11 +1,3 @@
-/**
- * FitCore AI Agent — tool-calling architecture
- *
- * Step 1 — planning: plan-step.ts (single LLM call)
- * Step 2 — tool execution (parallel)
- * Step 3 — streaming generation (higher temperature)
- */
-
 import { openai } from "@/lib/openaiClient"
 import { AI_CHAT_MODEL } from "@/lib/ai/model"
 import { createAgentPlan } from "@/lib/ai/plan-step"
@@ -55,18 +47,13 @@ export interface AgentResult {
   mode: AgentMode
   toolsUsed: string[]
   retrievalK?: number
-  retrievalKReason?: string
-  /** Per-stage latency (ms), for the observability trace. */
   timings?: { planMs: number; toolsMs: number; generationMs: number }
-  /** Coarse token accounting (≈ chars/4), for cost/latency dashboards. */
   usage?: {
     promptCharsApprox: number
     completionChars: number
     completionTokensApprox: number
   }
 }
-
-const LOG_TOOLS = new Set(["log_food", "log_workout", "adjust_plan"])
 
 export async function runAgent(params: {
   message: string
@@ -87,7 +74,6 @@ export async function runAgent(params: {
   const toolsUsed: string[] = []
   let citations: Citation[] = []
   const retrievalK = parsed.retrievalK
-  const retrievalKReason = parsed.retrievalKReason
   let toolsMs = 0
 
   if (planChoice.finish_reason === "tool_calls" && planChoice.message.tool_calls?.length) {
@@ -110,16 +96,14 @@ export async function runAgent(params: {
         toolsUsed.push(toolName)
         let content = ""
 
-        if (toolName === "set_retrieval_params") {
-          content = `Retrieval params set: k=${args.k}, reason: ${args.reason ?? "unspecified"}`
-
-        } else if (toolName === "query_knowledge_base") {
+        if (toolName === "query_knowledge_base") {
           try {
+            const k = typeof args.k === "number" ? args.k : retrievalK
             const result = await chatWithRagRetrieve({
               query: (args.query as string) || message,
               sessionId,
               userContext,
-              topK: retrievalK,
+              topK: k,
             })
             citations = result.citations
             if (result.chunks.length === 0) {
@@ -189,7 +173,6 @@ export async function runAgent(params: {
     mode,
     toolsUsed,
     retrievalK,
-    retrievalKReason,
     timings: { planMs, toolsMs, generationMs },
     usage: {
       promptCharsApprox,

@@ -20,7 +20,6 @@ export interface ParsedToolCall {
 export interface AgentPlanResult {
   tools: string[]
   retrievalK?: number
-  retrievalKReason?: string
   finishReason: string
   toolCalls: ParsedToolCall[]
 }
@@ -38,7 +37,6 @@ function parsePlanChoice(planChoice: {
   const tools: string[] = []
   const toolCalls: ParsedToolCall[] = []
   let retrievalK: number | undefined
-  let retrievalKReason: string | undefined
 
   if (finishReason === "tool_calls" && planChoice.message.tool_calls?.length) {
     for (const toolCall of planChoice.message.tool_calls) {
@@ -51,11 +49,10 @@ function parsePlanChoice(planChoice: {
         arguments: toolCall.function.arguments || "{}",
       })
 
-      if (name === "set_retrieval_params") {
+      if (name === "query_knowledge_base") {
         try {
           const args = JSON.parse(toolCall.function.arguments || "{}")
           if (typeof args.k === "number") retrievalK = args.k
-          if (typeof args.reason === "string") retrievalKReason = args.reason
         } catch {
           // ignore malformed args
         }
@@ -63,7 +60,7 @@ function parsePlanChoice(planChoice: {
     }
   }
 
-  return { tools, retrievalK, retrievalKReason, finishReason, toolCalls }
+  return { tools, retrievalK, finishReason, toolCalls }
 }
 
 export async function planAgentStep(params: {

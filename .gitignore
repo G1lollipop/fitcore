@@ -66,6 +66,8 @@ rag/data/cloud_remaining.txt
 *.local
 *.log
 logs/
+rag/rag_server.err
+web/next_server.err
 
 # ---- Lockfiles ----
 # Keep the web lockfile version-controlled so GitHub Actions can use npm ci.

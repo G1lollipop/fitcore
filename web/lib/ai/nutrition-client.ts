@@ -1,6 +1,13 @@
 import { NUTRITION_PARSE_API_URL } from '@/lib/ai/model'
+import { z } from 'zod'
 
 const FETCH_TIMEOUT_MS = 60_000
+const nutritionSchema = z.object({
+  calories: z.number().finite().nonnegative(),
+  protein: z.number().finite().nonnegative(),
+  carbs: z.number().finite().nonnegative(),
+  fat: z.number().finite().nonnegative(),
+})
 
 export interface NutritionApiResponse {
   calories: number
@@ -27,7 +34,7 @@ export async function fetchNutritionApi(
       throw new Error(`Modal API returned ${response.status}`)
     }
 
-    return (await response.json()) as NutritionApiResponse
+    return nutritionSchema.parse(await response.json())
   } finally {
     clearTimeout(timeoutId)
   }

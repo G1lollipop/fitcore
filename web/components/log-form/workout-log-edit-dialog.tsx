@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Loader2, Plus, Save } from 'lucide-react'
 import {
   Dialog,
@@ -18,6 +18,7 @@ import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
 import { updateWorkoutLog, createWorkoutLog } from '@/app/actions/logWorkout'
 import type { WorkoutLogItem } from '@/app/actions/types'
+import { elapsedLoggingMs, trackLoggingEvent } from '@/lib/analytics/logging-events'
 
 interface WorkoutLogEditDialogProps {
   /** The entry being edited; `null` keeps the dialog closed (edit mode). */
@@ -76,6 +77,11 @@ export function WorkoutLogEditDialog({
 
   const [fields, setFields] = useState<EditFields | null>(null)
   const [saving, setSaving] = useState(false)
+  const editStartedAtRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    editStartedAtRef.current = isOpen ? performance.now() : null
+  }, [isOpen, log?.id])
 
   // Sync form state on the closed→open transition — React's "adjust state
   // during render" pattern, which avoids an extra effect + render pass.
@@ -141,6 +147,21 @@ export function WorkoutLogEditDialog({
         description: result.error ? tError(t, result.error) : t.logForm.edit.tryLater,
       })
       return
+    }
+    const changedFieldCount = (
+      ['workout_name', 'sets', 'duration_minutes', 'calories_burned'] as const
+    ).filter((field) => {
+      const original = field === 'sets' ? (log.sets ?? '') : log[field]
+      return fields[field] !== original
+    }).length
+    if (changedFieldCount > 0) {
+      trackLoggingEvent('FitCore Logging Correction', {
+        source: 'record',
+        entry_point: 'record_editor',
+        changed_field_count: changedFieldCount,
+        log_type: 'workout',
+        elapsed_ms: elapsedLoggingMs(editStartedAtRef.current ?? performance.now()),
+      })
     }
     onSuccess?.()
     toast({ title: t.logForm.edit.updated, description: payload.workout_name })

@@ -57,7 +57,7 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
             type="button"
             onClick={() => onSend(input)}
             disabled={!input.trim() || isTyping}
-            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted-foreground"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none"
             aria-label={t.aiChat.send}
           >
             {isTyping ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
@@ -67,4 +67,3 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
     </>
   )
 }
-

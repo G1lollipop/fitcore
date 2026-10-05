@@ -22,7 +22,6 @@ export interface AIChatMeta {
   conversationId?: string
   retrievalBackend?: VectorRetrievalBackend
   retrievalK?: number        // number of chunks the LLM chose to retrieve
-  retrievalKReason?: string  // the LLM's stated rationale
   persisted?: boolean        // whether the message was successfully written to the history store
   assistantMessageId?: string // chat_messages.id of the persisted assistant reply (for feedback)
 }

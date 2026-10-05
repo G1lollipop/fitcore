@@ -11,44 +11,26 @@ import { ChatHeader } from './chat-header'
 import type { Message } from './types'
 
 interface ChatWindowProps {
-  // ── conversation state ──
   conversationId: string
   sessionOptions: ChatConversationSummary[]
   isLoadingHistory: boolean
-
-  // ── message stream state ──
   messages: Message[]
   isTyping: boolean
   input: string
   setInput: (v: string) => void
-
   onClose: () => void
-
-  // ── actions ──
   onSwitchConversation: (cid: string) => void
   onStartNewChat: () => void
   onClearHistory: () => void
   onSend: (text: string) => void
 }
 
-const PANEL_EASE = [0.16, 1, 0.3, 1] as const
+const PANEL_EASE = [0.22, 1, 0.36, 1] as const
 
-/**
- * Renders both responsive chat panels:
- *   • Desktop (`md:` and up): a right-docked rail anchored to the viewport's
- *     right edge, full-height, ~420px wide. Slides in from the right.
- *   • Mobile: a full-sheet that slides up from the bottom and fills the
- *     screen. Uses the same components as desktop.
- *
- * The Tailwind responsive `hidden md:flex` toggles keep us from having to
- * track viewport width in JS — only one panel is laid out at a time.
- */
 export function ChatWindow(props: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-scroll to the latest message whenever the list grows or the
-  // typing indicator changes.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [props.messages, props.isTyping])
@@ -60,10 +42,6 @@ export function ChatWindow(props: ChatWindowProps) {
     </>
   )
 }
-
-/* -------------------------------------------------------------------------- */
-/*  Variants                                                                  */
-/* -------------------------------------------------------------------------- */
 
 interface VariantProps extends ChatWindowProps {
   bottomRef: RefObject<HTMLDivElement | null>
@@ -93,8 +71,8 @@ function MobileSheet({
       initial={{ y: '100%' }}
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
-      transition={{ duration: 0.32, ease: PANEL_EASE }}
-      className="glass-strong fixed inset-0 z-50 flex flex-col shadow-2xl md:hidden"
+      transition={{ duration: 0.35, ease: PANEL_EASE }}
+      className="flex fixed inset-0 z-50 flex-col bg-background/95 backdrop-blur-xl md:hidden"
     >
       <ChatHeader
         compact={false}
@@ -162,13 +140,16 @@ function DesktopDock({
       initial={{ x: '100%', opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '100%', opacity: 0 }}
-      transition={{ duration: 0.32, ease: PANEL_EASE }}
+      transition={{ duration: 0.3, ease: PANEL_EASE }}
       className={cn(
-        'glass-strong fixed inset-y-0 right-0 z-50 hidden w-full max-w-[420px] flex-col',
-        'rounded-l-2xl border-l border-border/60 shadow-[0_0_60px_-12px_rgba(0,0,0,0.25)]',
+        'fixed inset-y-0 right-0 z-50 hidden w-full max-w-[420px] flex-col',
+        'border-l border-border/50 bg-background/80 backdrop-blur-2xl',
+        'shadow-[-8px_0_40px_-8px_rgba(0,0,0,0.12)]',
         'md:flex'
       )}
     >
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent" />
+
       <ChatHeader
         compact={false}
         conversationId={conversationId}
@@ -192,7 +173,7 @@ function DesktopDock({
         }
       />
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         {isLoadingHistory ? (
           <Spinner />
         ) : (
@@ -225,7 +206,7 @@ function IconButton({ onClick, ariaLabel, tone = 'default', children }: IconButt
       onClick={onClick}
       aria-label={ariaLabel}
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-xl border border-border/70 bg-secondary/60 text-muted-foreground transition-all hover:border-primary/30 hover:bg-secondary',
+        'flex h-8 w-8 items-center justify-center rounded-xl border border-border/60 bg-secondary/50 text-muted-foreground transition-all hover:border-primary/30 hover:bg-secondary hover:shadow-sm',
         tone === 'destructive' ? 'hover:text-destructive' : 'hover:text-foreground'
       )}
     >
@@ -237,7 +218,10 @@ function IconButton({ onClick, ariaLabel, tone = 'default', children }: IconButt
 function Spinner() {
   return (
     <div className="flex flex-1 items-center justify-center">
-      <Loader2 size={24} className="animate-spin text-primary" />
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 size={18} className="animate-spin text-primary" />
+        <span>Loading...</span>
+      </div>
     </div>
   )
 }
