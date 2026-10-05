@@ -36,7 +36,7 @@ export async function chatWithRagRetrieve(payload: {
   query: string
   sessionId: string
   userContext: RagChatRequest["userContext"]
-  topK?: number   // decided by the Agent's set_retrieval_params tool; omit to let the backend choose automatically
+  topK?: number   // selected by query_knowledge_base; omit to let the backend choose automatically
 }): Promise<RagRetrieveResponse> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30_000)

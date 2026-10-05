@@ -16,7 +16,9 @@ import evaluate  # noqa: E402
 @pytest.mark.parametrize("module", [eval_abstention, eval_faithfulness])
 def test_chat_failure_fails_gate_and_preserves_report(module, tmp_path, monkeypatch):
     dataset = tmp_path / "dataset.json"
-    dataset.write_text(json.dumps([{"id": "case1", "question": "test", "in_scope": True}]))
+    dataset.write_text(
+        json.dumps([{"id": "case1", "question": "test", "in_scope": True}])
+    )
     baseline = tmp_path / "baseline.json"
     baseline.write_text('{"thresholds": {}}')
     monkeypatch.setattr(module, "_EVAL_DIR", tmp_path)
@@ -26,10 +28,17 @@ def test_chat_failure_fails_gate_and_preserves_report(module, tmp_path, monkeypa
 
     monkeypatch.setattr(module, "call_chat_http", failed_chat)
     run = getattr(module, "evaluate_abstention", None) or module.evaluate_faithfulness
-    assert run(
-        dataset_path=dataset, use_http=True, limit=None, gate=True,
-        baseline_path=baseline, tag="test",
-    ) == 1
+    assert (
+        run(
+            dataset_path=dataset,
+            use_http=True,
+            limit=None,
+            gate=True,
+            baseline_path=baseline,
+            tag="test",
+        )
+        == 1
+    )
     report = json.loads(next(tmp_path.glob("*_report_*.json")).read_text())
     assert report["results"][0]["error"] == "HTTP 500"
 

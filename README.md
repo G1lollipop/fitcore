@@ -1,6 +1,22 @@
 # FitCore
 
-An AI-powered fitness coaching app. The frontend and backend are managed together in a single monorepo:
+FitCore is an AI-powered fitness and nutrition app that makes food logging easier and gives users context-aware coaching. It combines a Next.js frontend, a FastAPI retrieval service, Supabase data and authentication, and AI models for chat and nutrition extraction.
+
+**Live app:** [fitcore-web-eight.vercel.app](https://fitcore-web-eight.vercel.app/) (sign-in required)
+
+## What it does
+
+- Logs food from natural-language descriptions, voice transcripts, and photos.
+- Brings nutrition and training records into a mobile-first daily view.
+- Grounds coaching answers with a retrieval pipeline that combines vector search and BM25, with optional reranking.
+
+## Explore the code
+
+- [`web/`](./web) contains the Next.js app, authenticated user flows, food logging, and chat UI.
+- [`rag/`](./rag) contains the FastAPI retrieval service.
+- [`DEVELOPMENT.md`](./DEVELOPMENT.md) explains architecture, API contracts, ingestion, testing, and troubleshooting.
+
+The frontend and backend are managed together in a single monorepo:
 
 ```
 Fitcore/
@@ -17,13 +33,16 @@ flowchart TD
     Actions["Server Actions<br/>(web/app/actions/*)"]
     ChatAPI["/api/ai/chat (SSE)<br/>route.ts"]
     Supabase[("Supabase<br/>Auth + logs/plans/stats/chat")]
-    LLM["Google Gemini<br/>(chat / parsing / vision / embedding)"]
+    LLM["Google Gemini<br/>(chat / vision / embedding)"]
+    NutritionAPI["Modal · Qwen2.5-3B<br/>(food nutrition parsing)"]
     RAG["RAG service FastAPI (rag/)<br/>/v1/retrieve · /v1/chat · /v1/chat/stream"]
 
     Browser -->|"protected routes"| Auth
     Browser -->|"data read/write<br/>(userId injected server-side via requireUserId())"| Actions
     Browser -->|"chat"| ChatAPI
     Actions --> Supabase
+    Actions -->|"Quick Log food/workout splitting"| LLM
+    Actions -->|"food nutrition<br/>(quickLog segments / logFood)"| NutritionAPI
     ChatAPI -->|"personal context user-context.ts"| Supabase
     ChatAPI -->|"generation"| LLM
     ChatAPI -->|"knowledge retrieval rag-client.ts"| RAG
@@ -93,4 +112,5 @@ secrets marked `sync: false` (`GOOGLE_AI_STUDIO_API_KEY`, `SUPABASE_*`, `UPSTASH
 ## Tech stack
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, Supabase (Auth + data)
-- **Backend**: Python 3.11, FastAPI, LangChain 1.x, Google Gemini (gemini-2.5-flash + gemini-embedding-001), Chroma / Supabase pgvector
+- **AI models**: Google Gemini (gemini-2.5-flash — chat, vision, embeddings) + Qwen2.5-3B fine-tuned for food nutrition parsing (Modal serverless)
+- **Backend**: Python 3.11, FastAPI, LangChain 1.x, Chroma / Supabase pgvector

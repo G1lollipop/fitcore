@@ -3,6 +3,7 @@
 import { ArrowUpRight, Bot, Sparkles } from 'lucide-react'
 import type { RefObject } from 'react'
 import { useT } from '@/lib/i18n/provider'
+import { CoachAvatar } from './coach-avatar'
 import { KNOWLEDGE_TOPICS } from '@/components/knowledge/starters'
 import { ChatInput } from './chat-input'
 import { ChatMessage } from './chat-message'
@@ -47,9 +48,9 @@ export function ChatBody({
         {showStarters && <ChatStarters onPick={onSend} />}
 
         {showWaiting && (
-          <div className="flex gap-3">
-            <div className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-accent/15 flex items-center justify-center shadow-sm ring-1 ring-primary/10">
-              <Bot size={14} className="text-primary" />
+          <div className="flex gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/25 to-accent/20 text-primary">
+              <CoachAvatar size={20} />
             </div>
             <div className="rounded-2xl rounded-tl-md border border-border/40 bg-card/60 px-4 py-3 shadow-sm backdrop-blur-sm">
               <TypingIndicator />

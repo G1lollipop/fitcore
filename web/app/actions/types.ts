@@ -28,7 +28,6 @@ export type UserGoals = {
   target_protein: number;
   target_carbs: number;
   target_fat: number;
-  water_goal: number;
 };
 
 export type TodayStats = {
@@ -38,7 +37,6 @@ export type TodayStats = {
   total_fat: number;
   calories_burned: number;
   workout_duration: number;
-  water_intake: number;
   diet_logs: DietLogItem[];
   workout_logs: WorkoutLogItem[];
 };
@@ -62,7 +60,7 @@ export type WeeklyTrendData = {
 export type TodayWorkoutInfo = {
   plan: { id: string; name: string } | null;
   todayDay: { id: string; name: string; isRestDay: boolean } | null;
-  exercises: { id: string; text: string; sets?: number; repsMin?: number; repsMax?: number; weight?: number }[];
+  exercises: { id: string; text: string; exerciseName: string; sets?: number; repsMin?: number; repsMax?: number; weight?: number }[];
 } | null;
 
 export type DashboardData = {

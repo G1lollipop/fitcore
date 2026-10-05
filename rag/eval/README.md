@@ -187,10 +187,14 @@ measured values after the expanded KB is ingested:
 ### CI wiring (repo root `.github/workflows/`)
 
 - `rag-ci.yml` — runs `ruff check` + `ruff format --check` + `pytest` (including this directory's metric unit tests) on every PR/push touching `rag/`. No external API calls.
-- `rag-eval.yml` — the consolidated evaluation suite. One nightly run + manual + path-filtered PR gates, with three jobs:
-  - **retrieval-gate** — retrieval regression gate; runs on PRs touching `eval/`, `data/`, or `services/retrieval/`. Reads the **already-ingested Supabase** (only embeds queries, does not re-ingest in CI to avoid blowing the free quota) and runs the `--gate` above.
-  - **agent-gate** — Agent Step-1 tool-selection gate (`web/lib/ai/eval/eval-agent.ts`); runs on PRs touching `web/lib/ai/`.
-  - **answer-eval** — nightly/manual only: boots the backend once and runs the answer-level LLM-as-Judge (`evaluate.py`) + faithfulness (`eval_faithfulness.py`) + abstention (`eval_abstention.py`) gates.
+- `rag-eval.yml` — manual-only live evaluation; no scheduled/PR execution or automatic issue creation. Four jobs cover retrieval, reranking, agent tool selection, and answer/faithfulness/abstention. Retrieval reads the already-ingested Supabase store and only embeds queries. Answer evaluation boots one backend and saves reports plus backend logs, including on failure.
+
+The workflow was disabled in GitHub on 2026-09-23 while quota and regression issues are tracked in #262 (agent startup), #263 (retrieval), and #264 (generation). Normal RAG CI and Web CI remain enabled. Before enabling and manually dispatching this workflow:
+
+1. Merge the maintenance fixes and confirm ordinary CI passes.
+2. Provide sufficient Gemini quota for both generation and judging; the observed 20-request daily allowance cannot cover the full suite. A key in the same project does not create a separate project quota.
+3. Run a manual evaluation and inspect error counts and backend logs before interpreting scores. API/judge errors invalidate the run; do not lower quality thresholds to hide them.
+4. Resolve the retrieval regression using per-query results before closing #263. Keep automatic evaluation disabled until API capacity is sustainable.
 
 > After changing the KB, re-ingest the new documents into Supabase (run `python scripts/ingest_seed_kb.py --force` locally with the Supabase env set), or the retrieval gate won't see them.
 

@@ -133,8 +133,15 @@ export function useHistoryActions() {
           })
         }
       }
-      patchNutrition(dateStr, (logs) => [...logs.filter((d) => d.id !== tempId), ...foods])
-      if (workouts.length) patchWorkouts(dateStr, (logs) => [...logs, ...workouts])
+      patchNutrition(dateStr, (logs) => {
+        const existing = logs.filter((log) => log.id !== tempId)
+        const ids = new Set(existing.map((log) => log.id))
+        return [...existing, ...foods.filter((log) => !ids.has(log.id))]
+      })
+      if (workouts.length) patchWorkouts(dateStr, (logs) => {
+        const ids = new Set(logs.map((log) => log.id))
+        return [...logs, ...workouts.filter((log) => !ids.has(log.id))]
+      })
     },
     [patchNutrition, patchWorkouts]
   )

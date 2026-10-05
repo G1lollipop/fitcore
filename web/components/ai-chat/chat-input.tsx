@@ -1,9 +1,8 @@
 'use client'
 
-import { Loader2, Send, Sparkles } from 'lucide-react'
+import { Loader2, Send } from 'lucide-react'
 import { type RefObject } from 'react'
 import { useT } from '@/lib/i18n/provider'
-import type { Dictionary } from '@/lib/i18n'
 
 interface ChatInputProps {
   input: string
@@ -13,6 +12,9 @@ interface ChatInputProps {
   inputRef: RefObject<HTMLInputElement | null>
 }
 
+/**
+ * Suggestion chips, text input, and send button.
+ */
 export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatInputProps) {
   const t = useT()
 
@@ -25,7 +27,7 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
 
   return (
     <>
-      <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t border-border/60 px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-1.5 overflow-x-auto border-t border-border/60 bg-background px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {t.aiChat.suggested.map((s) => (
           <button
             key={s}
@@ -39,7 +41,7 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
         ))}
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 px-3 pb-3 pt-1">
+      <div className="flex shrink-0 items-center gap-2 bg-background px-3 pb-3 pt-1">
         <div className="relative flex-1">
           <input
             ref={inputRef}
@@ -49,7 +51,7 @@ export function ChatInput({ input, setInput, onSend, isTyping, inputRef }: ChatI
             onKeyDown={handleKeyDown}
             placeholder={t.aiChat.inputPlaceholder}
             disabled={isTyping}
-            className="h-11 w-full rounded-2xl border border-border/80 bg-secondary/80 pl-4 pr-12 text-sm text-foreground shadow-sm backdrop-blur-sm transition-all placeholder:text-muted-foreground/60 hover:border-primary/30 focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:shadow-md disabled:opacity-60"
+            className="h-10 w-full rounded-full border border-border bg-secondary pl-4 pr-11 text-sm text-foreground transition-all placeholder:text-muted-foreground focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
           />
           <button
             type="button"

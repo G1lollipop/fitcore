@@ -40,6 +40,7 @@ Browser
 Key points:
 
 - **Business data** goes through Next.js Server Actions straight to Supabase — no custom REST layer.
+- **Quick Log** uses Gemini to split food/workout descriptions, then the Modal Qwen nutrition API for each food segment. A service-role RPC commits every segment and refreshes daily totals atomically; retries reuse the request ID. Apply `web/supabase/migrations/20260925010041_quick_log_atomic_idempotency.sql` before deploying this path. The migration is included in source; this does not establish that it has been deployed or verified against a database.
 - **AI chat** goes through `POST /api/ai/chat` (SSE streaming). The server-side Agent uses tool calling to decide whether to query the knowledge base and whether to read user data.
 - **Knowledge retrieval** is provided by a standalone FastAPI service (`rag/`); the frontend calls its `/v1/retrieve` via `RAG_SERVICE_URL`.
 

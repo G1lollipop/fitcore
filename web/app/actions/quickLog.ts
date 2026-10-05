@@ -5,6 +5,7 @@ import { createHash, randomUUID } from 'crypto';
 import { openai } from '@/lib/openaiClient';
 import { supabase } from '@/lib/supabaseClient';
 import { AI_FAST_MODEL } from '@/lib/ai/model';
+import { fetchNutritionApi } from '@/lib/ai/nutrition-client';
 import { Database, Json } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId } from '@/lib/auth/require-user';
@@ -60,18 +61,14 @@ Each ParsedSegment shape:
 - kind: "food" or "workout" — required
 - when kind="food":
   - food_name: string — keep the portion from the user's wording (e.g. "30g whey protein")
-  - calories: int (kcal)
-  - protein: int (g)
-  - carbs: int (g)
-  - fat: int (g)
+  - Do not estimate nutrition: a dedicated nutrition model handles each food item.
 - when kind="workout":
   - workout_name: string — a normalized workout name (e.g. "Squat", "Running")
   - sets: int | null — null if not stated
   - duration_minutes: int
   - calories_burned: int (kcal)
 
-Nutrition / burn references (60kg adult):
-- Chicken breast 100g≈165kcal/31P/0C/4F; whey protein 100g≈380kcal/75P/8C/3F; cooked rice 100g≈130kcal/3P/28C/0F; egg 1≈70kcal/6P/1C/5F
+Workout burn references (60kg adult):
 - Squat 10 reps≈9kcal; bench press 10 reps≈7kcal; deadlift 10 reps≈11kcal; pull-up 10 reps≈9kcal; push-up 10 reps≈6kcal
 - Running 1 min≈11kcal; jump rope 1 min≈13kcal; swimming 1 min≈9kcal; cycling 1 min≈8kcal
 
@@ -116,7 +113,16 @@ async function parseQuickLog(userInput: string): Promise<ParsedSegment[]> {
     }
   }
 
-  return items.filter((it) => it && (it.kind === 'food' || it.kind === 'workout'));
+  const segments = items.filter((it) => it && (it.kind === 'food' || it.kind === 'workout'));
+  // Keep the mixed-log splitter while using the main branch's specialized
+  // nutrition model. All parsing finishes before the atomic database write.
+  return Promise.all(segments.map(async (segment) => {
+    if (segment.kind !== 'food') return segment;
+    const description = segment.food_name?.trim();
+    if (!description) throw new Error('Food segment is missing its description');
+    const nutrition = await fetchNutritionApi(description);
+    return { ...segment, ...nutrition };
+  }));
 }
 
 async function getCommittedQuickLog(
@@ -147,7 +153,7 @@ async function getCommittedQuickLog(
 /**
  * Single-shot quick-log entrypoint for the natural-language command bar.
  *
- * Flow: 1 LLM call to classify+segment+extract → 1 atomic Supabase RPC that
+ * Flow: Gemini splits food/workouts → Qwen estimates food nutrition → an atomic RPC
  * inserts every item and refreshes today's aggregate. The request id makes a
  * repeated delivery return the original result instead of inserting again.
  */
@@ -165,6 +171,11 @@ export async function quickLog(
 
   const resolvedRequestId = requestId ?? randomUUID();
   const requestHash = createHash('sha256').update(trimmed).digest('hex');
+  const cached = await getCommittedQuickLog(userId, resolvedRequestId, requestHash);
+  if (cached) {
+    if (cached.success) revalidatePath('/');
+    return cached;
+  }
   let segments: ParsedSegment[];
   try {
     segments = await parseQuickLog(trimmed);

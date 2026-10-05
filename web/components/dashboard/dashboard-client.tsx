@@ -14,6 +14,7 @@ import { useDashboardData, useDashboardActions } from '@/lib/queries/dashboard'
 import { useHistoryActions } from '@/lib/queries/history'
 import { usePrefetchUserSettings } from '@/lib/queries/settings'
 import { getTodayDate } from '@/lib/utils/date'
+import { warmupNutritionApi } from '@/app/actions/nutritionWarmup'
 import type { DashboardData } from '@/app/actions/types'
 import { useT } from '@/lib/i18n/provider'
 
@@ -74,6 +75,28 @@ export function DashboardClient({
     prefetchUserSettings()
   }, [prefetchUserSettings])
 
+  // Warm the nutrition Modal API on first dashboard visit so the quick-log
+  // and food-log actions don't pay the cold-start latency on the first real
+  // parse. Throttled via localStorage to ≤ 1 ping per 10 min across tabs.
+  useEffect(() => {
+    let shouldWarmup = true
+    try {
+      const WARMUP_KEY = 'nutrition_api_last_warmup'
+      const lastWarmup = localStorage.getItem(WARMUP_KEY)
+      const now = Date.now()
+      if (lastWarmup && now - Number(lastWarmup) < 10 * 60 * 1000) {
+        shouldWarmup = false
+      } else {
+        localStorage.setItem(WARMUP_KEY, String(now))
+      }
+    } catch {
+      // localStorage unavailable — warmup anyway (non-blocking)
+    }
+    if (shouldWarmup) {
+      warmupNutritionApi()
+    }
+  }, [])
+
   const displayName = userName || t.greeting.defaultUserName
 
   // Generic "something changed" hook: kick a non-blocking background refetch
@@ -111,18 +134,13 @@ export function DashboardClient({
         <TodayOverview
           userId={userId}
           kcalIntake={dashboardData?.today.total_calories}
-          kcalBurn={dashboardData?.today.calories_burned}
           kcalGoal={dashboardData?.goals.target_calories}
-          workoutMinutes={dashboardData?.today.workout_duration}
           protein={dashboardData?.today.total_protein}
           proteinGoal={dashboardData?.goals.target_protein}
           carbs={dashboardData?.today.total_carbs}
           carbsGoal={dashboardData?.goals.target_carbs}
           fat={dashboardData?.today.total_fat}
           fatGoal={dashboardData?.goals.target_fat}
-          waterMl={dashboardData?.today.water_intake}
-          waterGoalMl={dashboardData?.goals.water_goal}
-          onWaterLogged={handleLogSuccess}
           onTargetsSaved={handleLogSuccess}
           className="shrink-0"
         />
@@ -150,7 +168,6 @@ export function DashboardClient({
       <TabPanel active={activeNav === 'nutrition'} prefetch>
         <HistoryCenter userId={userId} onLogSuccess={handleLogSuccess} />
       </TabPanel>
-
     </AppShell>
   )
 }

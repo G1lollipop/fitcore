@@ -11,6 +11,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "eval:agent": "tsx lib/ai/eval/eval-agent.ts",
     "backfill:exercise-en": "node --env-file=.env.local scripts/backfill-exercise-name-en.mjs"
   },
@@ -43,18 +45,24 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^9.39.0",
     "eslint-config-next": "^16.1.6",
     "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^29.1.1",
     "postcss": "^8.5",
     "prettier": "^3.4.2",
     "supabase": "^2.77.0",
     "tailwindcss": "^4.2.0",
     "tsx": "^4.19.4",
     "tw-animate-css": "1.3.3",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "vitest": "^4.1.10"
   }
 }

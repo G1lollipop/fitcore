@@ -1,32 +1,8 @@
-# Consolidated evaluation suite (merges the former retrieval, agent,
-# answer-level, and generation eval workflows into one file).
-#
-# Jobs:
-#   - changes        : detect which areas a PR touched (path filter).
-#   - retrieval-gate : offline retrieval metrics vs baseline (reads Supabase).
-#   - reranker-gate  : same gate over the live CrossEncoder reranking path
-#                      (--variant reranker); base MiniLM by default, or the
-#                      fine-tuned model via the RERANKER_MODEL_REF repo variable.
-#   - agent-gate     : agent Step-1 tool-selection golden set vs baseline (Node).
-#   - answer-eval    : boots the backend once and runs the answer-level
-#                      LLM-judge + faithfulness + abstention evals
-#                      (nightly / manual only).
-#
-# Triggers: one nightly schedule + manual + PRs. On a PR the retrieval and
-# agent gates run only when their own paths changed, so a web-only PR doesn't
-# burn the retrieval quota and a backend-only PR doesn't burn the agent quota.
-#
-# Lives at the REPO ROOT (GitHub Actions only runs root workflows); steps run
-# inside rag/ or web/ via defaults.run.working-directory.
-#
-# Required repo secrets:
-#   GOOGLE_AI_STUDIO_API_KEY · SUPABASE_URL · SUPABASE_SERVICE_ROLE_KEY
+# Live API evaluation is manual-only while quota and retrieval issues are tracked.
+# Normal RAG CI and Web CI remain automatic. See issues #262, #263, #264.
 name: RAG Eval
 
 on:
-  schedule:
-    # Single nightly run at 03:30 UTC for the whole suite.
-    - cron: '30 3 * * *'
   workflow_dispatch:
     inputs:
       relevance_threshold:
@@ -41,71 +17,21 @@ on:
       retrieval_min_score:
         description: 'Generation: RETRIEVAL_MIN_SCORE for abstention (0=disabled)'
         default: '0.35'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'rag/eval/**'
-      - 'rag/data/**'
-      - 'rag/training/**'
-      - 'rag/app/services/retrieval/**'
-      - 'rag/app/services/rag_service.py'
-      - 'rag/app/core/settings.py'
-      - 'web/lib/ai/**'
-      - 'web/package.json'
-      - 'web/package-lock.json'
-      - '.github/workflows/rag-eval.yml'
 
 concurrency:
   group: rag-eval-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  changes:
-    name: Detect changed areas
-    runs-on: ubuntu-latest
-    outputs:
-      retrieval: ${{ steps.filter.outputs.retrieval }}
-      reranker: ${{ steps.filter.outputs.reranker }}
-      agent: ${{ steps.filter.outputs.agent }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            retrieval:
-              - 'rag/eval/**'
-              - 'rag/data/**'
-              - 'rag/app/services/retrieval/**'
-              - 'rag/app/services/rag_service.py'
-              - 'rag/app/core/settings.py'
-              - '.github/workflows/rag-eval.yml'
-            reranker:
-              - 'rag/eval/**'
-              - 'rag/training/**'
-              - 'rag/app/services/retrieval/**'
-              - 'rag/app/services/rag_service.py'
-              - 'rag/app/core/settings.py'
-              - '.github/workflows/rag-eval.yml'
-            agent:
-              - 'web/lib/ai/**'
-              - 'web/package.json'
-              - 'web/package-lock.json'
-              - '.github/workflows/rag-eval.yml'
-
   # ── Retrieval-layer regression gate (Recall/nDCG/MRR + abstention) ──────────
   # Reads the already-populated Supabase pgvector store (re-ingesting in CI would
-  # blow the Gemini embedding free-tier quota). PRs run it only when retrieval
-  # code/data/eval changed.
+  # blow the Gemini embedding free-tier quota).
   retrieval-gate:
     name: Retrieval regression gate
-    needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.retrieval == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
-      issues: write
     defaults:
       run:
         working-directory: rag
@@ -149,26 +75,6 @@ jobs:
           path: rag/eval/retrieval_report_*.json
           retention-days: 90
 
-      - name: Open issue on nightly regression
-        if: failure() && github.event_name == 'schedule'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const today = new Date().toISOString().slice(0, 10);
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `[rag-retrieval] Nightly retrieval regression — ${today}`,
-              body: [
-                `The nightly retrieval eval gate failed on ${today}.`,
-                ``,
-                `Metrics dropped below rag/eval/retrieval_baseline.json.`,
-                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-                ``,
-                `Download the \`rag-retrieval-report-${context.runId}\` artifact for the per-query breakdown.`,
-              ].join('\n'),
-              labels: ['rag-eval', 'regression'],
-            });
 
   # ── Reranker regression gate (live CrossEncoder path) ──────────────────────
   # Runs the same anchor/keyword gate but through RagService's reranking path
@@ -179,13 +85,10 @@ jobs:
   # the local models/ artifact is gitignored and not present in CI.
   reranker-gate:
     name: Reranker regression gate
-    needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.reranker == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
-      issues: write
     defaults:
       run:
         working-directory: rag
@@ -234,38 +137,14 @@ jobs:
           path: rag/eval/retrieval_report_*.json
           retention-days: 90
 
-      - name: Open issue on nightly regression
-        if: failure() && github.event_name == 'schedule'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const today = new Date().toISOString().slice(0, 10);
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `[rag-reranker] Nightly reranker regression — ${today}`,
-              body: [
-                `The nightly reranker eval gate failed on ${today}.`,
-                ``,
-                `Metrics dropped below rag/eval/retrieval_baseline.json on the --variant reranker path.`,
-                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-                ``,
-                `Download the \`rag-reranker-report-${context.runId}\` artifact for the per-query breakdown.`,
-              ].join('\n'),
-              labels: ['rag-eval', 'regression'],
-            });
 
   # ── Agent Step-1 tool-selection regression gate (Node + Gemini) ─────────────
-  # PRs run it only when agent code changed.
   agent-gate:
     name: Agent tool-selection gate
-    needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.agent == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
       contents: read
-      issues: write
     defaults:
       run:
         working-directory: web
@@ -295,37 +174,16 @@ jobs:
           path: web/lib/ai/eval/agent_eval_report_*.json
           retention-days: 90
 
-      - name: Open issue on nightly regression
-        if: failure() && github.event_name == 'schedule'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const today = new Date().toISOString().slice(0, 10);
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `[agent-eval] Nightly tool-selection regression — ${today}`,
-              body: [
-                `The nightly agent tool-selection eval gate failed on ${today}.`,
-                ``,
-                `Metrics dropped below web/lib/ai/eval/agent-baseline.json.`,
-                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-              ].join('\n'),
-              labels: ['rag-eval', 'regression'],
-            });
 
   # ── Answer-level (end-to-end) evals: LLM-judge relevance/completeness/accuracy
   # + faithfulness (RAGAS-style) + abstention, all against a single booted
-  # backend. Nightly / manual only — each run consumes Gemini quota for chat +
-  # judging, so it never runs on PRs.
+  # backend. Manual only: each run consumes Gemini quota for chat and judging.
   answer-eval:
     name: Answer-level + faithfulness + abstention
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: read
-      issues: write
     defaults:
       run:
         working-directory: rag
@@ -478,25 +336,6 @@ jobs:
           echo "::error::One or more answer-level gates failed (answer=${{ steps.answer_gate.outcome }}, faithfulness=${{ steps.faithfulness_gate.outcome }}, abstention=${{ steps.abstention_gate.outcome }})"
           exit 1
 
-      - name: Open issue on nightly regression
-        if: failure() && github.event_name == 'schedule'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const today = new Date().toISOString().slice(0, 10);
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `[rag-eval] Nightly answer-level regression — ${today}`,
-              body: [
-                `The nightly answer-level / faithfulness / abstention eval failed on ${today}.`,
-                ``,
-                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-                ``,
-                `Download the \`rag-answer-reports-${context.runId}\` artifact for the per-question breakdown.`,
-              ].join('\n'),
-              labels: ['rag-eval', 'regression'],
-            });
 
       - name: Stop backend
         if: always()

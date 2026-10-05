@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Bot, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { ThumbsDown, ThumbsUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CoachAvatar } from './coach-avatar'
 import { useT } from '@/lib/i18n/provider'
 import { submitMessageFeedback } from '@/app/actions/chat'
 import { CitationsList } from './citations-list'
@@ -18,8 +19,8 @@ export function ChatMessage({ msg }: ChatMessageProps) {
   return (
     <div className={cn('flex gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}>
       {!isUser && (
-        <div className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-accent/15 flex items-center justify-center shadow-sm ring-1 ring-primary/10">
-          <Bot size={14} className="text-primary" />
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/25 to-accent/20 text-primary">
+          <CoachAvatar size={20} />
         </div>
       )}
 

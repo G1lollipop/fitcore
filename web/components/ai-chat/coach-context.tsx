@@ -37,7 +37,12 @@ export function CoachProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ isOpen, open, close, consumePrompt }),
+    () => ({
+      isOpen,
+      open,
+      close,
+      consumePrompt,
+    }),
     [isOpen, open, close, consumePrompt]
   )
 

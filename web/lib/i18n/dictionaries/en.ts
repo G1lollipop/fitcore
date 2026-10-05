@@ -357,6 +357,13 @@ export const en = {
       deleteAria: (name: string) => `Delete ${name}`,
       editAria: (name: string) => `Edit ${name}`,
     },
+    mode: {
+      back: 'Back',
+      exit: 'Exit',
+      discardConfirm: 'Discard workout progress?',
+      inProgress: 'Workout in progress',
+      resume: 'Resume',
+    },
   },
 
   labels: {
@@ -923,7 +930,7 @@ export const en = {
     ],
     home: {
       title: 'AI Coach',
-      subtitle: 'Ask anything about fitness & nutrition',
+      subtitle: 'Ask anything about fitness and nutrition',
       placeholder: 'Ask the coach a fitness question…',
       cta: 'Ask coach',
       chips: [

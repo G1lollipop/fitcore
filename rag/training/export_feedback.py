@@ -105,7 +105,9 @@ def _stable_id(query: str) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Feedback → reranker training flywheel")
+    parser = argparse.ArgumentParser(
+        description="Feedback → reranker training flywheel"
+    )
     parser.add_argument("--train-out", default=str(DEFAULT_TRAIN_OUT))
     parser.add_argument("--neg-per-pos", type=int, default=4)
     parser.add_argument("--depth", type=int, default=20)

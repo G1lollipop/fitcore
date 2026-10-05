@@ -85,6 +85,7 @@ flowchart TD
 | **Vector database** | Supabase pgvector (production) · Chroma (local) |
 | **Embedding model** | Gemini gemini-embedding-001 (default 768 dims, tunable via EMBEDDING_DIM) |
 | **Chat model** | Google Gemini (default gemini-2.5-flash, switchable via environment variable) through an OpenAI-compatible endpoint |
+| **Nutrition parsing** | Fine-tuned Qwen2.5-3B (LoRA) on Modal serverless GPU estimates food nutrition. Quick Log uses Gemini to split food/workout input before calling Qwen for each food segment; `logFood` calls Qwen directly. |
 | **Reranking** | HuggingFace CrossEncoder (bge-reranker-base) |
 | **Database** | Supabase PostgreSQL |
 | **Deployment** | Vercel (frontend) · Render Blueprint (RAG backend) |
@@ -159,7 +160,7 @@ Fitcore/
 │   │   ├── dashboard|nutrition|training|plans|log-form|knowledge|settings/
 │   │   └── ui/                     # shadcn/ui base components
 │   └── lib/
-│       ├── ai/                     # agent.ts · agent-tools.ts · rag-client.ts · user-context.ts
+│       ├── ai/                     # agent.ts · agent-tools.ts · rag-client.ts · user-context.ts · nutrition-client.ts
 │       └── plans/ metrics/ supabaseClient.ts database.types.ts
 │
 └── rag/                            # Python RAG backend (FastAPI + LangChain)
@@ -183,7 +184,7 @@ Fitcore/
 
 ```bash
 cd web
-cp .env.local.example .env.local   # fill in Supabase / Gemini key
+cp .env.local.example .env.local   # fill in Supabase / Gemini key / Modal nutrition URL
 npm install
 npm run dev
 ```
@@ -226,6 +227,8 @@ RAG_SERVICE_URL=http://your-rag-server:8000
 # Optional: point at another OpenAI-compatible provider (overrides the Gemini default when set)
 # OPENAI_API_KEY=
 # OPENAI_BASE_URL=
+# Custom fine-tuned Qwen2.5-3B nutrition parsing API on Modal (replaces Gemini for food logging)
+# NUTRITION_PARSE_API_URL=https://g1lollipop--fitcore-nutrition-api-analyze-meal.modal.run
 ```
 
 ### RAG backend (`rag/.env`)

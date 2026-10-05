@@ -62,9 +62,13 @@ export function useDashboardActions() {
         const next = { ...today }
         const dietLogs = [...next.diet_logs]
         const workoutLogs = [...next.workout_logs]
+        const foodIds = new Set(dietLogs.map((log) => log.id))
+        const workoutIds = new Set(workoutLogs.map((log) => log.id))
         const nowIso = new Date().toISOString()
         for (const item of items) {
           if (item.kind === 'food') {
+            if (foodIds.has(item.id)) continue
+            foodIds.add(item.id)
             dietLogs.push({
               id: item.id,
               food_name: item.name,
@@ -79,6 +83,8 @@ export function useDashboardActions() {
             next.total_carbs += item.carbs
             next.total_fat += item.fat
           } else {
+            if (workoutIds.has(item.id)) continue
+            workoutIds.add(item.id)
             workoutLogs.push({
               id: item.id,
               workout_name: item.name,
@@ -125,13 +131,6 @@ export function useDashboardActions() {
     [patchToday]
   )
 
-  const setWater = useCallback(
-    (amountMl: number) => {
-      patchToday((today) => ({ ...today, water_intake: amountMl }))
-    },
-    [patchToday]
-  )
-
   /** Background refetch — used when we don't have the delta locally. */
   const invalidate = useCallback(() => {
     void qc.invalidateQueries({ queryKey: DASHBOARD_KEY })
@@ -142,7 +141,6 @@ export function useDashboardActions() {
     applyQuickLogItems,
     applyDietLog,
     applyWorkoutLog,
-    setWater,
     invalidate,
   }
 }

@@ -27,7 +27,9 @@ def test_chat_stream_event_order(client):
 
 
 def test_chat_stream_sources_payload(client):
-    r = client.post("/v1/chat/stream", json={"query": "hypertrophy?", "sessionId": "s2"})
+    r = client.post(
+        "/v1/chat/stream", json={"query": "hypertrophy?", "sessionId": "s2"}
+    )
     assert r.status_code == 200, r.text
 
     events = _parse_events(r.text)

@@ -3,17 +3,14 @@
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useT } from '@/lib/i18n/provider'
 import { toLocalDateStr } from '@/lib/utils/date'
-import { getNutritionRange } from '@/app/actions/history'
-import { getWorkoutHistory } from '@/app/actions/history'
-import { DietDaySection } from './diet-day-section'
-import { WorkoutDaySection } from './workout-day-section'
-
-interface HistoryCenterProps {
-  userId?: string
-  onLogSuccess?: () => void
-}
+import { getNutritionRange, getWorkoutHistory } from '@/app/actions/history'
+import { WeeklySummaryBar } from './weekly-summary-bar'
+import { DayTimeline } from './day-timeline'
+import { TrendCharts } from './trend-charts'
+// REMOVED: DietDaySection, WorkoutDaySection imports
 
 const toDateStr = toLocalDateStr
 
@@ -24,15 +21,16 @@ function subDaysStr(dateStr: string, days: number): string {
   return toDateStr(date)
 }
 
-/**
- * Combined history: one shared date selector with compact, expandable cards
- * for the day's nutrition and training. The last 7 days are batch-fetched up
- * front so trend charts and day switching feel instant.
- */
+interface HistoryCenterProps {
+  userId?: string
+  onLogSuccess?: () => void
+}
+
 export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
   const t = useT()
   const qc = useQueryClient()
   const [selectedDate, setSelectedDate] = useState(new Date())
+  const [trendsOpen, setTrendsOpen] = useState(false)
 
   const todayStr = toDateStr(new Date())
   const selectedStr = toDateStr(selectedDate)
@@ -62,8 +60,6 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
     staleTime: 5 * 60 * 1000,
   })
 
-  // Seed the per-day caches so any downstream consumers (and the sections on
-  // first paint) read from React Query instead of firing individual requests.
   useEffect(() => {
     if (nutritionQuery.data) {
       for (const [date, data] of Object.entries(nutritionQuery.data)) {
@@ -80,12 +76,20 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
     }
   }, [workoutQuery.data, qc])
 
-  const loadingWeek = nutritionQuery.isLoading || workoutQuery.isLoading
+  const dietData = nutritionQuery.data?.[selectedStr]
+  const workoutLogs = workoutQuery.data?.[selectedStr]
 
   return (
-    <div className="space-y-2">
-      {/* Compact date pill — minimal vertical footprint so both cards fit on one
-          mobile screen without scrolling. */}
+    <div className="flex flex-col gap-2">
+      {/* Weekly summary bar */}
+      <WeeklySummaryBar
+        dietWeekData={nutritionQuery.data}
+        workoutWeekData={workoutQuery.data}
+        todayStr={todayStr}
+        onOpenTrends={() => setTrendsOpen(true)}
+      />
+
+      {/* Date selector */}
       <div className="flex items-center justify-center gap-1.5">
         <button
           type="button"
@@ -138,20 +142,33 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
         )}
       </div>
 
-      <DietDaySection
-        date={selectedDate}
-        userId={userId}
-        onChange={onLogSuccess}
-        weekData={nutritionQuery.data}
-        isLoadingWeek={loadingWeek}
-      />
-      <WorkoutDaySection
-        date={selectedDate}
-        userId={userId}
-        onChange={onLogSuccess}
-        weekData={workoutQuery.data}
-        isLoadingWeek={loadingWeek}
-      />
+      {/* Day timeline card */}
+      <div className="glass glass-highlight max-h-[calc(100dvh-18rem)] overflow-y-auto rounded-2xl p-3">
+        <DayTimeline
+          date={selectedDate}
+          userId={userId}
+          dietData={dietData}
+          workoutLogs={workoutLogs}
+          onChange={onLogSuccess}
+        />
+      </div>
+
+      {/* Trend charts sheet */}
+      <Sheet open={trendsOpen} onOpenChange={setTrendsOpen}>
+        <SheetContent side="bottom" className="h-[85dvh] rounded-t-2xl p-0">
+          <SheetHeader className="px-4 pt-5 pb-2">
+            <SheetTitle className="font-display text-lg">7-Day Trends</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-6">
+            <TrendCharts
+              date={selectedDate}
+              dietWeekData={nutritionQuery.data}
+              workoutWeekData={workoutQuery.data}
+              todayStr={todayStr}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
