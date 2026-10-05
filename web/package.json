@@ -11,7 +11,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "eval:agent": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs lib/ai/eval/eval-agent.ts",
+    "eval:agent": "tsx lib/ai/eval/eval-agent.ts",
     "backfill:exercise-en": "node --env-file=.env.local scripts/backfill-exercise-name-en.mjs"
   },
   "dependencies": {

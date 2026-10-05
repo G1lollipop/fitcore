@@ -6,7 +6,6 @@ import { ChatWindow } from './chat-window'
 import { useChatStream } from './hooks/use-chat-stream'
 import { useConversations } from './hooks/use-conversations'
 import { useCoach } from './coach-context'
-import { useDashboardActions } from '@/lib/queries/dashboard'
 
 interface AIChatWidgetProps {
   userId: string
@@ -27,21 +26,14 @@ interface AIChatWidgetProps {
 export function AIChatWidget({ userId }: AIChatWidgetProps) {
   // Open/closed state now lives in CoachProvider so the home hero, the action
   // dock and suggestion chips can all open the coach (and queue a prompt).
-  const { isOpen, close, consumePrompt, openPlanPreview } = useCoach()
+  const { isOpen, close, consumePrompt } = useCoach()
   const [input, setInput] = useState('')
 
-  const { invalidate } = useDashboardActions()
   const conv = useConversations(userId)
   const { isTyping, sendMessage } = useChatStream({
     conversationId: conv.conversationId,
     setMessages: conv.setMessages,
     onAssistantDone: conv.refreshSummaries,
-    // When the coach logs food/workout/water mid-chat, refresh the dashboard
-    // so the rings/totals reflect it without a manual reload.
-    onLoggedActivity: invalidate,
-    // When the coach produces a plan preview, hand it to the shared coach
-    // context so the dashboard can open the plan detail sheet for confirmation.
-    onPlanPreview: openPlanPreview,
   })
 
   /** Wire the input box, chips and slash commands through one entry point. */

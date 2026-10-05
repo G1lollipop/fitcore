@@ -38,7 +38,6 @@ try {
   // .env.local optional for CI secrets injection
 }
 
-import { planAgentStep } from "../plan-step"
 import {
   type AgentGoldenCase,
   scoreCase,
@@ -75,6 +74,9 @@ async function main() {
     )
     process.exit(1)
   }
+
+  // Import after optional .env.local loading: the client reads env at import time.
+  const { planAgentStep } = await import("../plan-step")
 
   const dataset: AgentGoldenCase[] = JSON.parse(
     readFileSync(DATASET, "utf8")

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Loader2, Plus, Save } from 'lucide-react'
 import {
   Dialog,
@@ -19,6 +19,7 @@ import { tError } from '@/lib/i18n'
 import { updateDietLog } from '@/app/actions/updateDietLog'
 import { saveDietLog } from '@/app/actions/saveDietLog'
 import type { DietLogItem } from '@/app/actions/types'
+import { elapsedLoggingMs, trackLoggingEvent } from '@/lib/analytics/logging-events'
 
 /** Client-side row id for optimistic inserts, with a non-crypto fallback. */
 function newId(): string {
@@ -73,6 +74,11 @@ export function DietLogEditDialog({
 
   const [fields, setFields] = useState<EditFields | null>(null)
   const [saving, setSaving] = useState(false)
+  const editStartedAtRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    editStartedAtRef.current = isOpen ? performance.now() : null
+  }, [isOpen, log?.id])
 
   // Sync form state on the closed→open transition — React's "adjust state
   // during render" pattern (https://react.dev/learn/you-might-not-need-an-effect),
@@ -158,8 +164,23 @@ export function DietLogEditDialog({
       })
       return
     }
+    const changedFieldCount = (
+      ['food_name', 'calories', 'protein', 'carbs', 'fat'] as const
+    ).filter((field) => fields[field] !== log[field]).length
+    if (changedFieldCount > 0) {
+      trackLoggingEvent('FitCore Logging Correction', {
+        source: 'record',
+        entry_point: 'record_editor',
+        changed_field_count: changedFieldCount,
+        log_type: 'food',
+        elapsed_ms: elapsedLoggingMs(editStartedAtRef.current ?? performance.now()),
+      })
+    }
     onSuccess?.()
-    toast({ title: t.logForm.edit.updated, description: `${next.food_name} · ${next.calories} kcal` })
+    toast({
+      title: t.logForm.edit.updated,
+      description: `${next.food_name} · ${next.calories} kcal`,
+    })
     onClose()
   }
 
@@ -172,7 +193,9 @@ export function DietLogEditDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isCreate ? t.logForm.create.dietTitle : t.logForm.edit.dietTitle}</DialogTitle>
+          <DialogTitle>
+            {isCreate ? t.logForm.create.dietTitle : t.logForm.edit.dietTitle}
+          </DialogTitle>
           <DialogDescription>
             {isCreate ? t.logForm.create.dietDesc : t.logForm.edit.dietDesc}
           </DialogDescription>

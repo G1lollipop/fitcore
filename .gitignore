@@ -66,8 +66,8 @@ rag/data/cloud_remaining.txt
 *.log
 logs/
 
-# ---- Lockfiles (currently not version-controlled) ----
-package-lock.json
+# ---- Lockfiles ----
+# Keep the web lockfile version-controlled so GitHub Actions can use npm ci.
 pnpm-lock.yaml
 yarn.lock
 

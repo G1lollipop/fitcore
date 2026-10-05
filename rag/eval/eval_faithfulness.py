@@ -59,6 +59,7 @@ def _build_judge() -> ChatOpenAI:
 
 
 _JUDGE: ChatOpenAI | None = None
+_JUDGE_ERROR_COUNT = 0
 
 
 def get_judge() -> ChatOpenAI:
@@ -70,6 +71,7 @@ def get_judge() -> ChatOpenAI:
 
 def judge_claim_supported(claim: str, context: str) -> bool:
     """LLM-as-judge: is this atomic claim entailed by the retrieved context?"""
+    global _JUDGE_ERROR_COUNT
     if not context.strip():
         return False
     prompt = f"""You are evaluating RAG faithfulness (groundedness).
@@ -89,12 +91,14 @@ Answer ONLY "yes" or "no"."""
         text = (resp.content or "").strip().lower()
         return text.startswith("yes") or text == "y"
     except Exception as exc:  # noqa: BLE001
+        _JUDGE_ERROR_COUNT += 1
         print(f"  [judge error] {exc}")
         return False
 
 
 def judge_answer_relevancy(question: str, answer: str) -> float:
     """0-1 proxy for RAGAS answer_relevancy (single LLM score)."""
+    global _JUDGE_ERROR_COUNT
     if not answer.strip():
         return 0.0
     prompt = f"""Rate how relevant this answer is to the question on a 1-5 integer scale.
@@ -109,10 +113,12 @@ Reply JSON only: {{"score": <1-5>}}"""
         text = (resp.content or "").strip()
         m = re.search(r"\{[^{}]+\}", text)
         if not m:
-            return 0.0
+            raise ValueError("Judge returned no score JSON")
         data = json.loads(m.group())
         return round(float(data.get("score", 0)) / 5.0, 3)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        _JUDGE_ERROR_COUNT += 1
+        print(f"  [judge error] {exc}")
         return 0.0
 
 
@@ -159,6 +165,9 @@ def evaluate_faithfulness(
     baseline_path: Path,
     tag: str,
 ) -> int:
+    global _JUDGE_ERROR_COUNT
+    _JUDGE_ERROR_COUNT = 0
+
     dataset: list[dict] = json.loads(dataset_path.read_text(encoding="utf-8"))
     in_scope = [d for d in dataset if d.get("in_scope", True)]
     if limit:
@@ -214,6 +223,8 @@ def evaluate_faithfulness(
     summary = {
         "total_cases": len(in_scope),
         "valid_cases": len(faith_scores),
+        "chat_error_cases": len(in_scope) - len(faith_scores),
+        "judge_error_count": _JUDGE_ERROR_COUNT,
         "avg_faithfulness": round(sum(faith_scores) / max(len(faith_scores), 1), 4),
         "avg_answer_relevancy": round(sum(rel_scores) / max(len(rel_scores), 1), 4),
     }
@@ -245,7 +256,7 @@ def evaluate_faithfulness(
         baseline_path = _EVAL_DIR / baseline_path
     if not baseline_path.exists():
         print(f"[gate] baseline missing: {baseline_path}")
-        return 0
+        return 1
 
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     thresholds = baseline.get("thresholds", {})
@@ -254,6 +265,12 @@ def evaluate_faithfulness(
         "answer_relevancy": summary["avg_answer_relevancy"],
     }
     failures: list[str] = []
+    if not summary["valid_cases"]:
+        failures.append("valid_cases 0")
+    if summary["chat_error_cases"]:
+        failures.append(f"chat_errors {summary['chat_error_cases']} > 0")
+    if summary["judge_error_count"]:
+        failures.append(f"judge_errors {summary['judge_error_count']} > 0")
     for metric, floor in thresholds.items():
         actual = float(metric_values.get(metric, 0))
         if actual + 1e-9 < float(floor):

@@ -1,15 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { openai } from '@/lib/openaiClient';
 import { supabase } from '@/lib/supabaseClient';
 import { AI_FAST_MODEL } from '@/lib/ai/model';
-import { Database } from '@/lib/database.types';
+import { Database, Json } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
 import { authedUserId } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
-import { recomputeDailyStats } from '@/lib/stats/recompute-daily-stats';
 import type { DietLogItem, WorkoutLogItem } from './types';
 
 type FoodLogInsert = Database['public']['Tables']['food_logs']['Insert'];
@@ -120,14 +119,42 @@ async function parseQuickLog(userInput: string): Promise<ParsedSegment[]> {
   return items.filter((it) => it && (it.kind === 'food' || it.kind === 'workout'));
 }
 
+async function getCommittedQuickLog(
+  userId: string,
+  requestId: string,
+  requestHash: string
+): Promise<QuickLogResponse | null> {
+  const { data, error } = await supabase.rpc('get_quick_log_result', {
+    p_user_id: userId,
+    p_request_id: requestId,
+    p_request_hash: requestHash,
+  });
+
+  if (error) {
+    console.error('[quickLog] idempotency lookup error:', error.message);
+    return { success: false, error: ActionError.DB_INSERT_FAILED };
+  }
+
+  if (data === null) return null;
+  if (typeof data !== 'object' || Array.isArray(data) || !Array.isArray(data.items)) {
+    console.error('[quickLog] idempotency lookup returned an invalid result');
+    return { success: false, error: ActionError.DB_INSERT_FAILED };
+  }
+
+  return { success: true, items: data.items as unknown as QuickLogResult[] };
+}
+
 /**
  * Single-shot quick-log entrypoint for the natural-language command bar.
  *
- * Flow: 1 LLM call to classify+segment+extract → 1 supabase round-trip to
- * either insert or merge into today's daily_stats row. Significantly cheaper
- * than calling logFood + logWorkout separately for mixed inputs.
+ * Flow: 1 LLM call to classify+segment+extract → 1 atomic Supabase RPC that
+ * inserts every item and refreshes today's aggregate. The request id makes a
+ * repeated delivery return the original result instead of inserting again.
  */
-export async function quickLog(userInput: string): Promise<QuickLogResponse> {
+export async function quickLog(
+  userInput: string,
+  requestId?: string
+): Promise<QuickLogResponse> {
   const a = await authedUserId();
   if (!a.ok) return a.result;
   const userId = a.userId;
@@ -136,8 +163,28 @@ export async function quickLog(userInput: string): Promise<QuickLogResponse> {
     return { success: false, error: ActionError.MISSING_PARAMS };
   }
 
-  const segments = await parseQuickLog(trimmed);
+  const resolvedRequestId = requestId ?? randomUUID();
+  const requestHash = createHash('sha256').update(trimmed).digest('hex');
+  let segments: ParsedSegment[];
+  try {
+    segments = await parseQuickLog(trimmed);
+  } catch (parseError) {
+    // A committed request may have lost its response. Recover its cached result
+    // if a transient AI failure prevents parsing the retry.
+    const cached = await getCommittedQuickLog(userId, resolvedRequestId, requestHash);
+    if (cached) {
+      if (cached.success) revalidatePath('/');
+      return cached;
+    }
+    throw parseError;
+  }
+
   if (segments.length === 0) {
+    const cached = await getCommittedQuickLog(userId, resolvedRequestId, requestHash);
+    if (cached) {
+      if (cached.success) revalidatePath('/');
+      return cached;
+    }
     return { success: false, error: ActionError.AI_PARSE_EMPTY };
   }
 
@@ -183,47 +230,50 @@ export async function quickLog(userInput: string): Promise<QuickLogResponse> {
     }
   }
 
-  // Insert the parsed items into their normalized tables, then recompute the
-  // daily_stats aggregate cache once.
-  if (dietLogs.length > 0) {
-    const foodRows: FoodLogInsert[] = dietLogs.map((d) => ({
-      id: d.id,
-      user_id: userId,
-      date: today,
-      food_name: d.food_name,
-      calories: d.calories,
-      protein: d.protein,
-      carbs: d.carbs,
-      fat: d.fat,
-      logged_at: d.logged_at,
-    }));
-    const { error } = await supabase.from('food_logs').insert(foodRows);
-    if (error) {
-      console.error('[quickLog] food insert error:', error.message);
-      return { success: false, error: ActionError.DB_INSERT_FAILED };
-    }
+  const foodRows: FoodLogInsert[] = dietLogs.map((d) => ({
+    id: d.id,
+    user_id: userId,
+    date: today,
+    food_name: d.food_name,
+    calories: d.calories,
+    protein: d.protein,
+    carbs: d.carbs,
+    fat: d.fat,
+    logged_at: d.logged_at,
+  }));
+  const workoutRows: WorkoutLogInsert[] = workoutLogs.map((w) => ({
+    id: w.id,
+    user_id: userId,
+    date: today,
+    workout_name: w.workout_name,
+    sets: w.sets,
+    duration_minutes: w.duration_minutes,
+    calories_burned: w.calories_burned,
+    logged_at: w.logged_at,
+  }));
+
+  const { data, error } = await supabase.rpc('commit_quick_log', {
+    p_user_id: userId,
+    p_request_id: resolvedRequestId,
+    p_request_hash: requestHash,
+    p_date: today,
+    p_food_rows: foodRows as unknown as Json,
+    p_workout_rows: workoutRows as unknown as Json,
+    p_items: results as unknown as Json,
+  });
+
+  if (error) {
+    console.error('[quickLog] atomic save error:', error.message);
+    return { success: false, error: ActionError.DB_INSERT_FAILED };
   }
 
-  if (workoutLogs.length > 0) {
-    const workoutRows: WorkoutLogInsert[] = workoutLogs.map((w) => ({
-      id: w.id,
-      user_id: userId,
-      date: today,
-      workout_name: w.workout_name,
-      sets: w.sets,
-      duration_minutes: w.duration_minutes,
-      calories_burned: w.calories_burned,
-      logged_at: w.logged_at,
-    }));
-    const { error } = await supabase.from('workout_logs').insert(workoutRows);
-    if (error) {
-      console.error('[quickLog] workout insert error:', error.message);
-      return { success: false, error: ActionError.DB_INSERT_FAILED };
-    }
+  if (!data || typeof data !== 'object' || Array.isArray(data) || !Array.isArray(data.items)) {
+    console.error('[quickLog] atomic save returned an invalid result');
+    return { success: false, error: ActionError.DB_INSERT_FAILED };
   }
 
-  await recomputeDailyStats(userId, today);
+  const committedItems = data.items as unknown as QuickLogResult[];
 
   revalidatePath('/');
-  return { success: true, items: results };
+  return { success: true, items: committedItems };
 }

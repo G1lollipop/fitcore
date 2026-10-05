@@ -166,11 +166,8 @@ export async function POST(request: Request) {
               latencyMs: Date.now() - startedAt,
               conversationId: effectiveConversationId,
               retrievalK: result.retrievalK,
-              retrievalKReason: result.retrievalKReason,
               persisted,
-              loggedActivity: result.loggedActivity,
               assistantMessageId: assistantMessageId ?? undefined,
-              planPreview: result.planPreview,
             },
           })
         )

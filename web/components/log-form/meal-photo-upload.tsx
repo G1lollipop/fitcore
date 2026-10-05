@@ -23,6 +23,7 @@ import { saveDietLog } from '@/app/actions/saveDietLog';
 import { updateDietLog } from '@/app/actions/updateDietLog';
 import { useMealPhoto } from './meal-photo-context';
 import type { DietLogItem } from '@/app/actions/types';
+import { elapsedLoggingMs, trackLoggingEvent } from '@/lib/analytics/logging-events';
 
 /**
  * Strips transient parse-only fields (confidence, notes) so they don't end
@@ -56,6 +57,8 @@ const HIGH_CONFIDENCE_THRESHOLD = 0.75;
 type EditState = {
   parsed: ParsedMealPhoto;
   previewUrl: string;
+  startedAt: number;
+  reviewOpenedAt: number;
   /**
    * Present only when the entry was already auto-saved (high-confidence path)
    * and we are now editing it in place. Undefined means the user is reviewing
@@ -128,8 +131,8 @@ export function MealPhotoUpload({ onSuccess }: Props) {
   const { toast } = useToast();
 
   const openReview = useCallback(
-    (parsed: ParsedMealPhoto, previewUrl: string, savedLogId?: string) => {
-      setEditing({ parsed, previewUrl, savedLogId });
+    (parsed: ParsedMealPhoto, previewUrl: string, startedAt: number, savedLogId?: string) => {
+      setEditing({ parsed, previewUrl, startedAt, reviewOpenedAt: performance.now(), savedLogId });
       setEdited({
         food_name: parsed.food_name,
         calories: parsed.calories,
@@ -141,8 +144,17 @@ export function MealPhotoUpload({ onSuccess }: Props) {
     []
   );
 
-  const closeReview = useCallback(() => {
-    if (editing) URL.revokeObjectURL(editing.previewUrl);
+  const closeReview = useCallback((reason: 'cancelled' | 'saved' = 'cancelled') => {
+    if (editing) {
+      URL.revokeObjectURL(editing.previewUrl);
+      if (reason === 'cancelled') {
+        trackLoggingEvent('FitCore Logging Review Cancelled', {
+          source: 'photo',
+          entry_point: 'meal_photo_review',
+          review_type: editing.savedLogId ? 'adjustment' : 'confirmation',
+        });
+      }
+    }
     setEditing(null);
     setEdited(null);
     setSaving(false);
@@ -155,7 +167,14 @@ export function MealPhotoUpload({ onSuccess }: Props) {
    */
   const processPhoto = useCallback(
     async (file: File) => {
+      const startedAt = performance.now();
+      trackLoggingEvent('FitCore Logging Attempt', {
+        source: 'photo',
+        entry_point: 'meal_photo',
+      });
       let objectUrl: string | null = null;
+      let outcomeTracked = false;
+      let stage: 'processing' | 'saving' = 'processing';
       const loading = toast({
         title: t.logForm.photo.recognizing,
         description: t.logForm.photo.recognizingDesc,
@@ -169,6 +188,13 @@ export function MealPhotoUpload({ onSuccess }: Props) {
         const parseResult = await parseFoodFromPhoto(fd);
 
         if (!parseResult.success || !parseResult.data) {
+          trackLoggingEvent('FitCore Logging Failed', {
+            source: 'photo',
+            entry_point: 'meal_photo',
+            failure_reason: 'parse_failed',
+            elapsed_ms: elapsedLoggingMs(startedAt),
+          });
+          outcomeTracked = true;
           loading.dismiss();
           if (objectUrl) URL.revokeObjectURL(objectUrl);
           toast({
@@ -183,6 +209,13 @@ export function MealPhotoUpload({ onSuccess }: Props) {
 
         // ── Low confidence: require explicit review before any DB write.
         if (parsed.confidence < HIGH_CONFIDENCE_THRESHOLD) {
+          trackLoggingEvent('FitCore Logging Review Required', {
+            source: 'photo',
+            entry_point: 'meal_photo',
+            confidence_band: 'low',
+            elapsed_ms: elapsedLoggingMs(startedAt),
+          });
+          outcomeTracked = true;
           loading.dismiss();
           const previewUrl = objectUrl;
           objectUrl = null; // hand ownership to the dialog (revoked on close)
@@ -192,7 +225,7 @@ export function MealPhotoUpload({ onSuccess }: Props) {
             action: (
               <ToastAction
                 altText={t.logForm.photo.reviewAlt}
-                onClick={() => openReview(parsed, previewUrl)}
+                onClick={() => openReview(parsed, previewUrl, startedAt)}
               >
                 {t.logForm.photo.review}
               </ToastAction>
@@ -202,12 +235,20 @@ export function MealPhotoUpload({ onSuccess }: Props) {
         }
 
         // ── High confidence: auto-save, then offer optional adjustment.
+        stage = 'saving';
         const saveResult = await saveDietLog(
           toDietLogItem(parsed, new Date().toISOString())
         );
         loading.dismiss();
 
         if (!saveResult.success || !saveResult.data) {
+          trackLoggingEvent('FitCore Logging Failed', {
+            source: 'photo',
+            entry_point: 'meal_photo',
+            failure_reason: 'save_failed',
+            elapsed_ms: elapsedLoggingMs(startedAt),
+          });
+          outcomeTracked = true;
           if (objectUrl) URL.revokeObjectURL(objectUrl);
           toast({
             title: t.logForm.photo.saveFailed,
@@ -218,6 +259,14 @@ export function MealPhotoUpload({ onSuccess }: Props) {
         }
 
         const savedItem = saveResult.data;
+        outcomeTracked = true;
+        trackLoggingEvent('FitCore Logging Completed', {
+          source: 'photo',
+          entry_point: 'meal_photo',
+          confidence_band: 'high',
+          elapsed_ms: elapsedLoggingMs(startedAt),
+          item_count: 1,
+        });
         const previewUrl = objectUrl;
         objectUrl = null;
         onSuccess?.();
@@ -231,6 +280,7 @@ export function MealPhotoUpload({ onSuccess }: Props) {
                 openReview(
                   { ...parsed, ...savedItem, confidence: parsed.confidence, notes: parsed.notes },
                   previewUrl,
+                  startedAt,
                   savedItem.id
                 )
               }
@@ -241,6 +291,14 @@ export function MealPhotoUpload({ onSuccess }: Props) {
         });
       } catch (err) {
         console.error('[MealPhotoUpload] processPhoto failed:', err);
+        if (!outcomeTracked) {
+          trackLoggingEvent('FitCore Logging Failed', {
+            source: 'photo',
+            entry_point: 'meal_photo',
+            failure_reason: stage === 'saving' ? 'save_failed' : 'processing_failed',
+            elapsed_ms: elapsedLoggingMs(startedAt),
+          });
+        }
         loading.dismiss();
         if (objectUrl) URL.revokeObjectURL(objectUrl);
         toast({
@@ -275,6 +333,9 @@ export function MealPhotoUpload({ onSuccess }: Props) {
     setSaving(true);
 
     const isUpdate = !!editing.savedLogId;
+    const changedFieldCount = (
+      ['food_name', 'calories', 'protein', 'carbs', 'fat'] as const
+    ).filter((field) => edited[field] !== editing.parsed[field]).length;
     const next: DietLogItem = {
       id: editing.savedLogId ?? editing.parsed.id,
       food_name: edited.food_name,
@@ -285,26 +346,73 @@ export function MealPhotoUpload({ onSuccess }: Props) {
       logged_at: isUpdate ? editing.parsed.logged_at : new Date().toISOString(),
     };
 
-    const result = isUpdate
-      ? await updateDietLog(editing.savedLogId!, next)
-      : await saveDietLog(next);
+    let persisted = false;
+    try {
+      const result = isUpdate
+        ? await updateDietLog(editing.savedLogId!, next)
+        : await saveDietLog(next);
 
-    if (!result.success) {
+      if (!result.success) {
+        trackLoggingEvent('FitCore Logging Failed', {
+          source: 'photo',
+          entry_point: 'meal_photo_review',
+          failure_reason: 'save_failed',
+          review_type: isUpdate ? 'adjustment' : 'confirmation',
+          elapsed_ms: elapsedLoggingMs(isUpdate ? editing.reviewOpenedAt : editing.startedAt),
+        });
+        setSaving(false);
+        toast({
+          title: isUpdate ? t.logForm.photo.updateFailed : t.logForm.photo.saveFailed,
+          description: tError(t, result.error),
+          variant: 'destructive',
+        });
+        return;
+      }
+      persisted = true;
+
+      if (changedFieldCount > 0) {
+        trackLoggingEvent('FitCore Logging Correction', {
+          source: 'photo',
+          entry_point: 'meal_photo_review',
+          log_type: 'food',
+          changed_field_count: changedFieldCount,
+          elapsed_ms: elapsedLoggingMs(editing.reviewOpenedAt),
+        });
+      }
+
+      if (!isUpdate) {
+        trackLoggingEvent('FitCore Logging Completed', {
+          source: 'photo',
+          entry_point: 'meal_photo_review',
+          confidence_band: 'low',
+          elapsed_ms: elapsedLoggingMs(editing.startedAt),
+          item_count: 1,
+        });
+      }
+
+      onSuccess?.();
+      toast({
+        title: isUpdate ? t.logForm.photo.updated : t.logForm.photo.logged,
+        description: `${next.food_name} · ${next.calories} kcal`,
+      });
+      closeReview('saved');
+    } catch (err) {
+      if (!persisted) {
+        trackLoggingEvent('FitCore Logging Failed', {
+          source: 'photo',
+          entry_point: 'meal_photo_review',
+          failure_reason: 'save_failed',
+          review_type: isUpdate ? 'adjustment' : 'confirmation',
+          elapsed_ms: elapsedLoggingMs(isUpdate ? editing.reviewOpenedAt : editing.startedAt),
+        });
+      }
       setSaving(false);
       toast({
         title: isUpdate ? t.logForm.photo.updateFailed : t.logForm.photo.saveFailed,
-        description: tError(t, result.error),
+        description: err instanceof Error ? err.message : undefined,
         variant: 'destructive',
       });
-      return;
     }
-
-    onSuccess?.();
-    toast({
-      title: isUpdate ? t.logForm.photo.updated : t.logForm.photo.logged,
-      description: `${next.food_name} · ${next.calories} kcal`,
-    });
-    closeReview();
   }, [editing, edited, onSuccess, toast, closeReview, t]);
 
   const setField = <K extends keyof NonNullable<typeof edited>>(
@@ -434,7 +542,7 @@ export function MealPhotoUpload({ onSuccess }: Props) {
           )}
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={closeReview} disabled={saving}>
+            <Button variant="outline" onClick={() => closeReview()} disabled={saving}>
               {t.logForm.photo.cancel}
             </Button>
             <Button onClick={onSave} disabled={saving} className="gap-2">

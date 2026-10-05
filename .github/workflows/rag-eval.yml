@@ -52,6 +52,7 @@ on:
       - 'rag/app/core/settings.py'
       - 'web/lib/ai/**'
       - 'web/package.json'
+      - 'web/package-lock.json'
       - '.github/workflows/rag-eval.yml'
 
 concurrency:
@@ -89,6 +90,7 @@ jobs:
             agent:
               - 'web/lib/ai/**'
               - 'web/package.json'
+              - 'web/package-lock.json'
               - '.github/workflows/rag-eval.yml'
 
   # ── Retrieval-layer regression gate (Recall/nDCG/MRR + abstention) ──────────
@@ -373,6 +375,8 @@ jobs:
           echo "Backend failed to start. Logs:"; cat backend.log; exit 1
 
       - name: Run answer-level evaluation
+        id: answer_eval
+        continue-on-error: true
         env:
           GOOGLE_AI_STUDIO_API_KEY: ${{ secrets.GOOGLE_AI_STUDIO_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -452,16 +456,21 @@ jobs:
             rag/eval/abstention_report_*.json
           retention-days: 90
 
-      - name: Upload backend log on failure
-        if: failure()
+      - name: Upload backend log
+        # The gate steps intentionally use continue-on-error so all reports are
+        # produced. Always upload the backend log; otherwise those failures hide
+        # the actual exception behind the final gate step.
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rag-backend-log-${{ github.run_id }}
           path: rag/backend.log
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Fail if any answer-level gate breached
         if: >-
+          steps.answer_eval.outcome == 'failure' ||
           steps.answer_gate.outcome == 'failure' ||
           steps.faithfulness_gate.outcome == 'failure' ||
           steps.abstention_gate.outcome == 'failure'

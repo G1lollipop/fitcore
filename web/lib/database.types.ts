@@ -477,6 +477,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      commit_quick_log: {
+        Args: {
+          p_date: string
+          p_food_rows: Json
+          p_items: Json
+          p_request_hash: string
+          p_request_id: string
+          p_user_id: string
+          p_workout_rows: Json
+        }
+        Returns: Json
+      }
+      get_quick_log_result: {
+        Args: {
+          p_request_hash: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      recompute_daily_stats: {
+        Args: {
+          p_date: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       exec_sql: { Args: { sql: string }; Returns: undefined }
       match_documents: {
         Args: {

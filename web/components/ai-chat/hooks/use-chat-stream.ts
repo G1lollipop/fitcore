@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from 'react'
 import type { AgentSSEEvent } from '@/lib/ai/types'
-import type { PlanPreviewPayload } from '@/lib/plans/types'
 import { useLanguage } from '@/lib/i18n/provider'
 import type { Dictionary } from '@/lib/i18n'
 import type { Message } from '../types'
@@ -11,12 +10,7 @@ import { nowHHMM } from '../utils'
 interface UseChatStreamArgs {
   conversationId: string
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
-  /** Called once the stream completes successfully (used to refresh sidebar summaries). */
   onAssistantDone?: () => void
-  /** Called when the agent logged food/workout/water this turn (refresh dashboard). */
-  onLoggedActivity?: () => void
-  /** Called when the agent produced a plan preview that needs user confirmation. */
-  onPlanPreview?: (preview: PlanPreviewPayload) => void
 }
 
 export interface UseChatStreamResult {
@@ -50,9 +44,7 @@ function applyEvent(
   aiMsgId: string,
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
   t: Dictionary,
-  onAssistantDone?: () => void,
-  onLoggedActivity?: () => void,
-  onPlanPreview?: (preview: PlanPreviewPayload) => void
+  onAssistantDone?: () => void
 ) {
   if (event.type === 'token') {
     setMessages((prev) =>
@@ -79,8 +71,6 @@ function applyEvent(
       )
     )
     onAssistantDone?.()
-    if (event.meta?.loggedActivity) onLoggedActivity?.()
-    if (event.meta?.planPreview) onPlanPreview?.(event.meta.planPreview)
     return
   }
 
@@ -108,8 +98,6 @@ export function useChatStream({
   conversationId,
   setMessages,
   onAssistantDone,
-  onLoggedActivity,
-  onPlanPreview,
 }: UseChatStreamArgs): UseChatStreamResult {
   const { t } = useLanguage()
   const [isTyping, setIsTyping] = useState(false)
@@ -173,7 +161,7 @@ export function useChatStream({
 
           for (const block of blocks) {
             const event = parseSSEBlock(block)
-            if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone, onLoggedActivity, onPlanPreview)
+            if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone)
           }
         }
 
@@ -182,7 +170,7 @@ export function useChatStream({
         const tail = buffer.trim()
         if (tail) {
           const event = parseSSEBlock(tail)
-          if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone, onLoggedActivity, onPlanPreview)
+          if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone)
         }
       } catch (error) {
         setMessages((prev) =>
@@ -204,7 +192,7 @@ export function useChatStream({
         setIsTyping(false)
       }
     },
-    [conversationId, isTyping, setMessages, onAssistantDone, onLoggedActivity, onPlanPreview, t]
+    [conversationId, isTyping, setMessages, onAssistantDone, t]
   )
 
   return { isTyping, sendMessage }

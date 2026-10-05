@@ -13,6 +13,7 @@ import { useSpeechInput } from '@/lib/hooks/use-speech-input'
 import { getTodayDate } from '@/lib/utils/date'
 import type { DietLogItem } from '@/app/actions/types'
 import { cn } from '@/lib/utils'
+import { elapsedLoggingMs, trackLoggingEvent } from '@/lib/analytics/logging-events'
 
 interface HomeLogBarProps {
   userId?: string
@@ -23,7 +24,7 @@ interface HomeLogBarProps {
 
 type Feedback =
   | { kind: 'success'; text: string }
-  | { kind: 'error'; text: string; retry?: string }
+  | { kind: 'error'; text: string; retry?: { text: string; requestId: string } }
 
 /**
  * Always-visible natural-language logging bar for the home tab — the product's
@@ -63,17 +64,38 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
   const showFeedback = useCallback((fb: Feedback) => {
     setFeedback(fb)
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current)
+    // Keep an actionable retry visible until the user retries or submits
+    // something else; an ambiguous server response can arrive after 5 seconds.
+    if (fb.kind === 'error' && fb.retry) {
+      feedbackTimer.current = null
+      return
+    }
     feedbackTimer.current = setTimeout(() => setFeedback(null), 5000)
   }, [])
 
   const submit = useCallback(
-    (raw: string) => {
+    (raw: string, retryRequestId?: string) => {
       const trimmed = raw.trim()
       if (!trimmed) return
+      const requestId = retryRequestId ?? crypto.randomUUID()
+      const startedAt = performance.now()
+      trackLoggingEvent('FitCore Logging Attempt', {
+        source: 'text',
+        entry_point: 'home_log_bar',
+      })
       if (!userId) {
+        trackLoggingEvent('FitCore Logging Failed', {
+          source: 'text',
+          entry_point: 'home_log_bar',
+          failure_reason: 'authentication_required',
+          elapsed_ms: elapsedLoggingMs(startedAt),
+        })
         showFeedback({ kind: 'error', text: t.logForm.quick.loginFirst })
         return
       }
+
+      setFeedback(null)
+      if (feedbackTimer.current) clearTimeout(feedbackTimer.current)
 
       // Clear + keep the input usable immediately — the user can log again
       // without waiting for the model.
@@ -95,13 +117,32 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
       setPendingCount((c) => c + 1)
 
       void (async () => {
+        let outcomeTracked = false
         try {
-          const res = await quickLog(trimmed)
+          const res = await quickLog(trimmed, requestId)
           if (!res.success) {
+            trackLoggingEvent('FitCore Logging Failed', {
+              source: 'text',
+              entry_point: 'home_log_bar',
+              failure_reason: 'request_failed',
+              elapsed_ms: elapsedLoggingMs(startedAt),
+            })
+            outcomeTracked = true
             history.removeFood(today, tempId)
-            showFeedback({ kind: 'error', text: tError(t, res.error), retry: trimmed })
+            showFeedback({
+              kind: 'error',
+              text: tError(t, res.error),
+              retry: { text: trimmed, requestId },
+            })
             return
           }
+          trackLoggingEvent('FitCore Logging Completed', {
+            source: 'text',
+            entry_point: 'home_log_bar',
+            elapsed_ms: elapsedLoggingMs(startedAt),
+            item_count: res.items.length,
+          })
+          outcomeTracked = true
           // Patch the dashboard rings/totals + splice the resolved rows into
           // today's History caches, then reconcile against the server.
           applyQuickLogItems(res.items)
@@ -109,11 +150,19 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
           onLogged?.()
           showFeedback({ kind: 'success', text: summarize(res.items, t) })
         } catch (err) {
+          if (!outcomeTracked) {
+            trackLoggingEvent('FitCore Logging Failed', {
+              source: 'text',
+              entry_point: 'home_log_bar',
+              failure_reason: 'request_failed',
+              elapsed_ms: elapsedLoggingMs(startedAt),
+            })
+          }
           history.removeFood(today, tempId)
           showFeedback({
             kind: 'error',
             text: err instanceof Error ? err.message : t.logForm.quick.tryLater,
-            retry: trimmed,
+            retry: { text: trimmed, requestId },
           })
         } finally {
           setPendingCount((c) => Math.max(0, c - 1))
@@ -199,7 +248,9 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={speech.listening ? t.logForm.quick.micListening : t.logForm.quick.homeSubtitle}
+          placeholder={
+            speech.listening ? t.logForm.quick.micListening : t.logForm.quick.homeSubtitle
+          }
           aria-label={t.logForm.quick.homeTitle}
           className="min-w-0 flex-1 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
         />
@@ -268,7 +319,7 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
             {feedback.kind === 'error' && feedback.retry ? (
               <button
                 type="button"
-                onClick={() => submit(feedback.retry as string)}
+                onClick={() => submit(feedback.retry!.text, feedback.retry!.requestId)}
                 className="ml-1 inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
               >
                 <RotateCcw size={10} />
@@ -299,7 +350,9 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
 
 function summarize(items: QuickLogResult[], t: Dictionary): string {
   const parts: string[] = []
-  const foods = items.filter((i): i is Extract<QuickLogResult, { kind: 'food' }> => i.kind === 'food')
+  const foods = items.filter(
+    (i): i is Extract<QuickLogResult, { kind: 'food' }> => i.kind === 'food'
+  )
   const workouts = items.filter(
     (i): i is Extract<QuickLogResult, { kind: 'workout' }> => i.kind === 'workout'
   )

@@ -918,46 +918,22 @@ export const en = {
     },
     suggested: [
       'What should I eat to build muscle?',
-      'Help me plan this week’s workouts',
+      'How many calories should I eat?',
       'Am I getting enough protein?',
     ],
     home: {
       title: 'AI Coach',
-      subtitle: 'Ask anything or plan your training',
-      placeholder: 'Ask the coach a fitness question, or ask it to plan your training…',
+      subtitle: 'Ask anything about fitness & nutrition',
+      placeholder: 'Ask the coach a fitness question…',
       cta: 'Ask coach',
       chips: [
         'Is creatine worth taking?',
-        'Plan my workout for today',
-        'Am I getting enough protein today?',
         'How do I fix lower back pain when squatting?',
+        'Am I getting enough protein today?',
       ],
     },
-    inputPlaceholder: 'Ask the AI coach, type / for commands…',
+    inputPlaceholder: 'Ask the AI coach a fitness question…',
     send: 'Send',
-    openSlashMenu: 'Open slash command menu',
-    slashChip: '/ commands',
-    slashTitle: 'Slash commands',
-    slashAria: 'Slash commands',
-    noMatchCommands: 'No matching commands · press Esc to close',
-    slashHint: '↑↓ navigate · Enter insert · Esc close',
-    slash: {
-      plan: {
-        label: 'Workout plan',
-        description: 'Let the AI coach build or adjust your week’s training',
-        template: 'Help me build a workout plan for this week. My goal is ',
-      },
-      log: {
-        label: 'Quick log',
-        description: 'Describe today’s food or workout and let AI structure it',
-        template: 'Log my workout / food for today: ',
-      },
-      macros: {
-        label: 'Macro check',
-        description: 'Check today’s protein / carbs / fat against your goals',
-        template: 'Check whether my macros today are on track and what I should add.',
-      },
-    },
   },
 }
 

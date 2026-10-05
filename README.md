@@ -38,11 +38,13 @@ flowchart TD
 
 FitCore is designed as a phone app first. **Every main page must fit entirely inside one phone viewport without vertical scrolling.** Cards show only the highest-priority summary; longer lists, charts, and detailed editors live behind taps that open full-screen sheets. Cards themselves may be internally scrollable, but the main page scroll is avoided.
 
+For the next AI logging validation round, use the [measurement definitions](./docs/ai-logging-metrics.md) and [five-person phone test kit](./docs/mobile-usability-test.md).
+
 ## Subprojects
 
 | Directory | Description | Docs |
 |------|------|------|
-| [`web/`](./web) | Frontend single-page app; the home route `/` contains two tabs: **Today / Record** (Today = daily command center with Quick Log + AI coach; Record = past nutrition + training under one shared date, with 7-day trend charts). The app is **AI-logging-first**: the fastest path from "I want to log this" to "it's logged" is the protagonist; the AI coach is a secondary, conversational surface for evidence-grounded Q&A and plan authoring. | [`web/README.md`](./web/README.md) |
+| [`web/`](./web) | Frontend single-page app; the home route `/` contains two tabs: **Today / Record** (Today = daily command center with Quick Log + AI coach; Record = past nutrition + training under one shared date, with 7-day trend charts). The app is **AI-logging-first**: the fastest path from "I want to log this" to "it's logged" is the protagonist; the coach answers evidence-grounded questions, while plan creation and editing live on Today. | [`web/README.md`](./web/README.md) |
 | [`rag/`](./rag) | RAG retrieval service: vector retrieval + BM25 fusion, optional reranking, adaptive topK | [`DEVELOPMENT.md`](./DEVELOPMENT.md) |
 
 ## Local setup

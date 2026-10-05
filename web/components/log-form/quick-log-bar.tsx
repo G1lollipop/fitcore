@@ -12,6 +12,7 @@ import { quickLog, type QuickLogResult } from '@/app/actions/quickLog'
 import { useDashboardActions } from '@/lib/queries/dashboard'
 import { useSpeechInput } from '@/lib/hooks/use-speech-input'
 import { cn } from '@/lib/utils'
+import { elapsedLoggingMs, trackLoggingEvent } from '@/lib/analytics/logging-events'
 
 /**
  * Floating "⌘K" command bar.
@@ -48,8 +49,24 @@ export function QuickLogBar() {
   const handleSubmit = useCallback(() => {
     const trimmed = text.trim()
     if (!trimmed) return
+    const requestId = crypto.randomUUID()
+    const startedAt = performance.now()
+    trackLoggingEvent('FitCore Logging Attempt', {
+      source: 'text',
+      entry_point: 'floating_quick_log',
+    })
     if (!userId) {
-      toast({ variant: 'destructive', title: t.logForm.quick.notLoggedIn, description: t.logForm.quick.loginFirst })
+      trackLoggingEvent('FitCore Logging Failed', {
+        source: 'text',
+        entry_point: 'floating_quick_log',
+        failure_reason: 'authentication_required',
+        elapsed_ms: elapsedLoggingMs(startedAt),
+      })
+      toast({
+        variant: 'destructive',
+        title: t.logForm.quick.notLoggedIn,
+        description: t.logForm.quick.loginFirst,
+      })
       return
     }
 
@@ -58,16 +75,38 @@ export function QuickLogBar() {
     setOpen(false)
     setRecents((prev) => [trimmed, ...prev.filter((r) => r !== trimmed)].slice(0, 5))
 
-    const loading = toast({ title: t.logForm.quick.parsing, description: t.logForm.quick.parsingDesc(trimmed) })
+    const loading = toast({
+      title: t.logForm.quick.parsing,
+      description: t.logForm.quick.parsingDesc(trimmed),
+    })
 
     void (async () => {
+      let outcomeTracked = false
       try {
-        const res = await quickLog(trimmed)
+        const res = await quickLog(trimmed, requestId)
         loading.dismiss()
         if (!res.success) {
-          toast({ variant: 'destructive', title: t.logForm.quick.logFailed, description: tError(t, res.error) })
+          trackLoggingEvent('FitCore Logging Failed', {
+            source: 'text',
+            entry_point: 'floating_quick_log',
+            failure_reason: 'request_failed',
+            elapsed_ms: elapsedLoggingMs(startedAt),
+          })
+          outcomeTracked = true
+          toast({
+            variant: 'destructive',
+            title: t.logForm.quick.logFailed,
+            description: tError(t, res.error),
+          })
           return
         }
+        trackLoggingEvent('FitCore Logging Completed', {
+          source: 'text',
+          entry_point: 'floating_quick_log',
+          elapsed_ms: elapsedLoggingMs(startedAt),
+          item_count: res.items.length,
+        })
+        outcomeTracked = true
         // Patch the dashboard cache with the parsed items so the rings/totals
         // update instantly; `onLogged` then runs a background reconcile.
         applyQuickLogItems(res.items)
@@ -75,6 +114,14 @@ export function QuickLogBar() {
         toast({ title: t.logForm.quick.logged, description: summarizeResults(res.items, t) })
       } catch (err) {
         loading.dismiss()
+        if (!outcomeTracked) {
+          trackLoggingEvent('FitCore Logging Failed', {
+            source: 'text',
+            entry_point: 'floating_quick_log',
+            failure_reason: 'request_failed',
+            elapsed_ms: elapsedLoggingMs(startedAt),
+          })
+        }
         toast({
           variant: 'destructive',
           title: t.logForm.quick.logFailed,
@@ -146,7 +193,9 @@ export function QuickLogBar() {
                   'glass-strong glass-highlight overflow-hidden rounded-2xl shadow-2xl shadow-foreground/20'
                 )}
               >
-                <DialogPrimitive.Title className="sr-only">{t.logForm.quick.srTitle}</DialogPrimitive.Title>
+                <DialogPrimitive.Title className="sr-only">
+                  {t.logForm.quick.srTitle}
+                </DialogPrimitive.Title>
 
                 <Header onClose={() => setOpen(false)} t={t} />
 
@@ -298,11 +347,7 @@ interface BodyProps {
 function Body({ recents, onPick, t }: BodyProps) {
   return (
     <div className="px-4 pb-4 min-h-[148px]">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="space-y-3"
-      >
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
         {recents.length > 0 ? (
           <Section title={t.logForm.quick.recentTitle}>
             <ChipRow items={recents} onPick={onPick} />
@@ -312,9 +357,7 @@ function Body({ recents, onPick, t }: BodyProps) {
             <ChipRow items={t.logForm.quick.suggestions} onPick={onPick} />
           </Section>
         )}
-        <p className="pt-1 text-[11px] text-muted-foreground">
-          {t.logForm.quick.hint}
-        </p>
+        <p className="pt-1 text-[11px] text-muted-foreground">{t.logForm.quick.hint}</p>
       </motion.div>
     </div>
   )
@@ -376,7 +419,9 @@ function Kbd({ children }: { children: React.ReactNode }) {
 
 function summarizeResults(items: QuickLogResult[], t: Dictionary): string {
   const parts: string[] = []
-  const foods = items.filter((i): i is Extract<QuickLogResult, { kind: 'food' }> => i.kind === 'food')
+  const foods = items.filter(
+    (i): i is Extract<QuickLogResult, { kind: 'food' }> => i.kind === 'food'
+  )
   const workouts = items.filter(
     (i): i is Extract<QuickLogResult, { kind: 'workout' }> => i.kind === 'workout'
   )

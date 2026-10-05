@@ -3,7 +3,7 @@
     "id": "agent_001",
     "message": "How much protein should I eat per day to build muscle?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 3,
     "acceptable_k": [3, 5]
   },
@@ -11,7 +11,7 @@
     "id": "agent_002",
     "message": "What does creatine do and how should I take it?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 5,
     "acceptable_k": [3, 5]
   },
@@ -19,7 +19,7 @@
     "id": "agent_003",
     "message": "Compare low-carb vs balanced diets for body composition — which works better?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 8,
     "acceptable_k": [5, 8]
   },
@@ -27,7 +27,7 @@
     "id": "agent_004",
     "message": "How does caffeine affect exercise performance?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 3,
     "acceptable_k": [3, 5]
   },
@@ -35,7 +35,7 @@
     "id": "agent_005",
     "message": "How should I time carbs around training?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 5,
     "acceptable_k": [3, 5, 8]
   },
@@ -43,7 +43,7 @@
     "id": "agent_006",
     "message": "How do I preserve muscle while cutting calories?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 5,
     "acceptable_k": [5, 8]
   },
@@ -51,7 +51,7 @@
     "id": "agent_007",
     "message": "What are progressive overload and periodization?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 8,
     "acceptable_k": [5, 8]
   },
@@ -59,7 +59,7 @@
     "id": "agent_008",
     "message": "How many sets per muscle group per week for hypertrophy?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 3,
     "acceptable_k": [3, 5]
   },
@@ -67,7 +67,7 @@
     "id": "agent_009",
     "message": "Does cardio interfere with strength gains?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 5,
     "acceptable_k": [5, 8]
   },
@@ -75,7 +75,7 @@
     "id": "agent_010",
     "message": "How long should I rest between sets for muscle growth?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 3,
     "acceptable_k": [3, 5]
   },
@@ -83,7 +83,7 @@
     "id": "agent_011",
     "message": "What is beta-alanine and how much should I take?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 3,
     "acceptable_k": [3, 5]
   },
@@ -91,7 +91,7 @@
     "id": "agent_012",
     "message": "Do probiotics help athletes with immunity or recovery?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 5,
     "acceptable_k": [3, 5]
   },
@@ -135,7 +135,7 @@
     "id": "agent_028",
     "message": "Based on what I ate today, am I eating enough protein for muscle gain?",
     "intent_mode": "hybrid",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base", "get_user_stats"],
+    "expected_tools": ["query_knowledge_base", "get_user_stats"],
     "expected_k": 5,
     "acceptable_k": [3, 5, 8]
   },
@@ -143,7 +143,7 @@
     "id": "agent_029",
     "message": "I'm in a deficit — how much protein do I need and am I hitting it today?",
     "intent_mode": "hybrid",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base", "get_user_stats"],
+    "expected_tools": ["query_knowledge_base", "get_user_stats"],
     "expected_k": 8,
     "acceptable_k": [5, 8]
   },
@@ -151,7 +151,7 @@
     "id": "agent_030",
     "message": "Given my calories today, should I add a post-workout meal with carbs?",
     "intent_mode": "hybrid",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base", "get_user_stats"],
+    "expected_tools": ["query_knowledge_base", "get_user_stats"],
     "expected_k": 5,
     "acceptable_k": [5, 8]
   },
@@ -159,7 +159,7 @@
     "id": "agent_031",
     "message": "Compare creatine dosing guidelines with what I've logged — anything to adjust?",
     "intent_mode": "hybrid",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base", "get_user_stats"],
+    "expected_tools": ["query_knowledge_base", "get_user_stats"],
     "expected_k": 5,
     "acceptable_k": [3, 5, 8]
   },
@@ -210,7 +210,7 @@
     "id": "agent_045",
     "message": "Does meal frequency boost metabolism?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 5,
     "acceptable_k": [3, 5]
   },
@@ -218,7 +218,7 @@
     "id": "agent_046",
     "message": "How should I warm up before lifting?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 3,
     "acceptable_k": [3, 5]
   },
@@ -226,7 +226,7 @@
     "id": "agent_047",
     "message": "Is HMB useful for muscle preservation?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 5,
     "acceptable_k": [3, 5]
   },
@@ -234,7 +234,7 @@
     "id": "agent_048",
     "message": "How many times per week should I train each muscle?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 3,
     "acceptable_k": [3, 5]
   },
@@ -242,7 +242,7 @@
     "id": "agent_049",
     "message": "Should I take sodium bicarbonate before HIIT?",
     "intent_mode": "knowledge",
-    "expected_tools": ["set_retrieval_params", "query_knowledge_base"],
+    "expected_tools": ["query_knowledge_base"],
     "expected_k": 5,
     "acceptable_k": [3, 5]
   },

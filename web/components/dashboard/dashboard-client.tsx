@@ -10,18 +10,12 @@ import { CoachAskBar } from '@/components/dashboard/coach-ask-bar'
 import { HomeLogBar } from '@/components/dashboard/home-log-bar'
 import { TabActiveProvider } from '@/components/dashboard/tab-active-context'
 import { HistoryCenter } from '@/components/history/history-center'
-import { PlanDetailSheet } from '@/components/plans/plan-detail-sheet'
 import { useDashboardData, useDashboardActions } from '@/lib/queries/dashboard'
 import { useHistoryActions } from '@/lib/queries/history'
 import { usePrefetchUserSettings } from '@/lib/queries/settings'
 import { getTodayDate } from '@/lib/utils/date'
 import type { DashboardData } from '@/app/actions/types'
-import type { PlanPreviewPayload } from '@/lib/plans/types'
-import { confirmWorkoutPlan } from '@/app/actions/generatePlan'
-import { useCoach } from '@/components/ai-chat/coach-context'
-import { useToast } from '@/hooks/use-toast'
 import { useT } from '@/lib/i18n/provider'
-import { tError } from '@/lib/i18n'
 
 /**
  * AI chat is opened on demand — defer its bundle until after first paint.
@@ -64,10 +58,7 @@ export function DashboardClient({
   initialDashboardData,
 }: DashboardClientProps) {
   const t = useT()
-  const { toast } = useToast()
-  const { planPreview, clearPlanPreview } = useCoach()
   const [activeNav, setActiveNav] = useState('dashboard')
-  const [confirmingPlan, setConfirmingPlan] = useState(false)
   // Dashboard payload now lives in the React Query cache (seeded with the
   // server-fetched data). Logging surfaces patch this cache optimistically,
   // so the rings/totals update instantly without a blocking full refetch.
@@ -96,31 +87,6 @@ export function DashboardClient({
     invalidate()
     invalidateDate(getTodayDate())
   }, [invalidate, invalidateDate])
-
-  const handleConfirmPlan = useCallback(
-    async (preview: PlanPreviewPayload) => {
-      setConfirmingPlan(true)
-      try {
-        const res = await confirmWorkoutPlan(preview)
-        if (res.success && 'data' in res && res.data) {
-          toast({ title: t.plans.detail.applied })
-          clearPlanPreview()
-          invalidate()
-          invalidateDate(getTodayDate())
-        } else {
-          const err = (res as { error?: unknown }).error
-          toast({
-            variant: 'destructive',
-            title: t.plans.detail.applyFailed,
-            description: typeof err === 'string' ? tError(t, err) : t.plans.list.tryLater,
-          })
-        }
-      } finally {
-        setConfirmingPlan(false)
-      }
-    },
-    [clearPlanPreview, invalidate, invalidateDate, t, toast]
-  )
 
   return (
     <AppShell
@@ -185,16 +151,6 @@ export function DashboardClient({
         <HistoryCenter userId={userId} onLogSuccess={handleLogSuccess} />
       </TabPanel>
 
-      {/* AI coach plan preview: opens automatically when the agent generates a plan. */}
-      <PlanDetailSheet
-        preview={planPreview}
-        onOpenChange={(open) => {
-          if (!open) clearPlanPreview()
-        }}
-        onSaved={handleLogSuccess}
-        onConfirm={handleConfirmPlan}
-        confirming={confirmingPlan}
-      />
     </AppShell>
   )
 }
