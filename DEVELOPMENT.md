@@ -40,7 +40,7 @@ Browser
 Key points:
 
 - **Business data** goes through Next.js Server Actions straight to Supabase — no custom REST layer.
-- **Quick Log** uses Gemini to split food/workout descriptions, then the Modal Qwen nutrition API for each food segment. A service-role RPC commits every segment and refreshes daily totals atomically; retries reuse the request ID. Apply `web/supabase/migrations/20260925010041_quick_log_atomic_idempotency.sql` before deploying this path. The migration is included in source; this does not establish that it has been deployed or verified against a database.
+- **Quick Log** uses Gemini to split food/workout descriptions, then the Modal Qwen nutrition API for each food segment. A service-role RPC commits every segment and refreshes daily totals atomically; retries reuse the request ID. Its migration is `web/supabase/migrations/20261015140111_quick_log_atomic_idempotency.sql`. It was applied to `fitcore-db` on October 15, 2026 and exercised with rollback-only database checks. See [Supabase operations](docs/supabase-operations.md) for access rules, verification, and migration-history limits.
 - **AI chat** goes through `POST /api/ai/chat` (SSE streaming). The server-side Agent uses tool calling to decide whether to query the knowledge base and whether to read user data.
 - **Knowledge retrieval** is provided by a standalone FastAPI service (`rag/`); the frontend calls its `/v1/retrieve` via `RAG_SERVICE_URL`.
 
