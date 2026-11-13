@@ -202,7 +202,7 @@ Open http://localhost:3000. After your first login, if there's no `user_settings
 | `POST` | `/v1/retrieve` | **Retrieval only** (used by the frontend Agent's tool), returns `chunks` |
 | `POST` | `/v1/chat` | Full RAG: retrieve → LLM generation, returns answer + citations + meta |
 | `POST` | `/v1/chat/stream` | Full RAG over **SSE** (used by the Knowledge Exploration Center): emits one `sources` event (citations + retrievalMeta + retrievalBackend), then `token` events, then `done` |
-| `POST` | `/api/chat` | Legacy slim wrapper, returns only `{ "response": answer }` |
+| `POST` | `/api/chat` | Legacy slim wrapper, returns only `{ "response": answer }` (same API-key / rate-limit guards as `/v1/chat`) |
 
 `/v1/retrieve` contract (`app/schemas/retrieve.py`, **LOCKED** — changes require front/back coordination):
 
@@ -277,9 +277,10 @@ The product is **AI-logging-first**: the fastest path from "I want to log this" 
 
 `app/actions/*.ts` are `'use server'` modules that read/write Supabase directly:
 
-- `dashboard.ts` today's stats / weekly trend / water
-- `logFood.ts` `saveDietLog.ts` `updateDietLog.ts` `parseFoodFromPhoto.ts` nutrition
-- `logWorkout.ts` training; `quickLog.ts` natural-language quick logging
+- `dashboard.ts` today's stats / weekly trend
+- `quickLog.ts` natural-language quick logging (food + workouts in one sentence)
+- `parseFoodFromPhoto.ts` `saveDietLog.ts` `updateDietLog.ts` `logFood.ts` (delete) nutrition logs
+- `logWorkout.ts` manual workout create / edit / delete; `training.ts` finishing an in-app training session
 - `plans.ts` workout plans (plans are a single JSON `structure` column — the relational exercise library was removed)
 - `generatePlan.ts` AI plan generation with a preview → confirm flow; `previewWorkoutPlan` returns a draft, `confirmWorkoutPlan` persists it
 - `onboarding.ts` onboarding; `chat.ts` read / clear chat history; `settings.ts` profile + macro targets; `history.ts` historical logs

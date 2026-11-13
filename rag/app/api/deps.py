@@ -10,6 +10,7 @@ configuration:
 
 from __future__ import annotations
 
+import hmac
 import time
 from collections import deque
 from threading import Lock
@@ -27,7 +28,8 @@ async def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
     expected = get_settings().rag_api_key
     if not expected:
         return
-    if not x_api_key or x_api_key != expected:
+    # Constant-time comparison so response timing doesn't leak the key.
+    if not x_api_key or not hmac.compare_digest(x_api_key.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="unauthorized")
 
 

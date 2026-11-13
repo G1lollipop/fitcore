@@ -68,6 +68,10 @@ function calculateMacros(tdee: number): { protein: number; carbs: number; fat: n
 export async function calculateNutritionRecommendation(
   data: OnboardingData
 ): Promise<{ success: boolean; recommendation?: NutritionRecommendation; error?: string }> {
+  // Calls the LLM, so it must not be reachable without a session.
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+
   const parsed = onboardingDataSchema.safeParse(data);
   if (!parsed.success) {
     return { success: false, error: firstZodError(parsed.error) };
@@ -182,27 +186,6 @@ export async function saveOnboardingData(
   } catch (error) {
     console.error('[saveOnboardingData] Error:', error);
     return { success: false, error: ActionError.SAVE_FAILED };
-  }
-}
-
-export async function checkUserOnboarded(): Promise<boolean> {
-  const userId = await getUserIdOrNull();
-  if (!userId) return false;
-
-  try {
-    const { data, error } = await supabase
-      .from('user_settings')
-      .select('user_id')
-      .eq('user_id', userId)
-      .single();
-
-    if (error) {
-      return false;
-    }
-
-    return !!data;
-  } catch {
-    return false;
   }
 }
 

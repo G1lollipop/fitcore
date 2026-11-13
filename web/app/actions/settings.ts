@@ -17,8 +17,8 @@ export type UpdateSettingsInput = z.infer<typeof onboardingDataSchema>;
 
 /**
  * Persist the edited body profile from the Settings panel (gender / age /
- * height / weight / activity). Nutrition targets are no longer edited here —
- * they live in the "Diet plan" on the Plans tab (see `updateDietPlan`).
+ * height / weight / activity). Nutrition targets are not edited here — they
+ * have their own dialog on the home overview (see `updateDietPlan`).
  */
 export async function updateUserSettings(
   input: UpdateSettingsInput
@@ -60,15 +60,13 @@ const updateDietPlanSchema = z.object({
   targetProtein: target,
   targetCarbs: target,
   targetFat: target,
-  // Daily water target in millilitres (250 ml .. 20 L).
-  waterGoalMl: z.number().int().min(250).max(20_000),
 });
 
 export type UpdateDietPlanInput = z.infer<typeof updateDietPlanSchema>;
 
 /**
- * Persist the user's "diet plan" — their daily nutrition targets + water goal.
- * Lives on the Plans tab; the AI coach can also recompute these from the
+ * Persist the user's "diet plan" — their daily nutrition targets. Edited from
+ * the home overview's targets dialog, which can also recompute them from the
  * profile (see `calculateNutritionRecommendation`).
  */
 export async function updateDietPlan(
@@ -89,7 +87,6 @@ export async function updateDietPlan(
     target_protein: Math.round(data.targetProtein),
     target_carbs: Math.round(data.targetCarbs),
     target_fat: Math.round(data.targetFat),
-    water_goal: Math.round(data.waterGoalMl),
   };
 
   const { error } = await supabase

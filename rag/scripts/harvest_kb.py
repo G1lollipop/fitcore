@@ -39,15 +39,6 @@ MIN_BODY = 2500
 PER_TOPIC = 14
 WRITE_PER_TOPIC = 5  # cap written docs per topic so no topic dominates the KB
 
-OK_HOSTS = (
-    "frontiersin.org",
-    "journals.plos.org",
-    "biomedcentral.com",
-    "peerj.com",
-    "sportsmedicine-open.springeropen.com",
-    "springeropen.com",
-)
-
 JFILTER = (
     '(JOURNAL:"Frontiers in Physiology" OR JOURNAL:"Frontiers in Nutrition" OR '
     'JOURNAL:"Frontiers in Sports and Active Living" OR JOURNAL:"PLoS One" OR '

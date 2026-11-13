@@ -260,6 +260,8 @@ export type Database = {
           id: string
           logged_at: string
           plan_id: string | null
+          session_revision: number | null
+          session_snapshot_hash: string | null
           sets: number | null
           user_id: string
           workout_name: string
@@ -273,6 +275,8 @@ export type Database = {
           id?: string
           logged_at?: string
           plan_id?: string | null
+          session_revision?: number | null
+          session_snapshot_hash?: string | null
           sets?: number | null
           user_id: string
           workout_name: string
@@ -286,6 +290,8 @@ export type Database = {
           id?: string
           logged_at?: string
           plan_id?: string | null
+          session_revision?: number | null
+          session_snapshot_hash?: string | null
           sets?: number | null
           user_id?: string
           workout_name?: string
@@ -524,6 +530,20 @@ export type Database = {
           p_request_id: string
           p_user_id: string
           p_workout_rows: Json
+        }
+        Returns: Json
+      }
+      finish_training_session: {
+        Args: {
+          p_calories_burned: number
+          p_date: string
+          p_duration_minutes: number
+          p_plan_id: string
+          p_request_id: string
+          p_revision: number
+          p_sets: Json
+          p_user_id: string
+          p_workout_name: string
         }
         Returns: Json
       }

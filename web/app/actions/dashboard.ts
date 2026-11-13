@@ -1,11 +1,9 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
-import { getTodayDate } from '@/lib/utils/date';
-import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
-import { ActionError } from '@/lib/errors';
+import { addDays, getTodayDate, weekdayIndex } from '@/lib/utils/date';
+import { getUserIdOrNull } from '@/lib/auth/require-user';
 import { calculateTodayWorkout } from '@/lib/plans/today-workout';
 import type {
   DashboardData,
@@ -24,33 +22,6 @@ type TodaySettingsJoin = {
 };
 
 type DailyStatsRow = Database['public']['Tables']['daily_stats']['Row'];
-type DailyStatsInsert = Database['public']['Tables']['daily_stats']['Insert'];
-type UserSettingsRow = Database['public']['Tables']['user_settings']['Row'];
-
-function getWeekBounds(date: Date): { start: Date; end: Date } {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const start = new Date(d.setDate(diff));
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-  return { start, end };
-}
-
-function getWeekLabel(date: Date): string {
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-  const firstDayOfWeek = firstDayOfMonth.getDay();
-  const weekOfMonth = Math.ceil((date.getDate() + firstDayOfWeek) / 7);
-  return `${monthNames[date.getMonth()]} Week ${weekOfMonth}`;
-}
-
-function getTodayWeekIndex(): number {
-  const day = new Date().getDay();
-  return day === 0 ? 6 : day - 1;
-}
 
 async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
   try {
@@ -81,8 +52,9 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
     const plan = settingsWithPlan.workout_plans;
 
     // Single source of truth for the (rest-day aware) day-selection + exercise
-    // formatting logic — shared with my-plans.tsx.
-    const result = calculateTodayWorkout(plan.structure);
+    // formatting logic. The weekday comes from the app's calendar day (not the
+    // server clock's local weekday) so it matches the `date` logs are written to.
+    const result = calculateTodayWorkout(plan.structure, weekdayIndex(getTodayDate()));
     if (!result) {
       return { plan: { id: plan.id, name: plan.name }, todayDay: null, exercises: [] };
     }
@@ -115,110 +87,58 @@ async function getTodayWorkoutData(userId: string): Promise<TodayWorkoutInfo> {
   }
 }
 
-export async function getUserGoals(): Promise<UserGoals | null> {
-  const userId = await getUserIdOrNull();
-  if (!userId) return null;
+const DEFAULT_GOALS: UserGoals = {
+  target_calories: 2500,
+  target_protein: 150,
+  target_carbs: 300,
+  target_fat: 80,
+};
 
+async function getUserGoals(userId: string): Promise<UserGoals> {
   const { data, error } = await supabase
     .from('user_settings')
-    .select('*')
+    .select('target_calories, target_protein, target_carbs, target_fat')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
-  // PGRST116 = no rows; treat as "no settings yet" and fall through to
-  // defaults. Any other error is a real failure.
-  if (error && error.code !== 'PGRST116') {
+  if (error) {
     console.error('[getUserGoals] Query error:', error.message);
-    return null;
-  }
-
-  const row = data as UserSettingsRow | null;
-  if (!row) {
-    return {
-      target_calories: 2500,
-      target_protein: 150,
-      target_carbs: 300,
-      target_fat: 80,
-    };
+    return DEFAULT_GOALS;
   }
 
   return {
-    target_calories: row.target_calories || 2500,
-    target_protein: row.target_protein || 150,
-    target_carbs: row.target_carbs || 300,
-    target_fat: row.target_fat || 80,
+    target_calories: data?.target_calories || DEFAULT_GOALS.target_calories,
+    target_protein: data?.target_protein || DEFAULT_GOALS.target_protein,
+    target_carbs: data?.target_carbs || DEFAULT_GOALS.target_carbs,
+    target_fat: data?.target_fat || DEFAULT_GOALS.target_fat,
   };
 }
 
 const TREND_DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
-function emptyTrend(today: Date): WeeklyTrendData {
-  const todayIndex = getTodayWeekIndex();
-  const { start } = getWeekBounds(today);
-  const days: WeeklyTrendDay[] = TREND_DAY_LABELS.map((label, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    return {
-      dateIso: d.toISOString().split('T')[0],
-      dayLabel: label,
-      kcalIntake: 0,
-      kcalBurn: 0,
-      workoutMinutes: 0,
-      isToday: i === todayIndex,
-    };
-  });
-  return { days, weekLabel: getWeekLabel(today), todayIndex, maxKcal: 0 };
-}
+type TrendTotals = { intake: number; burn: number; minutes: number };
 
 /**
- * Pulls the current week's daily_stats in a single query and shapes it as
- * 7 ordered (monday→sunday) trend cells with intake, burn, and workout
- * minutes per day. Used by the dashboard bento weekly heat-row.
+ * Shape the Monday→Sunday week containing `today` into 7 trend cells.
+ *
+ * Everything is derived from the app's calendar day (`getTodayDate`) with pure
+ * date-string arithmetic — never from the server clock's local date — so the
+ * week, the `isToday` marker and the per-day keys line up with the `date`
+ * column the log writes use, whatever time zone the server runs in.
  */
-export async function getWeeklyTrend(): Promise<WeeklyTrendData> {
-  const today = new Date();
-  const userId = await getUserIdOrNull();
-  if (!userId) return emptyTrend(today);
-
-  const { start, end } = getWeekBounds(today);
-  const startStr = start.toISOString().split('T')[0];
-  const endStr = end.toISOString().split('T')[0];
-
-  const { data, error } = await supabase
-    .from('daily_stats')
-    .select('date, total_calories, calories_burned, workout_duration')
-    .eq('user_id', userId)
-    .gte('date', startStr)
-    .lte('date', endStr);
-
-  if (error) {
-    console.error('[getWeeklyTrend] Query error:', error);
-    return emptyTrend(today);
-  }
-
-  const byDate = new Map<string, { intake: number; burn: number; minutes: number }>();
-  (data ?? []).forEach((row) => {
-    byDate.set(row.date, {
-      intake: row.total_calories ?? 0,
-      burn: row.calories_burned ?? 0,
-      minutes: row.workout_duration ?? 0,
-    });
-  });
-
-  const todayIndex = getTodayWeekIndex();
+function buildTrend(today: string, byDate: Map<string, TrendTotals>): WeeklyTrendData {
+  const todayIndex = weekdayIndex(today);
+  const monday = addDays(today, -todayIndex);
   let maxKcal = 0;
 
   const days: WeeklyTrendDay[] = TREND_DAY_LABELS.map((label, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    const iso = d.toISOString().split('T')[0];
-    const row = byDate.get(iso);
+    const dateIso = addDays(monday, i);
+    const row = byDate.get(dateIso);
     const kcalIntake = row?.intake ?? 0;
     const kcalBurn = row?.burn ?? 0;
-    if (kcalIntake > maxKcal) maxKcal = kcalIntake;
-    if (kcalBurn > maxKcal) maxKcal = kcalBurn;
+    maxKcal = Math.max(maxKcal, kcalIntake, kcalBurn);
     return {
-      dateIso: iso,
+      dateIso,
       dayLabel: label,
       kcalIntake,
       kcalBurn,
@@ -227,7 +147,40 @@ export async function getWeeklyTrend(): Promise<WeeklyTrendData> {
     };
   });
 
-  return { days, weekLabel: getWeekLabel(today), todayIndex, maxKcal };
+  return { days, maxKcal };
+}
+
+/**
+ * Pulls the current week's daily_stats in a single query and shapes it as
+ * 7 ordered (monday→sunday) trend cells with intake, burn, and workout
+ * minutes per day. Used by the dashboard bento weekly heat-row.
+ */
+async function getWeeklyTrend(userId: string): Promise<WeeklyTrendData> {
+  const today = getTodayDate();
+  const monday = addDays(today, -weekdayIndex(today));
+
+  const { data, error } = await supabase
+    .from('daily_stats')
+    .select('date, total_calories, calories_burned, workout_duration')
+    .eq('user_id', userId)
+    .gte('date', monday)
+    .lte('date', addDays(monday, 6));
+
+  if (error) {
+    console.error('[getWeeklyTrend] Query error:', error);
+    return buildTrend(today, new Map());
+  }
+
+  const byDate = new Map<string, TrendTotals>();
+  (data ?? []).forEach((row) => {
+    byDate.set(row.date, {
+      intake: row.total_calories ?? 0,
+      burn: row.calories_burned ?? 0,
+      minutes: row.workout_duration ?? 0,
+    });
+  });
+
+  return buildTrend(today, byDate);
 }
 
 export async function getDashboardData(): Promise<DashboardData | null> {
@@ -244,7 +197,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     weeklyTrend,
     todayWorkout,
   ] = await Promise.all([
-    getUserGoals(),
+    getUserGoals(userId),
     supabase
       .from('daily_stats')
       .select('*')
@@ -263,7 +216,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       .eq('user_id', userId)
       .eq('date', today)
       .order('logged_at', { ascending: true }),
-    getWeeklyTrend(),
+    getWeeklyTrend(userId),
     getTodayWorkoutData(userId),
   ]);
 
@@ -276,12 +229,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   }
 
   return {
-    goals: goals || {
-      target_calories: 2500,
-      target_protein: 150,
-      target_carbs: 300,
-      target_fat: 80,
-    },
+    goals,
     today: {
       total_calories: dailyStats?.total_calories || 0,
       total_protein: dailyStats?.total_protein || 0,

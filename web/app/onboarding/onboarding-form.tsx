@@ -17,7 +17,6 @@ import {
 import {
   User,
   Ruler,
-  Dumbbell,
   Sparkles,
   ChevronRight,
   ChevronLeft,

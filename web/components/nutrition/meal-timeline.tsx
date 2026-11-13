@@ -7,6 +7,7 @@ import { deleteDietLog } from '@/app/actions/logFood'
 import { useToast } from '@/hooks/use-toast'
 import { sumMacros } from '@/lib/metrics/macros'
 import { cn } from '@/lib/utils'
+import { APP_TIME_ZONE, minutesOfDay } from '@/lib/utils/date'
 import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -40,7 +41,10 @@ const MEAL_CONFIG: Record<MealSlot, MealConfig> = {
 }
 
 /**
- * Bucket a logged-at ISO timestamp into a meal slot using local-time hours.
+ * Bucket a logged-at ISO timestamp into a meal slot by its time of day in the
+ * app's time zone — the zone the entry's calendar day and any back-dated noon
+ * were written in — not the browser's, which would file a back-dated "lunch"
+ * under another meal for anyone outside that zone.
  * Boundaries are inclusive of the start, exclusive of the end:
  *   breakfast  04:00–10:30
  *   lunch      10:30–14:30
@@ -48,9 +52,8 @@ const MEAL_CONFIG: Record<MealSlot, MealConfig> = {
  *   dinner     17:00–21:30
  *   lateNight  21:30–04:00
  */
-function bucketByLoggedAt(iso: string): MealSlot {
-  const d = new Date(iso)
-  const minutes = d.getHours() * 60 + d.getMinutes()
+export function bucketByLoggedAt(iso: string): MealSlot {
+  const minutes = minutesOfDay(iso)
   if (minutes >= 240 && minutes < 630) return 'breakfast' // 04:00–10:30
   if (minutes >= 630 && minutes < 870) return 'lunch' // 10:30–14:30
   if (minutes >= 870 && minutes < 1020) return 'snack' // 14:30–17:00
@@ -59,10 +62,12 @@ function bucketByLoggedAt(iso: string): MealSlot {
 }
 
 function formatTime(iso: string, locale: string): string {
+  // Same zone as the meal grouping, so the clock shown matches the slot.
   return new Date(iso).toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    timeZone: APP_TIME_ZONE,
   })
 }
 

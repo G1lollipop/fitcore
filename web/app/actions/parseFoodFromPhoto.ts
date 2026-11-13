@@ -2,6 +2,7 @@
 
 import { randomUUID } from 'crypto';
 import { getGeminiVisionModel } from '@/lib/ai/gemini-client';
+import { authedUserId } from '@/lib/auth/require-user';
 import type { DietLogItem } from './types';
 
 /**
@@ -46,6 +47,11 @@ const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/he
 export async function parseFoodFromPhoto(
   formData: FormData
 ): Promise<{ success: boolean; data?: ParsedMealPhoto; error?: string }> {
+  // A server action is a public HTTP endpoint: without this check anyone could
+  // spend the vision model's quota without an account.
+  const a = await authedUserId();
+  if (!a.ok) return a.result;
+
   const file = formData.get('photo');
   if (!(file instanceof File)) {
     return { success: false, error: 'No image provided' };

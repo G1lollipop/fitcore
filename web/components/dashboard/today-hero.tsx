@@ -58,17 +58,21 @@ export function TodayHero({
   embedded = false,
 }: TodayHeroProps) {
   const t = useT()
-  const intakePct = clamp01(kcalIntake / Math.max(1, kcalGoal))
+  const intakeRatio = kcalIntake / Math.max(1, kcalGoal)
+  // The ring itself can only fill to 100%, so its arc uses the clamped value.
+  const intakePct = clamp01(intakeRatio)
 
   const displayIntake = useTickUp(kcalIntake)
 
   const offset = CIRC * (1 - intakePct)
 
-  // Color shifts green → orange → red as intake approaches / exceeds goal
+  // Color shifts green → orange → red as intake approaches / exceeds goal.
+  // Compare the unclamped ratio: the clamped one never exceeds 1, which left
+  // the over-goal red unreachable.
   const ringColor =
-    intakePct > 1
+    intakeRatio > 1
       ? 'var(--chart-5)'
-      : intakePct >= 0.7
+      : intakeRatio >= 0.7
         ? 'var(--chart-3)'
         : 'var(--chart-2)'
 
@@ -144,46 +148,5 @@ export function TodayHero({
       <div className="absolute -bottom-24 -left-12 h-48 w-48 rounded-full bg-accent/10 blur-3xl" aria-hidden />
       {body}
     </motion.section>
-  )
-}
-
-export interface StatProps {
-  tone: 'primary' | 'accent' | 'muted'
-  icon: React.ReactNode
-  label: string
-  value: number
-  /** When set, renders "value / goal unit" (e.g. macros). Omit for plain stats. */
-  goal?: number
-  unit: string
-}
-
-/**
- * Shared stat row used across the today overview: an icon chip + label + a big
- * value with a small unit. Exported so the macro rows (TodayMetrics) match the
- * energy rows exactly, keeping the whole card as one coherent stat list.
- */
-export function Stat({ tone, icon, label, value, goal, unit }: StatProps) {
-  const toneClass =
-    tone === 'primary'
-      ? 'bg-primary/10 text-primary'
-      : tone === 'accent'
-        ? 'bg-accent/20 text-accent-foreground'
-        : 'bg-secondary text-muted-foreground'
-
-  return (
-    <div className="flex items-center gap-2 py-0.5">
-      <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-md', toneClass)}>
-        {icon}
-      </span>
-      <div className="flex min-w-0 flex-1 items-baseline justify-between gap-1">
-        <p className="truncate text-[11px] leading-tight text-muted-foreground">{label}</p>
-        <p className="font-display text-[13px] font-semibold tabular-nums leading-tight text-foreground">
-          {value}
-          <span className="ml-0.5 whitespace-nowrap text-[10px] font-normal text-muted-foreground">
-            {goal != null && goal > 0 ? `/ ${goal} ${unit}` : unit}
-          </span>
-        </p>
-      </div>
-    </div>
   )
 }

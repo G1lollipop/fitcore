@@ -13,9 +13,11 @@ import {
   loadTrainingSession,
   saveTrainingSession,
   clearTrainingSession,
+  clearTrainingSessionIfSaved,
   type TrainingSession,
 } from '@/lib/training/session-state'
 import { finishTrainingSession } from '@/app/actions/training'
+import { ActionError } from '@/lib/errors'
 import { getTodayDate } from '@/lib/utils/date'
 import { SetLogger } from './set-logger'
 import { RestTimer } from './rest-timer'
@@ -40,7 +42,16 @@ export function TrainingMode({ planId, userId, day, onClose, onFinish }: Trainin
   const [showingRest, setShowingRest] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<'failed' | 'conflict' | null>(null)
   const sessionRef = useRef(session)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   // Keep sessionRef in sync with latest session
   useEffect(() => {
@@ -59,11 +70,6 @@ export function TrainingMode({ planId, userId, day, onClose, onFinish }: Trainin
     }, 1000)
     return () => clearInterval(id)
   }, [session.startedAt])
-
-  const totalSetsLogged = session.exercises.reduce(
-    (sum, ex) => sum + ex.completedSets.length,
-    0
-  )
 
   const handleLogSet = useCallback(
     (exerciseIdx: number) => (setNumber: number, weightKg: number | null, reps: number | null) => {
@@ -86,26 +92,71 @@ export function TrainingMode({ planId, userId, day, onClose, onFinish }: Trainin
 
   const handleFinish = useCallback(async () => {
     setSaving(true)
-    const current = sessionRef.current
-    const exercises = current.exercises.map((ex) => ({
-      name: ex.exercise.name,
-      completedSets: ex.completedSets.map((s) => ({
-        setNumber: s.setNumber,
-        weightKg: s.weightKg,
-        reps: s.reps,
-      })),
-    }))
+    setSaveError(null)
 
-    await finishTrainingSession({
-      planId: current.planId,
-      dayId: current.dayId,
-      workoutName: current.dayName,
-      startedAt: current.startedAt.toISOString(),
-      exercises,
-    })
-
-    clearTrainingSession({ userId, planId, dayId, date: today })
+    // The snapshot the server has confirmed it stores, once that is also
+    // everything logged on this screen.
+    let confirmed: TrainingSession | null = null
+    let problem: 'failed' | 'conflict' = 'failed'
+    try {
+      // Sets can still be logged or removed while a save is in flight, so a
+      // confirmed save is only the end if nothing changed since it was sent.
+      // Otherwise save again with the newer snapshot.
+      for (;;) {
+        const snapshot = sessionRef.current
+        const res = await finishTrainingSession({
+          // The session's own id: a retry resends it, so the server rewrites the
+          // same workout instead of adding a duplicate.
+          requestId: snapshot.requestId,
+          // Orders this snapshot against any other save of the session.
+          revision: snapshot.revision,
+          planId: snapshot.planId,
+          workoutName: snapshot.dayName,
+          startedAt: snapshot.startedAt.toISOString(),
+          exercises: snapshot.exercises.map((ex) => ({
+            name: ex.exercise.name,
+            completedSets: ex.completedSets.map((s) => ({
+              setNumber: s.setNumber,
+              weightKg: s.weightKg,
+              reps: s.reps,
+            })),
+          })),
+        })
+        if (!res.success) {
+          // The server holds a different save of this session and kept it.
+          if (res.error === ActionError.SAVE_CONFLICT) problem = 'conflict'
+          break
+        }
+        // Only a confirmation of the snapshot that was sent counts. A reply
+        // about any other revision — even the one now on screen — says
+        // nothing about what was submitted here.
+        if (res.revision !== snapshot.revision) break
+        // Saved, and nothing has changed since it was sent: done.
+        if (sessionRef.current.revision === snapshot.revision) {
+          confirmed = snapshot
+          break
+        }
+      }
+    } catch (err) {
+      console.error('[TrainingMode] finishTrainingSession threw:', err)
+    }
     setSaving(false)
+
+    if (!confirmed) {
+      // Keep the locally persisted session until the server confirms the whole
+      // save (summary + every set, one transaction). The logged sets are the
+      // user's work, so anything short of that leaves them in place to retry.
+      setSaveError(problem)
+      return
+    }
+
+    // Clears only the exact snapshot that was confirmed. If the stored session
+    // is anything else (this screen was closed and the session resumed while
+    // the save was in flight, or another tab holds its own copy), it stays.
+    const cleared = clearTrainingSessionIfSaved({ userId, planId, dayId, date: today }, confirmed)
+    // A screen that was closed mid-save must not close the one that resumed
+    // the session and is still showing sets this save did not cover.
+    if (!cleared && !mountedRef.current) return
     onFinish()
   }, [userId, planId, dayId, today, onFinish])
 
@@ -197,6 +248,11 @@ export function TrainingMode({ planId, userId, day, onClose, onFinish }: Trainin
 
       {/* ── Finish footer ── */}
       <div className="shrink-0 px-4 pb-6 pt-2">
+        {saveError && (
+          <p role="alert" className="mb-2 text-center text-xs font-medium text-destructive">
+            {saveError === 'conflict' ? t.training.mode.saveConflict : t.training.mode.saveFailed}
+          </p>
+        )}
         <button
           onClick={handleFinish}
           disabled={saving}

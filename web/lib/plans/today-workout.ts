@@ -2,8 +2,8 @@
  * Pick today's session from a JSON plan structure.
  *
  * Plans store a 7-element `days` array (Monday → Sunday). Today's session is
- * simply `days[isoWeekdayIndex(now)]`; a day is "rest" when flagged or empty.
- * Pure: pass `now` to make it deterministic in tests.
+ * simply `days[todayIndex]`; a day is "rest" when flagged or empty.
+ * Pure: the weekday is passed in, so callers decide which calendar "today" is.
  */
 
 import {
@@ -33,28 +33,24 @@ export interface TodayWorkoutResult {
   exercises: TodayWorkoutExercise[]
 }
 
-/** Convert a JS `Date.getDay()` (0 = Sun) to an ISO weekday index (0 = Mon … 6 = Sun). */
-function isoWeekdayIndex(date: Date): number {
-  const dayOfWeek = date.getDay()
-  return dayOfWeek === 0 ? 6 : dayOfWeek - 1
-}
-
 /**
  * Compute today's workout (or rest day) from a plan structure.
  *
  * @param structure - the active plan's JSON structure (or anything coercible)
- * @param now - injected clock for deterministic testing (defaults to `new Date()`)
+ * @param todayIndex - Monday-first weekday index (0 = Mon … 6 = Sun) of the
+ *   app's calendar day; use `weekdayIndex(getTodayDate())`, not the runtime
+ *   clock's local weekday, so it agrees with the dates logs are written to
  * @returns null when the plan has no days at all
  */
 export function calculateTodayWorkout(
   structure: PlanStructure | unknown | null | undefined,
-  now: Date = new Date()
+  todayIndex: number
 ): TodayWorkoutResult | null {
   if (!structure) return null
   const { days } = normalizePlanStructure(structure)
   if (days.length === 0) return null
 
-  const idx = isoWeekdayIndex(now)
+  const idx = todayIndex
   const day = days[idx] ?? null
   if (!day) return null
 

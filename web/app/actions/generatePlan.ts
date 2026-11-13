@@ -124,7 +124,7 @@ const clampInt = (v: unknown, min: number, max: number, fallback: number): numbe
 };
 
 /**
- * Core LLM step shared by generate + adjust: ask the model for a 7-day plan with
+ * Core LLM step shared by generating a new plan and adjusting the current one: ask the model for a 7-day plan with
  * free-text exercises, then normalize into `CustomPlanDay[]`. Does not persist.
  * No exercise catalog — the app is AI-first and stores exercises as free text.
  */
@@ -314,17 +314,4 @@ export async function confirmWorkoutPlan(preview: PlanPreviewPayload) {
   }
 
   return created;
-}
-
-export interface AdjustPlanInput {
-  /** Natural-language tweak, e.g. "swap leg day for upper body" / "lower the intensity" / "only 3 days this week". */
-  instruction: string;
-}
-
-/**
- * Conversationally adjust the user's workout plan: regenerates a preview from
- * the current plan + instruction. The caller must confirm via `confirmWorkoutPlan`.
- */
-export async function adjustWorkoutPlan(input: AdjustPlanInput) {
-  return previewWorkoutPlan({ instruction: input.instruction });
 }

@@ -13,14 +13,14 @@ import type { DietLogItem } from './types';
  * Persists a pre-parsed DietLogItem as a `food_logs` row, then recomputes the
  * daily_stats aggregate cache.
  *
- * Extracted from logFood.ts so multiple parsing paths (text input, photo
- * vision, future voice) can share a single write path. The "parse first,
+ * A single write path shared by the parse-then-confirm surfaces (photo vision,
+ * manual entry). The "parse first,
  * confirm, then save" pattern used by the photo flow needs this split:
  * parsing returns the item to the UI for review; saving happens only after
  * the user confirms.
  *
  * Also backs the manual structured-entry path: passing an optional `dateStr`
- * (matching the `logFood(text, dateStr)` pattern) back-dates the row to that
+ * back-dates the row to that
  * calendar day via `resolveLogTimestamp`, so a manual food entry lands on the
  * day the user is viewing in History. When omitted, the row keeps the
  * caller-supplied `logged_at` on today (photo / vision paths).

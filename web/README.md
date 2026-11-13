@@ -85,7 +85,7 @@ flowchart TD
 | **Vector database** | Supabase pgvector (production) · Chroma (local) |
 | **Embedding model** | Gemini gemini-embedding-001 (default 768 dims, tunable via EMBEDDING_DIM) |
 | **Chat model** | Google Gemini (default gemini-2.5-flash, switchable via environment variable) through an OpenAI-compatible endpoint |
-| **Nutrition parsing** | Fine-tuned Qwen2.5-3B (LoRA) on Modal serverless GPU estimates food nutrition. Quick Log uses Gemini to split food/workout input before calling Qwen for each food segment; `logFood` calls Qwen directly. |
+| **Nutrition parsing** | Fine-tuned Qwen2.5-3B (LoRA) on Modal serverless GPU estimates food nutrition. Quick Log uses Gemini to split food/workout input before calling Qwen for each food segment. |
 | **Reranking** | HuggingFace CrossEncoder (bge-reranker-base) |
 | **Database** | Supabase PostgreSQL |
 | **Deployment** | Vercel (frontend) · Render Blueprint (RAG backend) |

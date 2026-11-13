@@ -4,9 +4,6 @@ import { createAgentPlan } from "@/lib/ai/plan-step"
 import type { Citation, AgentMode, UserContextPayload, CoachChatMessage } from "@/lib/ai/types"
 import { chatWithRagRetrieve } from "@/lib/ai/rag-client"
 
-export { AGENT_TOOLS, buildAgentSystemPrompt } from "@/lib/ai/agent-tools"
-export { planAgentStep } from "@/lib/ai/plan-step"
-
 function formatUserContext(ctx: UserContextPayload): string {
   const lines: string[] = ["[User profile]"]
   const { profile, targets, today, logs } = ctx
@@ -21,7 +18,6 @@ function formatUserContext(ctx: UserContextPayload): string {
   lines.push(`Protein: ${today.protein ?? 0} / ${targets.protein ?? "not set"} g`)
   lines.push(`Carbs: ${today.carbs ?? 0} / ${targets.carbs ?? "not set"} g`)
   lines.push(`Fat: ${today.fat ?? 0} / ${targets.fat ?? "not set"} g`)
-  lines.push(`Water: ${today.water ?? 0} ml`)
   lines.push(`Calories burned: ${today.caloriesBurned ?? 0} kcal / Workout duration: ${today.workoutDuration ?? 0} min`)
 
   if (logs.dietLogs.length > 0) {

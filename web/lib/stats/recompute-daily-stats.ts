@@ -9,8 +9,7 @@ import { supabase } from '@/lib/supabaseClient';
  * After Phase 3, per-item logs live in their own tables and `daily_stats` is a
  * derived cache holding daily totals (used by the dashboard rings and the
  * weekly/monthly trend queries). Every food/workout write calls this so the
- * cache stays consistent. `water_intake` is owned separately by `logWater`
- * and is preserved here (never overwritten).
+ * cache stays consistent. The legacy `water_intake` column is left untouched.
  */
 export async function recomputeDailyStats(userId: string, date: string): Promise<void> {
   const { error } = await supabase.rpc('recompute_daily_stats', {

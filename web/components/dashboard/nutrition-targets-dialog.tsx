@@ -133,7 +133,6 @@ export function NutritionTargetsDialog({ open, onOpenChange, onSaved }: Nutritio
         targetProtein: Number(form.protein),
         targetCarbs: Number(form.carbs),
         targetFat: Number(form.fat),
-        waterGoalMl: 0,
       })
       if (res.success) {
         invalidateUserSettings()

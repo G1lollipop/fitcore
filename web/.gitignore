@@ -67,11 +67,10 @@ sql/
 # Documentation (local only)
 docs/
 
-# Scripts: ignore one-off local scripts by default, but keep version-controlled
-# maintenance scripts. Use `scripts/*` (not `scripts/`) so the `!` exceptions
-# below take effect — files inside a fully ignored directory can't be re-included.
+# Scripts: one-off local scripts are not version-controlled. To track a
+# maintenance script, add a `!scripts/<name>` exception below (`scripts/*`, not
+# `scripts/`, so exceptions can take effect).
 scripts/*
-!scripts/backfill-exercise-name-en.mjs
 
 # CSV files (local data files)
 *.csv

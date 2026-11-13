@@ -1,10 +1,8 @@
 'use server';
 
 import { supabase } from '@/lib/supabaseClient';
-import { Database, Json } from '@/lib/database.types';
+import type { Json } from '@/lib/database.types';
 import { authedUserId } from '@/lib/auth/require-user';
-
-type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row'];
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -71,21 +69,24 @@ export async function getChatHistory(
       return { success: true, messages: [] };
     }
 
+    // Fetch the newest `limit` rows, then flip back to chronological order —
+    // ascending + limit would pin a long conversation to its oldest messages.
+    const safeLimit = Math.min(Math.max(Math.trunc(limit) || 50, 1), 200);
     const { data, error } = await supabase
       .from('chat_messages')
-      .select('*')
+      .select('role, content')
       .eq('user_id', userId)
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-      .limit(limit);
+      .order('created_at', { ascending: false })
+      .limit(safeLimit);
 
     if (error) {
       console.error('[getChatHistory] Query error:', error);
       return { success: false, error: 'Failed to fetch message history' };
     }
 
-    const messages: ChatMessage[] = (data as ChatMessageRow[]).map((row) => ({
-      role: row.role as 'user' | 'assistant',
+    const messages: ChatMessage[] = (data ?? []).reverse().map((row) => ({
+      role: row.role === 'assistant' ? 'assistant' : 'user',
       content: row.content || '',
     }));
 

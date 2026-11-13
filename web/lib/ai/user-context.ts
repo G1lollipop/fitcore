@@ -3,13 +3,10 @@ import { supabase } from "@/lib/supabaseClient"
 import type { Database } from "@/lib/database.types"
 import type { UserContextPayload } from "@/lib/ai/types"
 import type { DietLogItem, WorkoutLogItem } from "@/app/actions/types"
+import { getTodayDate } from "@/lib/utils/date"
 
 type UserSettingsRow = Database["public"]["Tables"]["user_settings"]["Row"]
 type DailyStatsRow = Database["public"]["Tables"]["daily_stats"]["Row"]
-
-function getTodayDate(): string {
-  return new Date().toISOString().split("T")[0]
-}
 
 export async function buildUserContext(userId: string): Promise<UserContextPayload> {
   const today = getTodayDate()
@@ -62,7 +59,6 @@ export async function buildUserContext(userId: string): Promise<UserContextPaylo
       protein: dailyStats?.total_protein ?? null,
       carbs: dailyStats?.total_carbs ?? null,
       fat: dailyStats?.total_fat ?? null,
-
       caloriesBurned: dailyStats?.calories_burned ?? null,
       workoutDuration: dailyStats?.workout_duration ?? null,
     },

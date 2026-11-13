@@ -42,7 +42,7 @@ flowchart TD
     Browser -->|"chat"| ChatAPI
     Actions --> Supabase
     Actions -->|"Quick Log food/workout splitting"| LLM
-    Actions -->|"food nutrition<br/>(quickLog segments / logFood)"| NutritionAPI
+    Actions -->|"food nutrition<br/>(quickLog segments)"| NutritionAPI
     ChatAPI -->|"personal context user-context.ts"| Supabase
     ChatAPI -->|"generation"| LLM
     ChatAPI -->|"knowledge retrieval rag-client.ts"| RAG

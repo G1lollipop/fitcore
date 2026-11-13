@@ -1,7 +1,5 @@
 import type { DietLogItem, WorkoutLogItem } from "@/app/actions/types"
 
-export type ChatMode = "personal" | "rag" | "hybrid"
-
 /** A single chat message (user / assistant). */
 export interface CoachChatMessage {
   role: "user" | "assistant"
@@ -20,7 +18,6 @@ export type AgentSSEEvent =
 export interface AIChatMeta {
   latencyMs?: number
   conversationId?: string
-  retrievalBackend?: VectorRetrievalBackend
   retrievalK?: number        // number of chunks the LLM chose to retrieve
   persisted?: boolean        // whether the message was successfully written to the history store
   assistantMessageId?: string // chat_messages.id of the persisted assistant reply (for feedback)
@@ -32,19 +29,6 @@ export interface Citation {
   source: string
   snippet: string
   score?: number | null
-}
-
-export type VectorRetrievalBackend = "supabase" | "chroma" | "unknown"
-
-export interface AIChatResponse {
-  answer: string
-  mode: ChatMode | AgentMode
-  citations?: Citation[]
-  meta?: AIChatMeta & {
-    intent?: string
-    retrievedCount?: number
-    conversationId?: string
-  }
 }
 
 export interface UserContextPayload {
@@ -66,7 +50,6 @@ export interface UserContextPayload {
     protein?: number | null
     carbs?: number | null
     fat?: number | null
-    water?: number | null
     caloriesBurned?: number | null
     workoutDuration?: number | null
   }
@@ -84,12 +67,4 @@ export interface RagChatRequest {
   query: string
   sessionId: string
   userContext: UserContextPayload
-}
-
-export interface RagChatResponse {
-  answer: string
-  citations?: Citation[]
-  retrievalMeta?: {
-    retrievedCount?: number
-  }
 }

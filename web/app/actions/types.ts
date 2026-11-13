@@ -52,8 +52,6 @@ export type WeeklyTrendDay = {
 
 export type WeeklyTrendData = {
   days: WeeklyTrendDay[];   // length 7, monday → sunday
-  weekLabel: string;
-  todayIndex: number;
   maxKcal: number;          // peak intake or burn across the week (for bar scaling)
 };
 

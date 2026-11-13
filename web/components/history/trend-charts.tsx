@@ -11,8 +11,6 @@ import type { NutritionDayData } from '@/app/actions/history'
 import { toLocalDateStr } from '@/lib/utils/date'
 import { sumMacros } from '@/lib/metrics/macros'
 
-const toDateStr = toLocalDateStr
-
 interface TrendChartsProps {
   date: Date
   dietWeekData?: Record<string, NutritionDayData>

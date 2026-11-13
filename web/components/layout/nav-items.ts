@@ -28,8 +28,3 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'dashboard', labelKey: 'dashboard', shortLabelKey: 'shortDashboard', icon: LayoutDashboard },
   { id: 'nutrition', labelKey: 'nutrition', shortLabelKey: 'shortNutrition', icon: History },
 ] as const
-
-/** Lookup helper. Returns `undefined` for unknown ids. */
-export function findNavItem(id: string): NavItem | undefined {
-  return NAV_ITEMS.find((n) => n.id === id)
-}

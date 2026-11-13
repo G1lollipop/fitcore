@@ -6,6 +6,7 @@ import { createModuleLogger } from '@/lib/logger';
 import { authedUserId } from '@/lib/auth/require-user';
 import { planMetaSchema, firstZodError } from '@/lib/validation/schemas';
 import { ActionError } from '@/lib/errors';
+import { getTodayDate } from '@/lib/utils/date';
 import {
   emptyPlanStructure,
   normalizePlanStructure,
@@ -56,31 +57,6 @@ async function assertPlanOwner(
   return null;
 }
 
-export async function getUserPlansLight() {
-  const a = await authedUserId();
-  if (!a.ok) return a.result;
-  const userId = a.userId;
-  try {
-    planLogger.info('Fetching user plans', { userId });
-
-    const { data, error } = await supabase
-      .from('workout_plans')
-      .select(PLAN_COLUMNS)
-      .eq('creator_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      planLogger.error('Failed to fetch user plans', { error: error.message, userId });
-      throw new Error(error.message);
-    }
-
-    return { success: true, data };
-  } catch (error) {
-    planLogger.error('Error fetching user plans', { error: String(error), userId });
-    return { success: false, error: String(error) };
-  }
-}
-
 export async function getCurrentPlanLight() {
   const a = await authedUserId();
   if (!a.ok) return a.result;
@@ -115,39 +91,6 @@ export async function getCurrentPlanLight() {
     };
   } catch (error) {
     planLogger.error('Error fetching current plan', { error: String(error) });
-    return { success: false, error: String(error) };
-  }
-}
-
-export async function updatePlan(
-  planId: string,
-  updates: Record<string, unknown>
-) {
-  const a = await authedUserId();
-  if (!a.ok) return a.result;
-  const ownerCheck = await assertPlanOwner(planId, a.userId);
-  if (ownerCheck) return ownerCheck;
-  try {
-    planLogger.info('Updating plan', { planId });
-
-    const { data, error } = await supabase
-      .from('workout_plans')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', planId)
-      .select(PLAN_COLUMNS)
-      .single();
-
-    if (error) {
-      planLogger.error('Failed to update plan', { error: error.message, planId });
-      throw new Error(error.message);
-    }
-
-    return { success: true, data };
-  } catch (error) {
-    planLogger.error('Error updating plan', { error: String(error), planId });
     return { success: false, error: String(error) };
   }
 }
@@ -223,7 +166,7 @@ export async function setCurrentPlan(planId: string) {
   try {
     planLogger.info('Setting current plan', { userId, planId });
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDate();
 
     const { data: settings, error: fetchError } = await supabase
       .from('user_settings')

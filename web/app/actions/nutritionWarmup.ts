@@ -1,8 +1,11 @@
 'use server'
 
 import { NUTRITION_PARSE_API_URL } from '@/lib/ai/model'
+import { getUserIdOrNull } from '@/lib/auth/require-user'
 
 export async function warmupNutritionApi(): Promise<void> {
+  // Only signed-in users may wake the GPU endpoint (it bills per cold start).
+  if (!(await getUserIdOrNull())) return
   try {
     await fetch(NUTRITION_PARSE_API_URL, {
       method: 'POST',

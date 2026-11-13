@@ -11,6 +11,7 @@ import {
   saveTrainingSession,
   loadTrainingSession,
   clearTrainingSession,
+  clearTrainingSessionIfSaved,
 } from '@/lib/training/session-state'
 import type { PlanDay } from '@/lib/plans/types'
 
@@ -60,6 +61,53 @@ describe('session-state persistence helpers', () => {
       expect(restored!.dayName).toBe('Push')
       expect(restored!.startedAt).toBeInstanceOf(Date)
       expect(restored!.exercises).toHaveLength(1)
+    })
+
+    it('keeps the request id stable across a save/restore round trip', () => {
+      const session = makeSession()
+      expect(session.requestId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+      )
+
+      const restored = deserializeSession(JSON.stringify(serializeSession(session)))
+      expect(restored!.requestId).toBe(session.requestId)
+      // Logging more sets must not change which workout the session saves to.
+      expect(logSet(restored!, 0, 1, 60, 8).requestId).toBe(session.requestId)
+    })
+
+    it('gives two sessions different request ids', () => {
+      expect(makeSession().requestId).not.toBe(makeSession().requestId)
+    })
+
+    it('assigns a request id to a session stored before ids existed', () => {
+      const { requestId: _omitted, ...legacy } = serializeSession(makeSession())
+      const restored = deserializeSession(JSON.stringify(legacy))
+
+      expect(restored).not.toBeNull()
+      expect(restored!.requestId).toMatch(/^[0-9a-f-]{36}$/)
+    })
+
+    it('counts every edit to the logged sets in the revision', () => {
+      const session = makeSession()
+      expect(session.revision).toBe(0)
+
+      const logged = logSet(session, 0, 1, 60, 8)
+      expect(logged.revision).toBe(1)
+      // Removing a set is an edit too: the snapshot differs from the one before.
+      const removed = removeSet(logged, 0, 1)
+      expect(removed.revision).toBe(2)
+      // The source session is not mutated.
+      expect(session.revision).toBe(0)
+
+      const restored = deserializeSession(JSON.stringify(serializeSession(removed)))
+      expect(restored!.revision).toBe(2)
+    })
+
+    it('starts a session stored before revisions existed at revision 0', () => {
+      const { revision: _omitted, ...legacy } = serializeSession(logSet(makeSession(), 0, 1, 60, 8))
+      expect(deserializeSession(JSON.stringify(legacy))!.revision).toBe(0)
+      expect(deserializeSession(JSON.stringify({ ...legacy, revision: 'x' }))!.revision).toBe(0)
+      expect(deserializeSession(JSON.stringify({ ...legacy, revision: -3 }))!.revision).toBe(0)
     })
 
     it('deserializeSession returns null for invalid JSON', () => {
@@ -142,6 +190,49 @@ describe('session-state persistence helpers', () => {
 
       const key = buildTrainingSessionKey({ userId, planId, dayId: 'day-1', date })
       expect(localStorage.getItem(key)).toBeNull()
+    })
+
+    describe('clearTrainingSessionIfSaved', () => {
+      const params = { userId, planId, dayId: 'day-1', date }
+
+      it('clears the stored session when it is the snapshot the server confirmed', () => {
+        const session = logSet(makeSession(), 0, 1, 60, 8)
+        saveTrainingSession(session, params)
+
+        expect(clearTrainingSessionIfSaved(params, session)).toBe(true)
+        expect(loadTrainingSession(params)).toBeNull()
+      })
+
+      it('keeps a stored session that has been edited since the confirmed save', () => {
+        const saved = logSet(makeSession(), 0, 1, 60, 8)
+        const edited = logSet(saved, 0, 2, 60, 6)
+        saveTrainingSession(edited, params)
+
+        expect(clearTrainingSessionIfSaved(params, saved)).toBe(false)
+        expect(loadTrainingSession(params)!.exercises[0].completedSets).toHaveLength(2)
+      })
+
+      it('keeps a stored copy that reached the same revision with different sets', () => {
+        // Two tabs start from the same session and each log one set.
+        const shared = makeSession()
+        const thisTab = logSet(shared, 0, 1, 60, 8)
+        const otherTab = logSet(shared, 0, 1, 100, 3)
+        expect(otherTab.revision).toBe(thisTab.revision)
+        expect(otherTab.requestId).toBe(thisTab.requestId)
+        // The other tab wrote last; this tab's save is the one that was confirmed.
+        saveTrainingSession(otherTab, params)
+
+        expect(clearTrainingSessionIfSaved(params, thisTab)).toBe(false)
+        expect(loadTrainingSession(params)!.exercises[0].completedSets[0].weightKg).toBe(100)
+      })
+
+      it('keeps a stored session that is not the one that was saved', () => {
+        const other = makeSession()
+        saveTrainingSession(other, params)
+
+        expect(clearTrainingSessionIfSaved(params, makeSession())).toBe(false)
+        expect(loadTrainingSession(params)!.requestId).toBe(other.requestId)
+      })
     })
 
     it('load returns null after clear', () => {

@@ -22,6 +22,8 @@ export const ActionError = {
   PLAN_NOT_FOUND: 'PLAN_NOT_FOUND',
   EXERCISE_NOT_FOUND: 'EXERCISE_NOT_FOUND',
   SAVE_FAILED: 'SAVE_FAILED',
+  /** A different version of the same record is already stored; nothing was overwritten. */
+  SAVE_CONFLICT: 'SAVE_CONFLICT',
 
   // Validation (Zod) codes
   VALIDATION_FAILED: 'VALIDATION_FAILED',
@@ -36,5 +38,3 @@ export const ActionError = {
   PLAN_NAME_TOO_LONG: 'PLAN_NAME_TOO_LONG',
   FREQUENCY_INVALID: 'FREQUENCY_INVALID',
 } as const
-
-export type ActionErrorCode = (typeof ActionError)[keyof typeof ActionError]

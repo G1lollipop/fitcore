@@ -2,10 +2,30 @@
 
 import { supabase } from '@/lib/supabaseClient';
 import { getUserIdOrNull } from '@/lib/auth/require-user';
-import { toLocalDateStr } from '@/lib/utils/date';
+import { addDays, isDateStr } from '@/lib/utils/date';
 import type { DietLogItem, WorkoutLogItem } from './types';
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/**
+ * Longest inclusive range one call may ask for. The Record tab preloads 7
+ * days; the cap keeps a hand-crafted request from making the server walk (and
+ * return) an arbitrarily large calendar.
+ */
+const MAX_RANGE_DAYS = 92;
+
+/**
+ * Every calendar day in an inclusive range, or null when the range is
+ * malformed, reversed or longer than {@link MAX_RANGE_DAYS}. Pure date-string
+ * arithmetic, so the keys match the `date` column in any server time zone.
+ */
+function daysInRange(startStr: string, endStr: string): string[] | null {
+  if (!isDateStr(startStr) || !isDateStr(endStr) || startStr > endStr) return null;
+  const days: string[] = [];
+  for (let day = startStr; day <= endStr; day = addDays(day, 1)) {
+    if (days.length === MAX_RANGE_DAYS) return null;
+    days.push(day);
+  }
+  return days;
+}
 
 const DEFAULT_GOALS = { calories: 2500, protein: 150, carbs: 300, fat: 80 } as const;
 
@@ -23,7 +43,7 @@ export interface NutritionDayData {
  */
 export async function getNutritionByDate(dateStr: string): Promise<NutritionDayData> {
   const userId = await getUserIdOrNull();
-  if (!userId || !DATE_RE.test(dateStr)) {
+  if (!userId || !isDateStr(dateStr)) {
     return { goals: { ...DEFAULT_GOALS }, dietLogs: [] };
   }
 
@@ -64,7 +84,8 @@ export async function getNutritionRange(
   endStr: string
 ): Promise<Record<string, NutritionDayData>> {
   const userId = await getUserIdOrNull();
-  if (!userId || !DATE_RE.test(startStr) || !DATE_RE.test(endStr)) {
+  const days = daysInRange(startStr, endStr);
+  if (!userId || !days) {
     return {};
   }
 
@@ -101,11 +122,8 @@ export async function getNutritionRange(
 
   // Ensure every day in the requested range has an entry so callers can render
   // zeros without extra round-trips.
-  const start = new Date(`${startStr}T12:00:00`);
-  const end = new Date(`${endStr}T12:00:00`);
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const ds = toLocalDateStr(d);
-    grouped[ds] ??= { goals, dietLogs: [] };
+  for (const day of days) {
+    grouped[day] ??= { goals, dietLogs: [] };
   }
 
   return grouped;
@@ -121,7 +139,8 @@ export async function getWorkoutHistory(
   endStr: string
 ): Promise<Record<string, WorkoutLogItem[]>> {
   const userId = await getUserIdOrNull();
-  if (!userId || !DATE_RE.test(startStr) || !DATE_RE.test(endStr)) {
+  const days = daysInRange(startStr, endStr);
+  if (!userId || !days) {
     return {};
   }
 
@@ -147,11 +166,8 @@ export async function getWorkoutHistory(
 
   // Ensure every day in the requested range has an entry so callers can render
   // zeros without extra round-trips.
-  const start = new Date(`${startStr}T12:00:00`);
-  const end = new Date(`${endStr}T12:00:00`);
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const ds = toLocalDateStr(d);
-    grouped[ds] ??= [];
+  for (const day of days) {
+    grouped[day] ??= [];
   }
 
   return grouped;

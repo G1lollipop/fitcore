@@ -45,27 +45,47 @@ const requestSchema = z.object({
   conversationId: z.string().trim().optional(),
 })
 
-async function saveMessage(
+/**
+ * Persist one user → assistant turn as a single insert.
+ *
+ * Both rows go in one statement (so a turn is never half-saved) with explicit,
+ * strictly increasing `created_at` values: history is ordered by that column,
+ * and two independent inserts racing each other could store the answer ahead
+ * of the question it replies to.
+ *
+ * @returns the assistant row's id, or null when the turn could not be saved.
+ */
+async function saveTurn(
   userId: string,
-  role: "user" | "assistant",
-  content: string,
-  conversationId: string
+  conversationId: string,
+  userContent: string,
+  assistantContent: string
 ): Promise<string | null> {
+  const savedAt = Date.now()
   const { data, error } = await supabase
     .from("chat_messages")
-    .insert({
-      user_id: userId,
-      role,
-      content,
-      conversation_id: conversationId,
-    })
-    .select("id")
-    .single()
+    .insert([
+      {
+        user_id: userId,
+        role: "user",
+        content: userContent,
+        conversation_id: conversationId,
+        created_at: new Date(savedAt).toISOString(),
+      },
+      {
+        user_id: userId,
+        role: "assistant",
+        content: assistantContent,
+        conversation_id: conversationId,
+        created_at: new Date(savedAt + 1).toISOString(),
+      },
+    ])
+    .select("id, role")
   if (error) {
-    console.error("[/api/ai/chat] saveMessage error:", error)
+    console.error("[/api/ai/chat] saveTurn error:", error)
     return null
   }
-  return data?.id ?? null
+  return data?.find((row) => row.role === "assistant")?.id ?? null
 }
 
 async function loadRecentMessages(
@@ -78,7 +98,9 @@ async function loadRecentMessages(
     .select("role,content")
     .eq("user_id", userId)
     .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true })
+    // Newest `limit` rows; ascending + limit would return the *oldest* ones and
+    // starve the model of the latest turns once a conversation grows past it.
+    .order("created_at", { ascending: false })
     .limit(limit)
 
   if (error) {
@@ -87,6 +109,7 @@ async function loadRecentMessages(
   }
 
   return (data ?? [])
+    .reverse()
     .map(
       (row): CoachChatMessage => ({
         role: row.role === "assistant" ? "assistant" : "user",
@@ -146,11 +169,13 @@ export async function POST(request: Request) {
         // Persist before sending `done` so the stream doesn't finish ahead of
         // the DB write and drop history; write failures don't affect this
         // answer and are surfaced honestly via meta.persisted.
-        const [userMessageId, assistantMessageId] = await Promise.all([
-          saveMessage(userId, "user", message, effectiveConversationId),
-          saveMessage(userId, "assistant", result.answer, effectiveConversationId),
-        ])
-        const persisted = Boolean(userMessageId) && Boolean(assistantMessageId)
+        const assistantMessageId = await saveTurn(
+          userId,
+          effectiveConversationId,
+          message,
+          result.answer
+        )
+        const persisted = Boolean(assistantMessageId)
 
         // Best-effort observability trace (never blocks/affects the reply).
         void saveTrace(userId, assistantMessageId, effectiveConversationId, result, Date.now() - startedAt)

@@ -108,7 +108,13 @@ async def chat_v1(request: ChatRequest):
         raise HTTPException(status_code=500, detail="internal error")
 
 
-@router.post("/api/chat", response_model=LegacyChatResponse)
+# Same guards as /v1/chat: this adapter reaches the same LLM-backed pipeline, so
+# leaving them off would let callers bypass RAG_API_KEY and the rate limit.
+@router.post(
+    "/api/chat",
+    response_model=LegacyChatResponse,
+    dependencies=[Depends(require_api_key), Depends(rate_limit)],
+)
 async def chat_legacy(request: ChatRequest):
     result = await chat_v1(request)
     return LegacyChatResponse(response=result.answer)

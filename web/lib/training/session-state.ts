@@ -14,6 +14,19 @@ export interface ExerciseProgress {
 }
 
 export interface TrainingSession {
+  /**
+   * Stable id for this session, created once and persisted with it. The server
+   * saves the workout under this id, so sending the session again (after a
+   * failed save or a lost response) can never create a second workout.
+   */
+  requestId: string
+  /**
+   * Edit counter: bumped by every change to the logged sets, and sent with
+   * each save. It orders saves of this session, so the server can ignore a
+   * late-arriving older snapshot, and the device can tell whether what the
+   * server confirmed is still everything it holds.
+   */
+  revision: number
   planId: string
   dayId: string
   dayName: string
@@ -23,6 +36,8 @@ export interface TrainingSession {
 
 export function createTrainingSession(planId: string, day: PlanDay): TrainingSession {
   return {
+    requestId: crypto.randomUUID(),
+    revision: 0,
     planId,
     dayId: (day as { id?: string }).id ?? '',
     dayName: day.name,
@@ -41,7 +56,7 @@ export function logSet(
   weightKg: number | null,
   reps: number | null
 ): TrainingSession {
-  const updated = { ...session, exercises: [...session.exercises] }
+  const updated = { ...session, revision: session.revision + 1, exercises: [...session.exercises] }
   const ex = { ...updated.exercises[exerciseIdx], completedSets: [...updated.exercises[exerciseIdx].completedSets] }
   ex.completedSets.push({ setNumber: ex.completedSets.length + 1, weightKg, reps, loggedAt: new Date() })
   updated.exercises[exerciseIdx] = ex
@@ -53,25 +68,13 @@ export function removeSet(
   exerciseIdx: number,
   setNumber: number
 ): TrainingSession {
-  const updated = { ...session, exercises: [...session.exercises] }
+  const updated = { ...session, revision: session.revision + 1, exercises: [...session.exercises] }
   const ex = { ...updated.exercises[exerciseIdx], completedSets: [...updated.exercises[exerciseIdx].completedSets] }
   ex.completedSets = ex.completedSets
     .filter((s) => s.setNumber !== setNumber)
     .map((s, idx) => ({ ...s, setNumber: idx + 1 }))
   updated.exercises[exerciseIdx] = ex
   return updated
-}
-
-export function isSessionComplete(session: TrainingSession): boolean {
-  return session.exercises.every((ex) =>
-    ex.completedSets.length >= (ex.exercise.sets ?? 0)
-  )
-}
-
-export function getSessionSummary(session: TrainingSession) {
-  const totalSets = session.exercises.reduce((sum, ex) => sum + ex.completedSets.length, 0)
-  const elapsed = Math.round((Date.now() - session.startedAt.getTime()) / 1000)
-  return { totalSets, elapsed }
 }
 
 // ── localStorage persistence ────────────────────────────────────────────────
@@ -89,6 +92,8 @@ interface SerializedExerciseProgress {
 }
 
 interface SerializedSession {
+  requestId: string
+  revision: number
   planId: string
   dayId: string
   dayName: string
@@ -98,6 +103,8 @@ interface SerializedSession {
 
 export function serializeSession(session: TrainingSession): SerializedSession {
   return {
+    requestId: session.requestId,
+    revision: session.revision,
     planId: session.planId,
     dayId: session.dayId,
     dayName: session.dayName,
@@ -113,6 +120,8 @@ export function serializeSession(session: TrainingSession): SerializedSession {
     })),
   }
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export function deserializeSession(raw: string): TrainingSession | null {
   try {
@@ -154,6 +163,19 @@ export function deserializeSession(raw: string): TrainingSession | null {
     }).filter((e): e is ExerciseProgress => e !== null)
 
     return {
+      // Sessions saved before request ids existed get one now; it is written
+      // back to storage with the session, so it stays stable from here on.
+      requestId:
+        typeof parsed.requestId === 'string' && UUID_RE.test(parsed.requestId)
+          ? parsed.requestId
+          : crypto.randomUUID(),
+      // Sessions stored before revisions existed start counting from zero.
+      revision:
+        typeof parsed.revision === 'number' &&
+        Number.isInteger(parsed.revision) &&
+        parsed.revision >= 0
+          ? parsed.revision
+          : 0,
       planId: parsed.planId as string,
       dayId: (parsed.dayId as string) ?? '',
       dayName: parsed.dayName as string,
@@ -195,6 +217,31 @@ export function loadTrainingSession(params: {
   const raw = localStorage.getItem(key)
   if (!raw) return null
   return deserializeSession(raw)
+}
+
+/**
+ * Remove the stored session once the server has confirmed a save — but only
+ * if what is stored is exactly the snapshot that was saved. Anything else is
+ * left in place and `false` is returned, so no unsaved set is thrown away:
+ * sets logged after the save was submitted (on this screen, or after the
+ * screen was closed and resumed while the request was in flight), or a copy
+ * of the session edited in another tab, which can reach the same revision
+ * number with different sets.
+ */
+export function clearTrainingSessionIfSaved(
+  params: { userId: string; planId: string; dayId: string; date: string },
+  saved: TrainingSession
+): boolean {
+  if (typeof window === 'undefined') return false
+  const stored = loadTrainingSession(params)
+  if (
+    stored &&
+    JSON.stringify(serializeSession(stored)) !== JSON.stringify(serializeSession(saved))
+  ) {
+    return false
+  }
+  localStorage.removeItem(buildTrainingSessionKey(params))
+  return true
 }
 
 export function clearTrainingSession(params: {

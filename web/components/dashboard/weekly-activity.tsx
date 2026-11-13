@@ -65,9 +65,11 @@ export function WeeklyActivity({ data, className }: WeeklyActivityProps) {
   // follows the selected language; fall back to the server-provided label.
   const labelFor = (day: WeeklyTrendDay): string => {
     if (day.dateIso) {
+      // A date-only ISO string parses as UTC midnight, so read the weekday in
+      // UTC too — `getDay()` would shift it a day in zones west of UTC.
       const d = new Date(day.dateIso)
       if (!Number.isNaN(d.getTime())) {
-        return t.dashboard.weekdays[monFirstIndex(d.getDay())]
+        return t.dashboard.weekdays[monFirstIndex(d.getUTCDay())]
       }
     }
     return day.dayLabel

@@ -6,7 +6,7 @@ import { Dumbbell, Pencil, Trash2, UtensilsCrossed } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { useT } from '@/lib/i18n/provider'
-import { toLocalDateStr } from '@/lib/utils/date'
+import { minutesOfDay, toLocalDateStr } from '@/lib/utils/date'
 import { EmptyState } from '@/components/ui/empty-state'
 import { DietLogEditDialog } from '@/components/log-form/diet-log-edit-dialog'
 import { WorkoutLogEditDialog } from '@/components/log-form/workout-log-edit-dialog'
@@ -33,8 +33,12 @@ type TimelineItem =
 
 const MEAL_ORDER = ['breakfast', 'lunch', 'snack', 'dinner', 'lateNight'] as const
 
-function bucketByLoggedAt(iso: string): string {
-  const h = new Date(iso).getHours()
+/**
+ * Meal slot by the hour in the app's time zone (not the browser's), matching
+ * the zone the entry's day and any back-dated noon timestamp were written in.
+ */
+export function bucketByLoggedAt(iso: string): string {
+  const h = Math.floor(minutesOfDay(iso) / 60)
   if (h < 10) return 'breakfast'
   if (h < 13) return 'lunch'
   if (h < 16) return 'snack'
