@@ -25,7 +25,10 @@ def api_key(monkeypatch):
 @pytest.mark.parametrize("path,payload", PROTECTED_ROUTES)
 def test_rejects_missing_or_wrong_key(api_key, client, path, payload):
     assert client.post(path, json=payload).status_code == 401
-    assert client.post(path, json=payload, headers={"X-API-Key": "nope"}).status_code == 401
+    assert (
+        client.post(path, json=payload, headers={"X-API-Key": "nope"}).status_code
+        == 401
+    )
 
 
 @pytest.mark.parametrize("path,payload", PROTECTED_ROUTES)

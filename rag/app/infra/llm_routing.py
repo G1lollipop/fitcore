@@ -170,7 +170,9 @@ def is_quota_error(exc: BaseException) -> bool:
 def _without_unsupported_sampling(model: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     if model.lower().removeprefix("models/") not in _GEMINI_MODELS_WITHOUT_SAMPLING:
         return kwargs
-    return {key: value for key, value in kwargs.items() if key not in _SAMPLING_PARAMETERS}
+    return {
+        key: value for key, value in kwargs.items() if key not in _SAMPLING_PARAMETERS
+    }
 
 
 def _has_visible_output(chunk: ChatGenerationChunk) -> bool:
@@ -255,7 +257,10 @@ class GeminiFailoverChatModel(BaseChatModel):
                 result = model._generate(
                     messages,
                     stop=stop,
-                    **{**_without_unsupported_sampling(model_name, kwargs), "timeout": timeout},
+                    **{
+                        **_without_unsupported_sampling(model_name, kwargs),
+                        "timeout": timeout,
+                    },
                 )
                 self._last_model_used = model_name
                 return result
@@ -283,7 +288,10 @@ class GeminiFailoverChatModel(BaseChatModel):
             stream = model._stream(
                 messages,
                 stop=stop,
-                **{**_without_unsupported_sampling(model_name, kwargs), "timeout": timeout},
+                **{
+                    **_without_unsupported_sampling(model_name, kwargs),
+                    "timeout": timeout,
+                },
             )
             try:
                 for chunk in stream:
@@ -346,7 +354,11 @@ def build_chat_model(
         # Failover handles a model that cannot answer; the SDK retrying the
         # same model first would only delay the move to the next one. Each
         # request is also given its own time limit by the failover model.
-        provider_kwargs = {**provider_kwargs, "max_retries": 0, "timeout": attempt_timeout}
+        provider_kwargs = {
+            **provider_kwargs,
+            "max_retries": 0,
+            "timeout": attempt_timeout,
+        }
         providers.append(
             ChatOpenAI(
                 model=model_name,

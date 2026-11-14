@@ -47,7 +47,9 @@ def resource_exhausted() -> ApiError:
 
 
 def overloaded() -> ApiError:
-    return ApiError(503, "Error code: 503 - high demand", {"error": {"status": "UNAVAILABLE"}})
+    return ApiError(
+        503, "Error code: 503 - high demand", {"error": {"status": "UNAVAILABLE"}}
+    )
 
 
 def timed_out() -> Exception:
@@ -138,14 +140,22 @@ def test_leftover_default_does_not_override_the_new_one(leftover):
 
 
 def test_explicit_model_goes_first_then_the_rest_of_the_order():
-    assert resolve_model_chain("gemini-3.8-flash", GOOGLE) == [FLASH_38, HYDROGEN, FLASH_36]
+    assert resolve_model_chain("gemini-3.8-flash", GOOGLE) == [
+        FLASH_38,
+        HYDROGEN,
+        FLASH_36,
+    ]
     assert resolve_model_chain("gemini-4-argon", GOOGLE) == [
         "gemini-4-argon",
         HYDROGEN,
         FLASH_38,
         FLASH_36,
     ]
-    assert resolve_model_chain("gemini-4-hydrogen", GOOGLE) == [HYDROGEN, FLASH_38, FLASH_36]
+    assert resolve_model_chain("gemini-4-hydrogen", GOOGLE) == [
+        HYDROGEN,
+        FLASH_38,
+        FLASH_36,
+    ]
 
 
 def test_other_provider_uses_the_configured_model_alone():
@@ -153,7 +163,9 @@ def test_other_provider_uses_the_configured_model_alone():
     # Not Google's endpoint: the name is that provider's business.
     assert resolve_model_chain("gemini-2.5-flash", OTHER) == ["gemini-2.5-flash"]
 
-    model = build_chat_model(model="some-model", api_key="k", base_url=OTHER, temperature=0)
+    model = build_chat_model(
+        model="some-model", api_key="k", base_url=OTHER, temperature=0
+    )
     assert isinstance(model, ChatOpenAI)
     assert model.model_name == "some-model"
     assert model.temperature == 0
@@ -172,7 +184,9 @@ def test_build_chat_model_on_google_wraps_the_order(capsys):
     assert all(provider.temperature is None for provider in model.models)
     # The SDK must not retry a failing model before the next one is tried.
     assert all(provider.max_retries == 0 for provider in model.models)
-    assert all(provider.request_timeout == model.attempt_timeout for provider in model.models)
+    assert all(
+        provider.request_timeout == model.attempt_timeout for provider in model.models
+    )
     assert 0 < model.attempt_timeout < model.total_timeout
 
 
@@ -195,12 +209,18 @@ def test_failover_reasons():
     assert failover_reason(Exception("status: RESOURCE_EXHAUSTED")) == "quota"
 
     assert failover_reason(overloaded()) == "unavailable"
-    assert failover_reason(Exception('{"error": {"status": "UNAVAILABLE"}}')) == "unavailable"
+    assert (
+        failover_reason(Exception('{"error": {"status": "UNAVAILABLE"}}'))
+        == "unavailable"
+    )
 
     assert failover_reason(timed_out()) == "timeout"
     assert failover_reason(httpx.ReadTimeout("slow")) == "timeout"
     assert failover_reason(AttemptTimeoutError(HYDROGEN, 30.0)) == "timeout"
-    assert failover_reason(ApiError(504, "Error code: 504 - deadline exceeded")) == "timeout"
+    assert (
+        failover_reason(ApiError(504, "Error code: 504 - deadline exceeded"))
+        == "timeout"
+    )
     assert failover_reason(Exception("status: DEADLINE_EXCEEDED")) == "timeout"
 
     assert is_quota_error(rate_limited())
@@ -208,14 +228,30 @@ def test_failover_reasons():
 
 
 def test_everything_else_is_final():
-    for exc in (bad_request(), unauthorized(), forbidden(), ApiError(404, "model not found")):
+    for exc in (
+        bad_request(),
+        unauthorized(),
+        forbidden(),
+        ApiError(404, "model not found"),
+    ):
         assert failover_reason(exc) is None
     assert failover_reason(ApiError(500, "Error code: 500 - internal")) is None
-    assert failover_reason(openai.APIConnectionError(request=httpx.Request("POST", GOOGLE))) is None
+    assert (
+        failover_reason(
+            openai.APIConnectionError(request=httpx.Request("POST", GOOGLE))
+        )
+        is None
+    )
     # The status decides when there is one, whatever the message says.
-    assert failover_reason(ApiError(400, "UNAVAILABLE in your region: RESOURCE_EXHAUSTED")) is None
+    assert (
+        failover_reason(ApiError(400, "UNAVAILABLE in your region: RESOURCE_EXHAUSTED"))
+        is None
+    )
     # Only the status names count, not ordinary words or digits.
-    assert failover_reason(Exception("the knowledge base is temporarily unavailable")) is None
+    assert (
+        failover_reason(Exception("the knowledge base is temporarily unavailable"))
+        is None
+    )
     assert failover_reason(Exception("max_tokens must be below 4290 or 5030")) is None
 
 
@@ -229,12 +265,18 @@ def test_first_model_answers_when_available():
     assert model.last_model_used == HYDROGEN
 
 
-@pytest.mark.parametrize("flash_38_failure", [overloaded, timed_out], ids=["503", "timeout"])
+@pytest.mark.parametrize(
+    "flash_38_failure", [overloaded, timed_out], ids=["503", "timeout"]
+)
 def test_reaches_3_6_when_hydrogen_returns_429_and_3_8_is_unavailable_or_times_out(
     flash_38_failure,
 ):
     model, log = failover_model(
-        {HYDROGEN: [rate_limited()], FLASH_38: [flash_38_failure()], FLASH_36: ["from 3.6"]}
+        {
+            HYDROGEN: [rate_limited()],
+            FLASH_38: [flash_38_failure()],
+            FLASH_36: ["from 3.6"],
+        }
     )
     assert model.invoke("hi").content == "from 3.6"
     assert tried(log) == [HYDROGEN, FLASH_38, FLASH_36]
@@ -267,7 +309,11 @@ def test_stops_on_cancellation():
 
 def test_raises_the_last_error_when_every_model_fails_over():
     model, log = failover_model(
-        {HYDROGEN: [rate_limited()], FLASH_38: [overloaded()], FLASH_36: [rate_limited()]}
+        {
+            HYDROGEN: [rate_limited()],
+            FLASH_38: [overloaded()],
+            FLASH_36: [rate_limited()],
+        }
     )
     with pytest.raises(ApiError) as caught:
         model.invoke("hi")
@@ -290,7 +336,11 @@ def test_each_attempt_gets_a_time_limit_within_the_total():
 
 def test_no_attempt_starts_once_the_total_time_is_used_up():
     model, log = failover_model(
-        {HYDROGEN: [0.08, timed_out()], FLASH_38: [0.08, timed_out()], FLASH_36: ["unused"]},
+        {
+            HYDROGEN: [0.08, timed_out()],
+            FLASH_38: [0.08, timed_out()],
+            FLASH_36: ["unused"],
+        },
         attempt_timeout=0.1,
         total_timeout=0.12,
     )
@@ -348,7 +398,9 @@ def test_stream_reaches_3_6_when_hydrogen_returns_429_and_3_8_fails_before_text(
     assert "".join(pieces) == "From 3.6"
     # Nothing from the abandoned model reaches the caller, not even its empty chunk.
     assert [piece for piece in pieces if piece] == ["From ", "3.6"]
-    assert pieces.count(EMPTY) <= 2  # 3.6's own empty chunk, plus LangChain's closing chunk
+    assert (
+        pieces.count(EMPTY) <= 2
+    )  # 3.6's own empty chunk, plus LangChain's closing chunk
     assert tried(log) == [HYDROGEN, FLASH_38, FLASH_36]
     assert model.last_model_used == FLASH_36
 
@@ -383,7 +435,10 @@ def test_stream_gives_up_on_a_model_that_sends_only_empty_chunks_for_too_long():
 def test_stream_never_switches_after_text_has_started(failure):
     error_raised = failure()
     model, log = failover_model(
-        {HYDROGEN: [EMPTY, "Your protein ", "target is", error_raised], FLASH_38: ["another"]}
+        {
+            HYDROGEN: [EMPTY, "Your protein ", "target is", error_raised],
+            FLASH_38: ["another"],
+        }
     )
     pieces, error = stream_chunks(model)
     # What was produced stands; the failure is raised; no other model is asked.
@@ -403,7 +458,9 @@ def test_stream_stops_on_invalid_requests_and_auth_errors(failure):
 
 
 def test_stream_stops_when_the_caller_stops_reading():
-    model, log = failover_model({HYDROGEN: ["one", "two", "three"], FLASH_38: ["unused"]})
+    model, log = failover_model(
+        {HYDROGEN: ["one", "two", "three"], FLASH_38: ["unused"]}
+    )
     stream = model._stream([])
     assert next(stream).message.content == "one"
     stream.close()  # the user went away
@@ -413,7 +470,11 @@ def test_stream_stops_when_the_caller_stops_reading():
 
 def test_stream_raises_when_every_model_fails_over():
     model, log = failover_model(
-        {HYDROGEN: [rate_limited()], FLASH_38: [overloaded()], FLASH_36: [resource_exhausted()]}
+        {
+            HYDROGEN: [rate_limited()],
+            FLASH_38: [overloaded()],
+            FLASH_36: [resource_exhausted()],
+        }
     )
     pieces, error = stream_chunks(model)
     assert "".join(pieces) == ""
@@ -435,13 +496,19 @@ def sdk_model(respond, **limits: float):
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     model = build_chat_model(
-        model="gemini-2.5-flash", api_key="k", base_url=GOOGLE, http_client=client, **limits
+        model="gemini-2.5-flash",
+        api_key="k",
+        base_url=GOOGLE,
+        http_client=client,
+        **limits,
     )
     return model, requests
 
 
 def http_error(status: int, name: str) -> httpx.Response:
-    return httpx.Response(status, json={"error": {"code": status, "status": name, "message": name}})
+    return httpx.Response(
+        status, json={"error": {"code": status, "status": name, "message": name}}
+    )
 
 
 def http_answer(model: str, text: str) -> httpx.Response:
