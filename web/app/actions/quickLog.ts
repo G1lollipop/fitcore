@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { createHash, randomUUID } from 'crypto';
-import { openai } from '@/lib/openaiClient';
+import { createChatCompletion } from '@/lib/ai/chat-completion';
 import { supabase } from '@/lib/supabaseClient';
-import { AI_FAST_MODEL } from '@/lib/ai/model';
+import { AI_FAST_MODELS } from '@/lib/ai/model';
 import { fetchNutritionApi } from '@/lib/ai/nutrition-client';
 import { Database, Json } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
@@ -80,8 +80,7 @@ Rules:
 `;
 
 async function parseQuickLog(userInput: string): Promise<ParsedSegment[]> {
-  const response = await openai.chat.completions.create({
-    model: AI_FAST_MODEL,
+  const response = await createChatCompletion(AI_FAST_MODELS, {
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userInput },

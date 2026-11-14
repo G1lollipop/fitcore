@@ -2,8 +2,8 @@
 
 import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
-import { openai } from '@/lib/openaiClient';
-import { AI_FAST_MODEL } from '@/lib/ai/model';
+import { createChatCompletion } from '@/lib/ai/chat-completion';
+import { AI_FAST_MODELS } from '@/lib/ai/model';
 import { authedUserId, getUserIdOrNull } from '@/lib/auth/require-user';
 import {
   onboardingDataSchema,
@@ -97,8 +97,7 @@ Requirements:
 2. You may include a small fitness tip or encouragement
 3. Don't restate the numbers — give advice directly`;
 
-    const response = await openai.chat.completions.create({
-      model: AI_FAST_MODEL,
+    const response = await createChatCompletion(AI_FAST_MODELS, {
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 200,

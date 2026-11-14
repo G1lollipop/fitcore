@@ -6,7 +6,7 @@ import { Dumbbell, Pencil, Trash2, UtensilsCrossed } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { useT } from '@/lib/i18n/provider'
-import { minutesOfDay, toLocalDateStr } from '@/lib/utils/date'
+import { minutesOfDay } from '@/lib/utils/date'
 import { EmptyState } from '@/components/ui/empty-state'
 import { DietLogEditDialog } from '@/components/log-form/diet-log-edit-dialog'
 import { WorkoutLogEditDialog } from '@/components/log-form/workout-log-edit-dialog'
@@ -17,10 +17,9 @@ import { useToast } from '@/hooks/use-toast'
 import type { NutritionDayData } from '@/app/actions/history'
 import type { DietLogItem, WorkoutLogItem } from '@/app/actions/types'
 
-const toDateStr = toLocalDateStr
-
 interface DayTimelineProps {
-  date: Date
+  /** The day shown, as the `YYYY-MM-DD` the logs are stored under. */
+  dateStr: string
   userId?: string
   dietData?: NutritionDayData
   workoutLogs?: WorkoutLogItem[]
@@ -54,14 +53,13 @@ const SLOT_LABELS: Record<string, string> = {
   lateNight: '🌙 Late Night',
 }
 
-export function DayTimeline({ date, userId, dietData, workoutLogs, onChange }: DayTimelineProps) {
+export function DayTimeline({ dateStr, userId, dietData, workoutLogs, onChange }: DayTimelineProps) {
   const t = useT()
   const { toast } = useToast()
   const qc = useQueryClient()
   const [isPending, startTransition] = useTransition()
   const [editingDiet, setEditingDiet] = useState<DietLogItem | null>(null)
   const [editingWorkout, setEditingWorkout] = useState<WorkoutLogItem | null>(null)
-  const dateStr = toDateStr(date)
 
   const timelineItems = useMemo((): TimelineItem[] => {
     const items: TimelineItem[] = []

@@ -33,7 +33,8 @@ flowchart TD
     Actions["Server Actions<br/>(web/app/actions/*)"]
     ChatAPI["/api/ai/chat (SSE)<br/>route.ts"]
     Supabase[("Supabase<br/>Auth + logs/plans/stats/chat")]
-    LLM["Google Gemini<br/>(chat / vision / embedding)"]
+    LLM["Google Gemini<br/>(generation / vision)"]
+    Embeddings["Gemini embeddings<br/>(gemini-embedding-001)"]
     NutritionAPI["Modal · Qwen2.5-3B<br/>(food nutrition parsing)"]
     RAG["RAG service FastAPI (rag/)<br/>/v1/retrieve · /v1/chat · /v1/chat/stream"]
 
@@ -46,6 +47,7 @@ flowchart TD
     ChatAPI -->|"personal context user-context.ts"| Supabase
     ChatAPI -->|"generation"| LLM
     ChatAPI -->|"knowledge retrieval rag-client.ts"| RAG
+    RAG -->|"vector embeddings"| Embeddings
     RAG -->|"vector + BM25 fusion · rerank"| RAG
 ```
 
@@ -112,5 +114,5 @@ secrets marked `sync: false` (`GOOGLE_AI_STUDIO_API_KEY`, `SUPABASE_*`, `UPSTASH
 ## Tech stack
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, Supabase (Auth + data)
-- **AI models**: Google Gemini (gemini-2.5-flash — chat, vision, embeddings) + Qwen2.5-3B fine-tuned for food nutrition parsing (Modal serverless)
+- **AI models**: Gemini generation defaults to `gemini-4-hydrogen`, then tries `gemini-3.8-flash` and `gemini-3.6-flash` when a model is out of quota (HTTP 429), unavailable (HTTP 503) or too slow; RAG embeddings use `gemini-embedding-001` (768 dimensions by default), and text-food nutrition parsing uses the existing fine-tuned Qwen2.5-3B service on Modal.
 - **Backend**: Python 3.11, FastAPI, LangChain 1.x, Chroma / Supabase pgvector

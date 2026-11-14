@@ -5,21 +5,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useT } from '@/lib/i18n/provider'
-import { toLocalDateStr } from '@/lib/utils/date'
+import { addDays, formatCalendarDate, getTodayDate, isDateStr } from '@/lib/utils/date'
 import { getNutritionRange, getWorkoutHistory } from '@/app/actions/history'
 import { WeeklySummaryBar } from './weekly-summary-bar'
 import { DayTimeline } from './day-timeline'
 import { TrendCharts } from './trend-charts'
 // REMOVED: DietDaySection, WorkoutDaySection imports
-
-const toDateStr = toLocalDateStr
-
-function subDaysStr(dateStr: string, days: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const date = new Date(y, m - 1, d)
-  date.setDate(date.getDate() - days)
-  return toDateStr(date)
-}
 
 interface HistoryCenterProps {
   userId?: string
@@ -29,21 +20,20 @@ interface HistoryCenterProps {
 export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
   const t = useT()
   const qc = useQueryClient()
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  // The selected day is a calendar date in the app time zone, kept as a
+  // `YYYY-MM-DD` string. Not a `Date`: stepping a `Date` by a day, or building
+  // one from the picker's value, follows the browser's zone and can land on a
+  // different day than the one the logs are stored under.
+  const todayStr = getTodayDate()
+  const [selectedStr, setSelectedStr] = useState(todayStr)
   const [trendsOpen, setTrendsOpen] = useState(false)
 
-  const todayStr = toDateStr(new Date())
-  const selectedStr = toDateStr(selectedDate)
   const isToday = selectedStr === todayStr
   const isFuture = selectedStr > todayStr
-  const weekStart = useMemo(() => subDaysStr(todayStr, 6), [todayStr])
+  const weekStart = useMemo(() => addDays(todayStr, -6), [todayStr])
 
   const shiftDay = (delta: number) => {
-    setSelectedDate((cur) => {
-      const next = new Date(cur)
-      next.setDate(cur.getDate() + delta)
-      return next
-    })
+    setSelectedStr((cur) => addDays(cur, delta))
   }
 
   const nutritionQuery = useQuery({
@@ -102,7 +92,7 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
 
         <label className="relative cursor-pointer rounded-full border border-border/60 bg-secondary/50 px-3 py-1 text-center transition-colors hover:bg-secondary">
           <span className="text-xs font-medium text-foreground tabular-nums">
-            {selectedDate.toLocaleDateString(t.common.locale, {
+            {formatCalendarDate(selectedStr, t.common.locale, {
               month: 'short',
               day: 'numeric',
               weekday: 'short',
@@ -110,10 +100,10 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
           </span>
           <input
             type="date"
-            value={toDateStr(selectedDate)}
-            max={toDateStr(new Date())}
+            value={selectedStr}
+            max={todayStr}
             onChange={(e) => {
-              if (e.target.value) setSelectedDate(new Date(`${e.target.value}T12:00:00`))
+              if (isDateStr(e.target.value)) setSelectedStr(e.target.value)
             }}
             className="absolute inset-0 cursor-pointer opacity-0"
             aria-label={t.history.title}
@@ -133,7 +123,7 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
         {!isToday && (
           <button
             type="button"
-            onClick={() => setSelectedDate(new Date())}
+            onClick={() => setSelectedStr(getTodayDate())}
             aria-label={t.nutrition.backToToday}
             className="ml-0.5 flex h-7 w-7 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10"
           >
@@ -145,7 +135,7 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
       {/* Day timeline card */}
       <div className="glass glass-highlight max-h-[calc(100dvh-18rem)] overflow-y-auto rounded-2xl p-3">
         <DayTimeline
-          date={selectedDate}
+          dateStr={selectedStr}
           userId={userId}
           dietData={dietData}
           workoutLogs={workoutLogs}
@@ -161,7 +151,6 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
           </SheetHeader>
           <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-6">
             <TrendCharts
-              date={selectedDate}
               dietWeekData={nutritionQuery.data}
               workoutWeekData={workoutQuery.data}
               todayStr={todayStr}

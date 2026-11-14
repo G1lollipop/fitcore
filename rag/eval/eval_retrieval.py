@@ -250,16 +250,18 @@ def _get_judge():
     global _JUDGE
     if _JUDGE is not None:
         return _JUDGE
-    from langchain_openai import ChatOpenAI  # noqa: WPS433
-
     from app.core.settings import get_settings  # noqa: WPS433
+    from app.infra.llm_routing import build_chat_model  # noqa: WPS433
 
     s = get_settings()
     if not s.llm_api_key:
         raise RuntimeError("LLM API key is not configured; cannot use --judge")
     model = os.getenv("EVAL_JUDGE_MODEL") or s.rag_chat_model
-    _JUDGE = ChatOpenAI(
-        model=model, api_key=s.llm_api_key, base_url=s.llm_base_url, temperature=0
+    _JUDGE = build_chat_model(
+        model=model,
+        api_key=s.llm_api_key,
+        base_url=s.llm_base_url,
+        temperature=0,
     )
     return _JUDGE
 
@@ -286,10 +288,9 @@ def judge_chunk_relevant(question: str, text: str) -> bool:
             t = (resp.content or "").strip().lower()
             return t.startswith("y")
         except Exception as exc:  # noqa: BLE001
-            msg = str(exc)
-            is_quota = (
-                "RESOURCE_EXHAUSTED" in msg or "429" in msg or "quota" in msg.lower()
-            )
+            from app.infra.llm_routing import is_quota_error  # noqa: WPS433
+
+            is_quota = is_quota_error(exc)
             if is_quota and attempt < _JUDGE_MAX_RETRIES - 1:
                 wait = 20 * (attempt + 1)
                 print(

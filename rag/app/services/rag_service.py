@@ -11,7 +11,6 @@ from typing import Any
 
 from langchain_classic.retrievers import ContextualCompressionRetriever
 from langchain_core.documents import Document
-from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import (
     RunnableLambda,
@@ -22,6 +21,7 @@ from langchain_core.runnables import (
 from app.core.settings import get_settings
 from app.infra.cache import CacheManager
 from app.infra.embeddings import get_embedding
+from app.infra.llm_routing import build_chat_model
 from app.infra.supabase_client import supabase_configured, vector_backend
 from app.prompts.rag_chat import RAG_CHAT_PROMPT
 from app.services.citations import build_citations
@@ -58,7 +58,7 @@ class RagService(object):
             raise RuntimeError(
                 "LLM API key is not set (GOOGLE_AI_STUDIO_API_KEY); cannot build chat model"
             )
-        self.chat_model = ChatOpenAI(
+        self.chat_model = build_chat_model(
             model=settings.rag_chat_model,
             api_key=settings.llm_api_key,
             base_url=settings.llm_base_url,

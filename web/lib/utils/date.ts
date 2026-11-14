@@ -1,18 +1,25 @@
 /**
  * The one time zone the app keeps its calendar in. A log's `date`, the
- * timestamp given to a back-dated entry, and the hour used to sort a meal into
- * breakfast/lunch/dinner must all be read in this zone — never the server's or
- * the browser's — or an entry stored for one day/meal is shown under another.
+ * timestamp given to a back-dated entry, the hour used to sort a meal into
+ * breakfast/lunch/dinner and every time shown on screen must all be read in
+ * this zone — never the server's or the browser's — or an entry stored for one
+ * day/meal is shown under another.
+ *
+ * Instants are always stored in UTC (`toISOString()`); only the reading of
+ * them changes with this constant. The zone observes daylight saving time, so
+ * never hard-code its UTC offset: derive wall-clock values with `Intl` (as the
+ * helpers below do) and do day arithmetic on `YYYY-MM-DD` strings.
  */
-export const APP_TIME_ZONE = 'Asia/Shanghai';
+export const APP_TIME_ZONE = 'America/Chicago';
 
 /**
- * Today's date as `YYYY-MM-DD` in the given IANA time zone (default
- * Asia/Shanghai).
+ * Today's date as `YYYY-MM-DD` in the given IANA time zone (default: the app
+ * time zone).
  *
  * Deliberately NOT `new Date().toISOString()` — that returns the UTC date, so
- * on a UTC server (e.g. Vercel) any log written between local 00:00–08:00 would
- * land on the previous day's row. `en-CA` formats as `YYYY-MM-DD`.
+ * on a UTC server (e.g. Vercel) any log written in the evening (after 18:00
+ * or 19:00 app time, depending on daylight saving) would land on the next
+ * day's row. `en-CA` formats as `YYYY-MM-DD`.
  */
 export function getTodayDate(timeZone = APP_TIME_ZONE): string {
   return toLocalDateStr(new Date(), timeZone);
@@ -20,7 +27,7 @@ export function getTodayDate(timeZone = APP_TIME_ZONE): string {
 
 /**
  * Format an arbitrary `Date` as `YYYY-MM-DD` in the given IANA time zone
- * (default Asia/Shanghai).
+ * (default: the app time zone).
  *
  * Use this instead of `date.toISOString().split('T')[0]` anywhere a log's
  * calendar day is derived: `toISOString()` returns the UTC date, which drifts
@@ -81,16 +88,55 @@ export function minutesOfDay(instant: Date | string, timeZone = APP_TIME_ZONE): 
 }
 
 /**
+ * Wall-clock time as `HH:MM` (24h, zero-padded) in `timeZone` at the given
+ * instant (default: now, in the app time zone). For times shown on screen;
+ * `Date#getHours()` would show the browser's clock instead.
+ */
+export function formatClock(
+  instant: Date | string = new Date(),
+  timeZone = APP_TIME_ZONE
+): string {
+  const minutes = minutesOfDay(instant, timeZone);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+}
+
+/**
+ * Format a `YYYY-MM-DD` calendar date for display (weekday, month, day…).
+ *
+ * A calendar date has no time zone, so it must read the same in every
+ * browser. `new Date(dateStr).toLocaleDateString()` does not: it turns the
+ * date into an instant and reads it back in the browser's zone, which shows
+ * the previous day west of UTC. The date is pinned to UTC on both sides here.
+ */
+export function formatCalendarDate(
+  dateStr: string,
+  locale: string | undefined,
+  options: Intl.DateTimeFormatOptions
+): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(
+    new Date(Date.UTC(y, m - 1, d, 12))
+  );
+}
+
+/**
  * The instant at which a wall clock in `timeZone` reads noon on `dateStr`.
  *
  * `new Date(`${dateStr}T12:00:00`)` is NOT that: it parses in the runtime's
- * local zone, so on a UTC server "noon" lands at 20:00 Shanghai time.
+ * local zone, so on a UTC server "noon" lands at 06:00 or 07:00 app time.
+ *
+ * The offset is looked up for that particular day, so the result is right on
+ * both sides of a daylight-saving change (noon is 17:00 UTC in summer and
+ * 18:00 UTC in winter for America/Chicago).
  */
 function zonedNoon(dateStr: string, timeZone: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
   const utcNoon = Date.UTC(y, m - 1, d, 12);
   // Read the zone's wall clock at UTC noon to learn its offset on that day,
-  // then shift back by it. Noon is never inside a DST gap, so one pass is exact.
+  // then shift back by it. Clocks change in the small hours, well before both
+  // UTC noon and local noon, so the offset read here is the one in force at
+  // local noon and one pass is exact.
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
     hourCycle: 'h23',

@@ -1,5 +1,5 @@
 /// <reference types="@testing-library/jest-dom" />
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TrainingMode } from '@/components/training/training-mode'
 import type { PlanDay } from '@/lib/plans/types'
@@ -42,7 +42,8 @@ function storedSession() {
   return raw ? JSON.parse(raw) : null
 }
 
-vi.mock('@/lib/utils/date', () => ({
+vi.mock('@/lib/utils/date', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/utils/date')>()),
   getTodayDate: () => '2026-07-08',
 }))
 
@@ -544,5 +545,123 @@ describe('TrainingMode — stacked exercises + persistence', () => {
     // Same request id, same revision — but not what was saved, so it stays.
     expect(vi.mocked(finishTrainingSession).mock.calls[0][0].revision).toBe(otherTab.revision)
     expect(storedSession()).toEqual(otherTab)
+  })
+})
+
+describe('TrainingMode — resuming a workout started before the time zone change', () => {
+  const baseProps = {
+    planId: 'plan-1',
+    userId: 'user-1',
+    day: makeThreeExerciseDay(),
+    onClose: vi.fn(),
+    onFinish: vi.fn(),
+  }
+  // The app's day is 8 July (America/Chicago, 13:00); under the old
+  // Asia/Shanghai calendar the same moment was already 9 July.
+  const todayKey = 'fitcore-training-session:user-1:plan-1::2026-07-08'
+  const oldZoneKey = 'fitcore-training-session:user-1:plan-1::2026-07-09'
+  const oldZoneWhere = { userId: 'user-1', planId: 'plan-1', dayId: '', date: '2026-07-09' }
+
+  /** An unfinished workout with two logged sets, saved under the old zone's date. */
+  function seedOldZoneDraft() {
+    vi.setSystemTime(new Date('2026-07-08T17:20:00Z'))
+    let draft = createTrainingSession('plan-1', makeThreeExerciseDay())
+    draft = logSet(draft, 0, 1, 60, 8)
+    draft = logSet(draft, 0, 2, 65, 10)
+    saveTrainingSession(draft, oldZoneWhere)
+    vi.setSystemTime(new Date('2026-07-08T18:00:00Z'))
+    return draft
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    vi.clearAllMocks()
+    vi.mocked(finishTrainingSession).mockReset()
+    // Only the clock is faked, so timers used by the test helpers keep running.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-07-08T18:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('resumes the draft with its request id, revision and sets, and saves it once', async () => {
+    const draft = seedOldZoneDraft()
+    const onFinish = vi.fn()
+    render(<TrainingMode {...baseProps} onFinish={onFinish} />)
+
+    // The sets logged before the change are on screen, not a blank workout.
+    expect(screen.getByText(/60kg/)).toBeInTheDocument()
+    expect(screen.getByText(/65kg/)).toBeInTheDocument()
+    // The draft stays where it was stored; nothing is created for today.
+    expect(JSON.parse(localStorage.getItem(oldZoneKey)!).requestId).toBe(draft.requestId)
+    expect(localStorage.getItem(todayKey)).toBeNull()
+
+    fireEvent.click(screen.getByText('Finish Training'))
+    await waitFor(() => expect(onFinish).toHaveBeenCalledTimes(1))
+
+    expect(finishTrainingSession).toHaveBeenCalledTimes(1)
+    const sent = vi.mocked(finishTrainingSession).mock.calls[0][0]
+    expect(sent.requestId).toBe(draft.requestId)
+    expect(sent.revision).toBe(2)
+    expect(sent.startedAt).toBe(draft.startedAt.toISOString())
+    expect(sent.exercises[0].completedSets).toEqual([
+      { setNumber: 1, weightKg: 60, reps: 8 },
+      { setNumber: 2, weightKg: 65, reps: 10 },
+    ])
+    // Confirmed: the draft is gone, and no copy is left under either date.
+    expect(localStorage.getItem(oldZoneKey)).toBeNull()
+    expect(localStorage.getItem(todayKey)).toBeNull()
+  })
+
+  it('keeps counting revisions from where the draft left off', async () => {
+    const draft = seedOldZoneDraft()
+    const { container } = render(<TrainingMode {...baseProps} />)
+
+    logFirstExerciseSet(container, '70', '6')
+
+    const stored = JSON.parse(localStorage.getItem(oldZoneKey)!)
+    expect(stored.requestId).toBe(draft.requestId)
+    expect(stored.revision).toBe(3)
+    expect(stored.exercises[0].completedSets).toHaveLength(3)
+    expect(localStorage.getItem(todayKey)).toBeNull()
+  })
+
+  it('does not replace a newer draft stored under today', async () => {
+    const older = seedOldZoneDraft()
+    // Started after the change, under today's date: one set at 100 kg.
+    vi.setSystemTime(new Date('2026-07-08T17:50:00Z'))
+    const newer = logSet(createTrainingSession('plan-1', makeThreeExerciseDay()), 0, 1, 100, 3)
+    saveTrainingSession(newer, { ...oldZoneWhere, date: '2026-07-08' })
+    vi.setSystemTime(new Date('2026-07-08T18:00:00Z'))
+    const olderStored = localStorage.getItem(oldZoneKey)
+    const onFinish = vi.fn()
+    render(<TrainingMode {...baseProps} onFinish={onFinish} />)
+
+    // The newer draft is the one resumed...
+    expect(screen.getByText(/100kg/)).toBeInTheDocument()
+    expect(screen.queryByText(/65kg/)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Finish Training'))
+    await waitFor(() => expect(onFinish).toHaveBeenCalledTimes(1))
+
+    // ...and saved under its own id, while the older one is left exactly as it was.
+    expect(vi.mocked(finishTrainingSession).mock.calls[0][0].requestId).toBe(newer.requestId)
+    expect(localStorage.getItem(todayKey)).toBeNull()
+    expect(localStorage.getItem(oldZoneKey)).toBe(olderStored)
+    expect(JSON.parse(olderStored!).requestId).toBe(older.requestId)
+  })
+
+  it('Exit discards the resumed draft from where it is stored', () => {
+    seedOldZoneDraft()
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<TrainingMode {...baseProps} />)
+
+    fireEvent.click(screen.getByText('Exit'))
+
+    expect(localStorage.getItem(oldZoneKey)).toBeNull()
+    expect(localStorage.getItem(todayKey)).toBeNull()
+    confirmSpy.mockRestore()
   })
 })

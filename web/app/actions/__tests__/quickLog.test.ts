@@ -42,6 +42,48 @@ describe('unified quick logging', () => {
     }))
   })
 
+  it('splits the input with gemini-3.6-flash when Hydrogen returns 429 and 3.8 returns 503', async () => {
+    const reply = { choices: [{ message: { content: JSON.stringify({ items: [food, workout] }) } }] }
+    mocks.completion
+      .mockRejectedValueOnce(Object.assign(new Error('429 Too Many Requests'), { status: 429 }))
+      .mockRejectedValueOnce(Object.assign(new Error('503 high demand'), { status: 503 }))
+      .mockResolvedValueOnce(reply)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const result = await quickLog('I ate a turkey sandwich and walked for 30 minutes', requestId)
+
+    expect(result.success).toBe(true)
+    // Same JSON-mode request to every model; only the model differs.
+    const requests = mocks.completion.mock.calls.map(([params]) => params)
+    expect(requests.map((params) => params.model)).toEqual([
+      'gemini-4-hydrogen',
+      'gemini-3.8-flash',
+      'gemini-3.6-flash',
+    ])
+    // The SDK's own retries are off, so a failing model is left at once.
+    for (const [, options] of mocks.completion.mock.calls) expect(options.maxRetries).toBe(0)
+    for (const params of requests) {
+      expect(params.response_format).toEqual({ type: 'json_object' })
+      expect(params.messages).toEqual(requests[0].messages)
+    }
+    // The fallback model's structured reply is what gets logged; food macros
+    // still come from the Modal nutrition service, not from Gemini.
+    expect(mocks.nutrition).toHaveBeenCalledWith('a turkey sandwich')
+    expect(mocks.rpc).toHaveBeenCalledWith('commit_quick_log', expect.objectContaining({
+      p_food_rows: [expect.objectContaining({ calories: 350, protein: 25 })],
+      p_workout_rows: [expect.objectContaining({ workout_name: 'Walking' })],
+    }))
+    warn.mockRestore()
+  })
+
+  it('does not try another model when the request itself is rejected', async () => {
+    mocks.completion.mockRejectedValue(Object.assign(new Error('400 Invalid argument'), { status: 400 }))
+
+    await expect(quickLog('sandwich', requestId)).rejects.toMatchObject({ status: 400 })
+    expect(mocks.completion).toHaveBeenCalledTimes(1)
+    expect(mocks.completion.mock.calls[0][0].model).toBe('gemini-4-hydrogen')
+  })
+
   it('keeps workout-only logging independent of the nutrition service', async () => {
     split([workout])
     expect((await quickLog('I walked for 30 minutes', requestId)).success).toBe(true)

@@ -43,25 +43,35 @@ load_dotenv(_ROOT / ".env")
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from langchain_openai import ChatOpenAI  # noqa: E402
+from langchain_core.language_models.chat_models import BaseChatModel  # noqa: E402
 
 from app.core.settings import get_settings  # noqa: E402
+from app.infra.llm_routing import (  # noqa: E402
+    GeminiFailoverChatModel,
+    build_chat_model,
+    primary_model_name,
+)
 
 _settings = get_settings()
 
 RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://127.0.0.1:8000")
 # The judge model defaults to the main backend's; EVAL_JUDGE_MODEL can still override it.
-JUDGE_MODEL = os.getenv("EVAL_JUDGE_MODEL") or _settings.rag_chat_model
+# Reported as the model actually tried first: a leftover gemini-2.5-flash
+# setting is ignored by build_chat_model, so it must not be reported either.
+JUDGE_MODEL = primary_model_name(
+    os.getenv("EVAL_JUDGE_MODEL") or _settings.rag_chat_model,
+    _settings.llm_base_url,
+)
 DATASET_PATH = Path(__file__).parent / "golden_dataset_en.json"
 
 
-def _build_judge_llm() -> ChatOpenAI:
+def _build_judge_llm() -> BaseChatModel:
     """Same as RagService: use Gemini's OpenAI-compatible endpoint."""
     if not _settings.llm_api_key:
         raise RuntimeError(
             "LLM API key is not configured (GOOGLE_AI_STUDIO_API_KEY); the judge cannot call the LLM"
         )
-    return ChatOpenAI(
+    return build_chat_model(
         model=JUDGE_MODEL,
         api_key=_settings.llm_api_key,
         base_url=_settings.llm_base_url,
@@ -69,10 +79,11 @@ def _build_judge_llm() -> ChatOpenAI:
     )
 
 
-_JUDGE_LLM: ChatOpenAI | None = None
+_JUDGE_LLM: BaseChatModel | None = None
+_JUDGE_MODELS_USED: set[str] = set()
 
 
-def _get_judge_llm() -> ChatOpenAI:
+def _get_judge_llm() -> BaseChatModel:
     global _JUDGE_LLM
     if _JUDGE_LLM is None:
         _JUDGE_LLM = _build_judge_llm()
@@ -152,6 +163,10 @@ Output JSON only, in the format:
     try:
         llm = _get_judge_llm()
         response = llm.invoke(prompt)
+        if isinstance(llm, GeminiFailoverChatModel) and llm.last_model_used:
+            _JUDGE_MODELS_USED.add(llm.last_model_used)
+        else:
+            _JUDGE_MODELS_USED.add(JUDGE_MODEL)
         content: str = (response.content or "").strip() if response is not None else ""
         if not content:
             raise ValueError("The judge model returned empty content")
@@ -274,7 +289,10 @@ def evaluate() -> int:
     report = {
         "evaluated_at": datetime.now().isoformat(),
         "rag_service_url": RAG_SERVICE_URL,
+        # Keep the configured primary for compatibility; fallback usage is
+        # recorded separately so mixed-model judge reports are transparent.
         "judge_model": JUDGE_MODEL,
+        "judge_models_used": sorted(_JUDGE_MODELS_USED),
         "summary": {
             "total_cases": len(dataset),
             "valid_cases": len(valid),

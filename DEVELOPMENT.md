@@ -166,8 +166,8 @@ Open http://localhost:3000. After your first login, if there's no `user_settings
 | `RAG_SERVICE_URL` | ✅ | Backend RAG service URL (local default `http://127.0.0.1:8000`) |
 | `RAG_CLIENT_TIMEOUT_MS` | | RAG call timeout (default 120000; raise it for cold starts) |
 | `GOOGLE_AI_STUDIO_API_KEY` | ✅ | Gemini key covering all AI features: chat / parsing / vision |
-| `AI_CHAT_MODEL` / `AI_FAST_MODEL` | | Model names (default `gemini-2.5-flash`) |
-| `GEMINI_VISION_MODEL` | | Vision model for meal photo recognition (default `gemini-2.5-flash`) |
+| `AI_CHAT_MODEL` / `AI_FAST_MODEL` | | Gemini generation model names (default `gemini-4-hydrogen`) |
+| `GEMINI_VISION_MODEL` | | Vision model for meal photo recognition (default `gemini-4-hydrogen`) |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` | | Optional: override the Gemini default when pointing at another OpenAI-compatible provider |
 | `AI_CHAT_DEBUG_META` / `RAG_VECTOR_BACKEND` | | For debugging; response meta includes retrieval-backend info |
 
@@ -176,7 +176,7 @@ Open http://localhost:3000. After your first login, if there's no `user_settings
 | Variable | Required | Description |
 |------|------|------|
 | `GOOGLE_AI_STUDIO_API_KEY` | ✅ | Gemini key (shared by chat + embedding; also accepts `GEMINI_API_KEY` / `DASHSCOPE_API_KEY`) |
-| `RAG_CHAT_MODEL` | | Default `gemini-2.5-flash` |
+| `RAG_CHAT_MODEL` | | Default `gemini-4-hydrogen` |
 | `EMBEDDING_MODEL` / `EMBEDDING_DIM` | | Embedding model and dimension (default `models/gemini-embedding-001` / `768`; must match the migration) |
 | `LLM_BASE_URL` | | OpenAI-compatible chat endpoint (default Gemini) |
 | `VECTOR_BACKEND` | ✅ | `chroma` (local default) or `supabase` (pgvector) |
@@ -186,7 +186,9 @@ Open http://localhost:3000. After your first login, if there's no `user_settings
 | `CACHE_BACKEND` | | `memory` (default) or `redis` |
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | △ | Required when `CACHE_BACKEND=redis` |
 | `ALLOWED_ORIGINS` | | Allowed cross-origin frontend origins |
-| `EVAL_JUDGE_MODEL` | | LLM-as-Judge model used for evaluation |
+| `EVAL_JUDGE_MODEL` | | Optional LLM-as-Judge model; otherwise uses `RAG_CHAT_MODEL` |
+
+For Gemini generation through the Google endpoint, FitCore tries `gemini-4-hydrogen`, then `gemini-3.8-flash`, then `gemini-3.6-flash`. It moves to the next model when the current one is out of quota (HTTP 429 / `RESOURCE_EXHAUSTED`), unavailable (HTTP 503 / `UNAVAILABLE`), or too slow (no answer within the per-attempt time limit, or HTTP 504 / `DEADLINE_EXCEEDED`). It stops at once on anything else — invalid requests (400), authentication and permission errors (401 / 403), other server errors, network failures — and when the user cancels. Each model gets 30 seconds to answer (to start showing text, for a streamed reply) and a call gives up after 75 seconds in total (60 / 120 seconds for plan generation); the SDKs' own retries are switched off for these calls, because retrying the same model only delays the move to the next one. A streamed reply can only change model before any text is visible — empty chunks do not count — and never afterwards: if it then fails, the error is returned and the text already shown stands. Each call starts again from the first model; a fallback is not remembered. The same order and rules apply to meal-photo recognition (`GEMINI_VISION_MODEL`) and to the RAG service, including evaluation calls that use Gemini. A leftover `gemini-2.5-flash` (the old default) in `AI_CHAT_MODEL`, `AI_FAST_MODEL`, `GEMINI_VISION_MODEL`, `RAG_CHAT_MODEL` or `EVAL_JUDGE_MODEL` is ignored, so it cannot override the new default; any other model set there is tried first, followed by the standard order. These models run at fixed sampling settings, so `temperature` / `top_p` are not sent to them. Existing non-Google provider overrides remain available through `OPENAI_API_KEY` / `OPENAI_BASE_URL` on the web and `LLM_BASE_URL` for RAG; they use the one configured model, with no fallback. Because the three models share a Google project, project-wide quota exhaustion can affect every attempt. RAG embeddings remain `models/gemini-embedding-001` at the existing default of 768 dimensions, and text-food nutrition estimation continues to use the Modal Qwen2.5-3B service; neither has a fallback.
 
 > All `.env` / `.env.local` are gitignored — never commit secrets. `SUPABASE_SERVICE_ROLE_KEY` is a high-privilege key and is used only on the backend.
 

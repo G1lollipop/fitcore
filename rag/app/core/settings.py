@@ -64,7 +64,7 @@ class Settings(BaseSettings):
             "GOOGLE_AI_STUDIO_API_KEY", "GEMINI_API_KEY", "DASHSCOPE_API_KEY"
         ),
     )
-    rag_chat_model: str = Field(default="gemini-2.5-flash", alias="RAG_CHAT_MODEL")
+    rag_chat_model: str = Field(default="gemini-4-hydrogen", alias="RAG_CHAT_MODEL")
     llm_base_url: str = Field(
         default="https://generativelanguage.googleapis.com/v1beta/openai/",
         validation_alias=AliasChoices("LLM_BASE_URL", "DASHSCOPE_BASE_URL"),

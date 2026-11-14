@@ -43,16 +43,16 @@ flowchart TD
     end
 
     subgraph LLM ["LLM · Google Gemini"]
-        Qwen1["gemini-2.5-flash\nAgent planning (low temperature)"]
-        Qwen2["gemini-2.5-flash\nstreaming generation (high temperature)"]
+        GeminiPlan["gemini-4-hydrogen\nAgent planning"]
+        GeminiAnswer["gemini-4-hydrogen\nStreaming generation"]
     end
 
     User -->|"send message"| Widget
     Widget -->|"SSE fetch"| Route
     Route --> Agent
 
-    Agent -->|"Step 1: planning\ntool_choice=auto"| Qwen1
-    Qwen1 -->|"parallel tool_calls"| T2 & T3
+    Agent -->|"Step 1: planning\ntool_choice=auto"| GeminiPlan
+    GeminiPlan -->|"parallel tool_calls"| T2 & T3
 
     T2 --> Retrieve
     T3 --> Supabase
@@ -65,8 +65,8 @@ flowchart TD
     Vec <-->|"vector search"| Chroma
     BM25 <-->|"full document set"| Supabase
 
-    Agent -->|"Step 3: streaming generation"| Qwen2
-    Qwen2 -->|"token stream"| Route
+    Agent -->|"Step 3: streaming generation"| GeminiAnswer
+    GeminiAnswer -->|"token stream"| Route
     Route -->|"SSE data: {type:'token'}"| Widget
     Widget -->|"append in real time"| User
 ```
@@ -84,11 +84,13 @@ flowchart TD
 | **RAG framework** | LangChain 1.2 · LangChain Community |
 | **Vector database** | Supabase pgvector (production) · Chroma (local) |
 | **Embedding model** | Gemini gemini-embedding-001 (default 768 dims, tunable via EMBEDDING_DIM) |
-| **Chat model** | Google Gemini (default gemini-2.5-flash, switchable via environment variable) through an OpenAI-compatible endpoint |
+| **Generation model** | Google Gemini (default `gemini-4-hydrogen`; falls over to `gemini-3.8-flash`, then `gemini-3.6-flash`, on quota errors, an unavailable model or a timeout) |
 | **Nutrition parsing** | Fine-tuned Qwen2.5-3B (LoRA) on Modal serverless GPU estimates food nutrition. Quick Log uses Gemini to split food/workout input before calling Qwen for each food segment. |
 | **Reranking** | HuggingFace CrossEncoder (bge-reranker-base) |
 | **Database** | Supabase PostgreSQL |
 | **Deployment** | Vercel (frontend) · Render Blueprint (RAG backend) |
+
+For generation through Google's endpoint, FitCore tries `gemini-4-hydrogen`, then `gemini-3.8-flash`, then `gemini-3.6-flash`. It moves to the next model when the current one is out of quota (HTTP 429 / `RESOURCE_EXHAUSTED`), unavailable (HTTP 503 / `UNAVAILABLE`), or too slow (no answer within the per-attempt time limit, or HTTP 504 / `DEADLINE_EXCEEDED`). It stops at once on anything else — invalid requests (400), authentication and permission errors (401 / 403), other server errors, network failures — and when the user cancels. Each model gets 30 seconds to answer (to start showing text, for a streamed reply) and a call gives up after 75 seconds in total (60 / 120 seconds for plan generation); the SDKs' own retries are switched off for these calls, because retrying the same model only delays the move to the next one. A streamed reply can only change model before any text is visible — empty chunks do not count — and never afterwards: if it then fails, the error is returned and the text already shown stands. Each call starts again from the first model; a fallback is not remembered. The same order and rules apply to meal-photo recognition (`GEMINI_VISION_MODEL`) and to the RAG service, including evaluation calls that use Gemini. A leftover `gemini-2.5-flash` (the old default) in `AI_CHAT_MODEL`, `AI_FAST_MODEL`, `GEMINI_VISION_MODEL`, `RAG_CHAT_MODEL` or `EVAL_JUDGE_MODEL` is ignored, so it cannot override the new default; any other model set there is tried first, followed by the standard order. These models run at fixed sampling settings, so `temperature` / `top_p` are not sent to them. Existing non-Google provider overrides remain available through `OPENAI_API_KEY` / `OPENAI_BASE_URL` on the web and `LLM_BASE_URL` for RAG; they use the one configured model, with no fallback. Because the three models share a Google project, project-wide quota exhaustion can affect every attempt. RAG embeddings remain `models/gemini-embedding-001` at the existing default of 768 dimensions, and text-food nutrition estimation continues to use the Modal Qwen2.5-3B service; neither has a fallback.
 
 ---
 
@@ -220,9 +222,9 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=   # public key, used by the cookie session client (sign-in/sign-up/Google OAuth)
 SUPABASE_SERVICE_ROLE_KEY=   # server-side only (server actions + middleware), bypasses RLS, must never be exposed to the browser
 GOOGLE_AI_STUDIO_API_KEY=    # a single Gemini key covers all AI features: chat / parsing / vision
-AI_CHAT_MODEL=gemini-2.5-flash
-AI_FAST_MODEL=gemini-2.5-flash
-GEMINI_VISION_MODEL=gemini-2.5-flash
+AI_CHAT_MODEL=gemini-4-hydrogen
+AI_FAST_MODEL=gemini-4-hydrogen
+GEMINI_VISION_MODEL=gemini-4-hydrogen
 RAG_SERVICE_URL=http://your-rag-server:8000
 # Optional: point at another OpenAI-compatible provider (overrides the Gemini default when set)
 # OPENAI_API_KEY=
@@ -235,7 +237,7 @@ RAG_SERVICE_URL=http://your-rag-server:8000
 
 ```env
 GOOGLE_AI_STUDIO_API_KEY=        # Gemini key (shared by chat + embedding)
-RAG_CHAT_MODEL=gemini-2.5-flash
+RAG_CHAT_MODEL=gemini-4-hydrogen
 EMBEDDING_MODEL=models/gemini-embedding-001
 EMBEDDING_DIM=768                # must match the vector(N) in the Supabase migration
 VECTOR_BACKEND=supabase          # or chroma
@@ -243,5 +245,5 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 RERANKER_ENABLED=true
 RERANKER_MODEL_NAME=             # HuggingFace model id, or leave empty to use a local path
-EVAL_JUDGE_MODEL=gemini-2.5-flash
+EVAL_JUDGE_MODEL=gemini-4-hydrogen
 ```

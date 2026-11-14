@@ -3,7 +3,7 @@
 
 import { TrendingUp } from 'lucide-react'
 import { useMemo } from 'react'
-import { toLocalDateStr } from '@/lib/utils/date'
+import { addDays } from '@/lib/utils/date'
 import type { NutritionDayData } from '@/app/actions/history'
 import type { WorkoutLogItem } from '@/app/actions/types'
 
@@ -21,9 +21,7 @@ function computeStreak(
 ): number {
   let streak = 0
   for (let i = 0; i < 7; i++) {
-    const date = new Date(`${todayStr}T12:00:00`)
-    date.setDate(date.getDate() - i)
-    const dateStr = toLocalDateStr(date)
+    const dateStr = addDays(todayStr, -i)
     const hasDiet = (dietWeekData?.[dateStr]?.dietLogs?.length ?? 0) > 0
     const hasWorkout = (workoutWeekData?.[dateStr]?.length ?? 0) > 0
     if (hasDiet || hasWorkout) {

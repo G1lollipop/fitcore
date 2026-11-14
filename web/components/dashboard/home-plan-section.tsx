@@ -16,7 +16,10 @@ import { PlanGeneratorCard } from '@/components/plans/plan-generator-card'
 import { PlanEditor } from '@/components/plans/plan-editor'
 import { PlanDetailSheet, type DetailPlan } from '@/components/plans/plan-detail-sheet'
 import { TrainingMode } from '@/components/training/training-mode'
-import { loadTrainingSession, type TrainingSession } from '@/lib/training/session-state'
+import {
+  findResumableTrainingSession,
+  type TrainingSession,
+} from '@/lib/training/session-state'
 import { getTodayDate } from '@/lib/utils/date'
 import { ActiveSessionBanner } from '@/components/dashboard/active-session-banner'
 
@@ -71,13 +74,16 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
       setActiveSession(null)
       return
     }
-    const session = loadTrainingSession({
+    // The same lookup the training screen uses, so the banner offers exactly
+    // the draft that Resume will open (including one from before the app's
+    // time zone changed).
+    const found = findResumableTrainingSession({
       userId,
       planId: info.plan.id,
       dayId: '',
       date: getTodayDate(),
     })
-    setActiveSession(session)
+    setActiveSession(found?.session ?? null)
   }, [trainingOpen, userId, info])
 
   // Full active-plan structure (needed for the expanded sheet). The dashboard

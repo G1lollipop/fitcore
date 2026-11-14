@@ -10,7 +10,7 @@ import {
   createTrainingSession,
   logSet,
   removeSet,
-  loadTrainingSession,
+  findResumableTrainingSession,
   saveTrainingSession,
   clearTrainingSession,
   clearTrainingSessionIfSaved,
@@ -35,10 +35,16 @@ export function TrainingMode({ planId, userId, day, onClose, onFinish }: Trainin
   const dayId = (day as { id?: string }).id ?? ''
   const t = useT()
 
-  const [session, setSession] = useState<TrainingSession>(() => {
-    const saved = loadTrainingSession({ userId, planId, dayId, date: today })
-    return saved ?? createTrainingSession(planId, day)
-  })
+  const [resumed] = useState(() =>
+    findResumableTrainingSession({ userId, planId, dayId, date: today })
+  )
+  // The date this session is stored under. A draft started before the app's
+  // time zone changed sits under the old zone's date; it keeps living there,
+  // so resuming it never writes over whatever is stored for today.
+  const storageDate = resumed?.legacy ? resumed.date : today
+  const [session, setSession] = useState<TrainingSession>(
+    () => resumed?.session ?? createTrainingSession(planId, day)
+  )
   const [showingRest, setShowingRest] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -60,8 +66,8 @@ export function TrainingMode({ planId, userId, day, onClose, onFinish }: Trainin
 
   // Persist session to localStorage on every change
   useEffect(() => {
-    saveTrainingSession(session, { userId, planId, dayId, date: today })
-  }, [session, userId, planId, dayId, today])
+    saveTrainingSession(session, { userId, planId, dayId, date: storageDate })
+  }, [session, userId, planId, dayId, storageDate])
 
   // Elapsed timer — ticks every second
   useEffect(() => {
@@ -153,18 +159,21 @@ export function TrainingMode({ planId, userId, day, onClose, onFinish }: Trainin
     // Clears only the exact snapshot that was confirmed. If the stored session
     // is anything else (this screen was closed and the session resumed while
     // the save was in flight, or another tab holds its own copy), it stays.
-    const cleared = clearTrainingSessionIfSaved({ userId, planId, dayId, date: today }, confirmed)
+    const cleared = clearTrainingSessionIfSaved(
+      { userId, planId, dayId, date: storageDate },
+      confirmed
+    )
     // A screen that was closed mid-save must not close the one that resumed
     // the session and is still showing sets this save did not cover.
     if (!cleared && !mountedRef.current) return
     onFinish()
-  }, [userId, planId, dayId, today, onFinish])
+  }, [userId, planId, dayId, storageDate, onFinish])
 
   const handleDiscard = useCallback(() => {
     if (!confirm(t.training.mode.discardConfirm)) return
-    clearTrainingSession({ userId, planId, dayId, date: today })
+    clearTrainingSession({ userId, planId, dayId, date: storageDate })
     onClose()
-  }, [userId, planId, dayId, today, onClose, t])
+  }, [userId, planId, dayId, storageDate, onClose, t])
 
   const formatElapsed = (s: number) => {
     const m = Math.floor(s / 60)

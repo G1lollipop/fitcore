@@ -3,8 +3,11 @@
  * Used by runAgent and the offline agent eval harness.
  */
 
-import { openai } from "@/lib/openaiClient"
-import { AI_CHAT_MODEL } from "@/lib/ai/model"
+import { createChatCompletion } from "@/lib/ai/chat-completion"
+import { AI_CHAT_MODELS } from "@/lib/ai/model"
+
+/** An explicitly requested model is used on its own (evals compare models). */
+const modelsFor = (model?: string) => (model ? [model] : AI_CHAT_MODELS)
 import {
   AGENT_TOOLS,
   buildAgentPlanMessages,
@@ -67,20 +70,20 @@ export async function planAgentStep(params: {
   message: string
   conversationHistory?: CoachChatMessage[]
   model?: string
+  signal?: AbortSignal
 }): Promise<AgentPlanResult> {
   const messages = buildAgentPlanMessages({
     message: params.message,
     conversationHistory: params.conversationHistory,
   })
 
-  const planResponse = await openai.chat.completions.create({
-    model: params.model ?? AI_CHAT_MODEL,
+  const planResponse = await createChatCompletion(modelsFor(params.model), {
     messages,
     tools: AGENT_TOOLS,
     tool_choice: "auto",
     temperature: 0.2,
     max_tokens: 300,
-  })
+  }, { signal: params.signal })
 
   return parsePlanChoice(planResponse.choices[0])
 }
@@ -90,20 +93,21 @@ export async function createAgentPlan(params: {
   message: string
   conversationHistory?: CoachChatMessage[]
   model?: string
+  /** Cancels the call (the user closed the chat); no other model is tried. */
+  signal?: AbortSignal
 }) {
   const messages = buildAgentPlanMessages({
     message: params.message,
     conversationHistory: params.conversationHistory,
   })
 
-  const planResponse = await openai.chat.completions.create({
-    model: params.model ?? AI_CHAT_MODEL,
+  const planResponse = await createChatCompletion(modelsFor(params.model), {
     messages,
     tools: AGENT_TOOLS,
     tool_choice: "auto",
     temperature: 0.2,
     max_tokens: 300,
-  })
+  }, { signal: params.signal })
 
   const planChoice = planResponse.choices[0]
   return {

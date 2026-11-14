@@ -47,7 +47,6 @@ from corpus import Chunk, group_by_source, load_corpus_chunks  # noqa: E402
 
 DEFAULT_OUT = _TRAIN_DIR / "data" / "pairs.jsonl"
 
-_QUOTA_SIGNALS = ("RESOURCE_EXHAUSTED", "429", "quota")
 _MAX_RETRIES = 5
 
 _PROMPT = (
@@ -63,16 +62,15 @@ _PROMPT = (
 
 
 def _build_llm(model: str | None):
-    from langchain_openai import ChatOpenAI  # noqa: WPS433
-
     from app.core.settings import get_settings  # noqa: WPS433
+    from app.infra.llm_routing import build_chat_model  # noqa: WPS433
 
     s = get_settings()
     if not s.llm_api_key:
         raise RuntimeError(
             "GOOGLE_AI_STUDIO_API_KEY is not set; cannot generate queries"
         )
-    return ChatOpenAI(
+    return build_chat_model(
         model=model or s.rag_chat_model,
         api_key=s.llm_api_key,
         base_url=s.llm_base_url,
@@ -102,6 +100,8 @@ def _extract_json_array(text: str) -> list[str]:
 
 
 def _generate_for_chunk(llm, chunk: Chunk, n: int) -> list[str]:
+    from app.infra.llm_routing import is_quota_error  # noqa: WPS433
+
     prompt = _PROMPT.format(n=n, passage=chunk.text[:3000])
     for attempt in range(_MAX_RETRIES):
         try:
@@ -117,9 +117,7 @@ def _generate_for_chunk(llm, chunk: Chunk, n: int) -> list[str]:
                     out.append(q)
             return out[:n]
         except Exception as exc:  # noqa: BLE001
-            msg = str(exc)
-            is_quota = any(sig in msg for sig in _QUOTA_SIGNALS)
-            if is_quota and attempt < _MAX_RETRIES - 1:
+            if is_quota_error(exc) and attempt < _MAX_RETRIES - 1:
                 wait = 30 * (attempt + 1)
                 print(f"  [gen] rate-limited; waiting {wait}s then retry...")
                 time.sleep(wait)

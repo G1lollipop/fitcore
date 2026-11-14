@@ -1,5 +1,5 @@
-import { openai } from "@/lib/openaiClient"
-import { AI_CHAT_MODEL } from "@/lib/ai/model"
+import { streamChatCompletion } from "@/lib/ai/chat-completion"
+import { AI_CHAT_MODELS } from "@/lib/ai/model"
 import { createAgentPlan } from "@/lib/ai/plan-step"
 import type { Citation, AgentMode, UserContextPayload, CoachChatMessage } from "@/lib/ai/types"
 import { chatWithRagRetrieve } from "@/lib/ai/rag-client"
@@ -57,13 +57,16 @@ export async function runAgent(params: {
   userContext: UserContextPayload
   conversationHistory: CoachChatMessage[]
   onToken: (token: string) => void
+  /** Aborted when the user goes away; stops the model calls without trying another model. */
+  signal?: AbortSignal
 }): Promise<AgentResult> {
-  const { message, sessionId, userContext, conversationHistory, onToken } = params
+  const { message, sessionId, userContext, conversationHistory, onToken, signal } = params
 
   const planStart = Date.now()
   const { messages, planChoice, parsed } = await createAgentPlan({
     message,
     conversationHistory,
+    signal,
   })
   const planMs = Date.now() - planStart
 
@@ -140,13 +143,14 @@ export async function runAgent(params: {
   )
 
   const genStart = Date.now()
-  const streamResponse = await openai.chat.completions.create({
-    model: AI_CHAT_MODEL,
-    messages,
-    stream: true,
-    temperature: 0.7,
-    max_tokens: 900,
-  })
+  // Moves to the next model only if the current one fails over (quota,
+  // unavailable, too slow) before it has shown any text; after that the
+  // reply is never switched.
+  const streamResponse = streamChatCompletion(
+    AI_CHAT_MODELS,
+    { messages, temperature: 0.7, max_tokens: 900 },
+    { signal }
+  )
 
   let fullAnswer = ""
   for await (const chunk of streamResponse) {

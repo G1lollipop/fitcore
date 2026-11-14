@@ -8,11 +8,10 @@ import {
 import { useT } from '@/lib/i18n/provider'
 import type { WorkoutLogItem } from '@/app/actions/types'
 import type { NutritionDayData } from '@/app/actions/history'
-import { toLocalDateStr } from '@/lib/utils/date'
+import { addDays, formatCalendarDate } from '@/lib/utils/date'
 import { sumMacros } from '@/lib/metrics/macros'
 
 interface TrendChartsProps {
-  date: Date
   dietWeekData?: Record<string, NutritionDayData>
   workoutWeekData?: Record<string, WorkoutLogItem[]>
   todayStr: string
@@ -32,14 +31,12 @@ function buildDietChartData(
     goal: number
   }> = []
   for (let i = 6; i >= 0; i--) {
-    const date = new Date(`${todayStr}T12:00:00`)
-    date.setDate(date.getDate() - i)
-    const dateStr = toLocalDateStr(date)
+    const dateStr = addDays(todayStr, -i)
     const day = weekData?.[dateStr]
     const totals = sumMacros(day?.dietLogs ?? [])
     data.push({
       date: dateStr,
-      label: date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
+      label: formatCalendarDate(dateStr, 'en-US', { weekday: 'short', day: 'numeric' }),
       calories: totals.calories,
       protein: totals.protein,
       carbs: totals.carbs,
@@ -62,9 +59,7 @@ function buildWorkoutChartData(
     kcal: number
   }> = []
   for (let i = 6; i >= 0; i--) {
-    const date = new Date(`${todayStr}T12:00:00`)
-    date.setDate(date.getDate() - i)
-    const dateStr = toLocalDateStr(date)
+    const dateStr = addDays(todayStr, -i)
     const logs = weekData?.[dateStr] ?? []
     const totals = logs.reduce(
       (acc, l) => ({
@@ -76,14 +71,14 @@ function buildWorkoutChartData(
     )
     data.push({
       date: dateStr,
-      label: date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
+      label: formatCalendarDate(dateStr, 'en-US', { weekday: 'short', day: 'numeric' }),
       ...totals,
     })
   }
   return data
 }
 
-export function TrendCharts({ date: _date, dietWeekData, workoutWeekData, todayStr }: TrendChartsProps) {
+export function TrendCharts({ dietWeekData, workoutWeekData, todayStr }: TrendChartsProps) {
   const t = useT()
   const dietData = buildDietChartData(todayStr, dietWeekData)
   const workoutData = buildWorkoutChartData(todayStr, workoutWeekData)

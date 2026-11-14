@@ -4,6 +4,7 @@ import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n/provider'
+import { formatCalendarDate, getTodayDate } from '@/lib/utils/date'
 
 interface TodayHeroProps {
   kcalIntake?: number
@@ -25,8 +26,13 @@ function clamp01(v: number) {
   return v >= 1 ? 1 : v
 }
 
-function formatDate(d: Date, locale: string): string {
-  return d.toLocaleDateString(locale, { month: 'long', day: 'numeric', weekday: 'long' })
+/** Today's heading, for the app's calendar day rather than the browser's. */
+function formatToday(locale: string): string {
+  return formatCalendarDate(getTodayDate(), locale, {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
 }
 
 /**
@@ -80,7 +86,7 @@ export function TodayHero({
     <>
       <header className="relative flex items-center justify-between">
         <h2 className="font-display text-sm font-semibold text-foreground">
-          {formatDate(new Date(), t.common.locale)}
+          {formatToday(t.common.locale)}
         </h2>
       </header>
 

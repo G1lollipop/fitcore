@@ -33,9 +33,14 @@ for _p in (str(_ROOT), str(_EVAL_DIR)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from langchain_openai import ChatOpenAI  # noqa: E402
+from langchain_core.language_models.chat_models import BaseChatModel  # noqa: E402
 
 from app.core.settings import get_settings  # noqa: E402
+from app.infra.llm_routing import (  # noqa: E402
+    GeminiFailoverChatModel,
+    build_chat_model,
+    primary_model_name,
+)
 from generation_metrics import (  # noqa: E402
     faithfulness_from_verdicts,
     split_atomic_claims,
@@ -45,12 +50,29 @@ DATASET_PATH = _EVAL_DIR / "golden_dataset_en.json"
 DEFAULT_BASELINE = _EVAL_DIR / "faithfulness_baseline.json"
 
 
-def _build_judge() -> ChatOpenAI:
+def _judge_model_name() -> str:
+    """The judge model tried first (a leftover retired default is not used)."""
+    settings = get_settings()
+    return primary_model_name(
+        os.getenv("EVAL_JUDGE_MODEL") or settings.rag_chat_model,
+        settings.llm_base_url,
+    )
+
+
+def _record_judge_model(judge: BaseChatModel) -> None:
+    """Remember which model answered the judge call that just succeeded."""
+    if isinstance(judge, GeminiFailoverChatModel) and judge.last_model_used:
+        _JUDGE_MODELS_USED.add(judge.last_model_used)
+    else:
+        _JUDGE_MODELS_USED.add(_judge_model_name())
+
+
+def _build_judge() -> BaseChatModel:
     settings = get_settings()
     if not settings.llm_api_key:
         raise RuntimeError("LLM API key not configured")
     model = os.getenv("EVAL_JUDGE_MODEL") or settings.rag_chat_model
-    return ChatOpenAI(
+    return build_chat_model(
         model=model,
         api_key=settings.llm_api_key,
         base_url=settings.llm_base_url,
@@ -58,11 +80,12 @@ def _build_judge() -> ChatOpenAI:
     )
 
 
-_JUDGE: ChatOpenAI | None = None
+_JUDGE: BaseChatModel | None = None
 _JUDGE_ERROR_COUNT = 0
+_JUDGE_MODELS_USED: set[str] = set()
 
 
-def get_judge() -> ChatOpenAI:
+def get_judge() -> BaseChatModel:
     global _JUDGE
     if _JUDGE is None:
         _JUDGE = _build_judge()
@@ -87,7 +110,9 @@ Claim to verify:
 Is the claim fully supported by the context (no information beyond what context states)?
 Answer ONLY "yes" or "no"."""
     try:
-        resp = get_judge().invoke(prompt)
+        judge = get_judge()
+        resp = judge.invoke(prompt)
+        _record_judge_model(judge)
         text = (resp.content or "").strip().lower()
         return text.startswith("yes") or text == "y"
     except Exception as exc:  # noqa: BLE001
@@ -109,7 +134,9 @@ Answer: {answer[:2000]}
 
 Reply JSON only: {{"score": <1-5>}}"""
     try:
-        resp = get_judge().invoke(prompt)
+        judge = get_judge()
+        resp = judge.invoke(prompt)
+        _record_judge_model(judge)
         text = (resp.content or "").strip()
         m = re.search(r"\{[^{}]+\}", text)
         if not m:
@@ -167,6 +194,7 @@ def evaluate_faithfulness(
 ) -> int:
     global _JUDGE_ERROR_COUNT
     _JUDGE_ERROR_COUNT = 0
+    _JUDGE_MODELS_USED.clear()
 
     dataset: list[dict] = json.loads(dataset_path.read_text(encoding="utf-8"))
     in_scope = [d for d in dataset if d.get("in_scope", True)]
@@ -225,6 +253,10 @@ def evaluate_faithfulness(
         "valid_cases": len(faith_scores),
         "chat_error_cases": len(in_scope) - len(faith_scores),
         "judge_error_count": _JUDGE_ERROR_COUNT,
+        # Metrics may combine judgments from the configured model and fallback
+        # models; retain that provenance alongside the existing score fields.
+        "judge_model": _judge_model_name(),
+        "judge_models_used": sorted(_JUDGE_MODELS_USED),
         "avg_faithfulness": round(sum(faith_scores) / max(len(faith_scores), 1), 4),
         "avg_answer_relevancy": round(sum(rel_scores) / max(len(rel_scores), 1), 4),
     }

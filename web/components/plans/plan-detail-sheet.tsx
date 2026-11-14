@@ -28,6 +28,7 @@ import { useT } from '@/lib/i18n/provider'
 import { tError } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { updatePlanStructure } from '@/app/actions/plans'
+import { getTodayDate, weekdayIndex } from '@/lib/utils/date'
 import { previewWorkoutPlan } from '@/app/actions/generatePlan'
 import { normalizePlanStructure, type PlanStructure, type PlanPreviewPayload } from '@/lib/plans/types'
 
@@ -94,10 +95,13 @@ function blankExercise(): ExerciseRow {
   return { name: '', sets: '3', repsMin: '8', repsMax: '12', weight: '' }
 }
 
-/** 0 = Mon … 6 = Sun, matching the stored 7-day array order. */
+/**
+ * 0 = Mon … 6 = Sun, matching the stored 7-day array order. The weekday of the
+ * app's calendar day — the same one the server uses to pick today's workout —
+ * not of the browser's clock.
+ */
 function todayWeekdayIndex(): number {
-  const day = new Date().getDay()
-  return day === 0 ? 6 : day - 1
+  return weekdayIndex(getTodayDate())
 }
 
 interface PlanDetailSheetProps {

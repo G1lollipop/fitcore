@@ -164,6 +164,9 @@ export async function POST(request: Request) {
           onToken: (token) => {
             controller.enqueue(encodeEvent({ type: "token", content: token }))
           },
+          // The user closing the chat cancels the model calls instead of
+          // letting them run on (or fail over to another model) unseen.
+          signal: request.signal,
         })
 
         // Persist before sending `done` so the stream doesn't finish ahead of
@@ -198,6 +201,15 @@ export async function POST(request: Request) {
         )
         controller.close()
       } catch (error) {
+        if (request.signal.aborted) {
+          // Nobody is listening any more: nothing to report.
+          try {
+            controller.close()
+          } catch {
+            // Already closed by the disconnect.
+          }
+          return
+        }
         console.error("[/api/ai/chat] agent error:", error)
         controller.enqueue(
           encodeEvent({

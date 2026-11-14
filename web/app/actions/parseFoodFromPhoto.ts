@@ -1,7 +1,7 @@
 'use server';
 
 import { randomUUID } from 'crypto';
-import { getGeminiVisionModel } from '@/lib/ai/gemini-client';
+import { generateVisionJson } from '@/lib/ai/gemini-client';
 import { authedUserId } from '@/lib/auth/require-user';
 import type { DietLogItem } from './types';
 
@@ -73,12 +73,11 @@ export async function parseFoodFromPhoto(
 
   let raw: string;
   try {
-    const model = getGeminiVisionModel();
-    const result = await model.generateContent([
+    const result = await generateVisionJson([
       PROMPT,
       { inlineData: { data: base64, mimeType } },
     ]);
-    raw = result.response.text() ?? '';
+    raw = result.text;
   } catch (error) {
     console.error('[parseFoodFromPhoto] Gemini call failed:', error);
     const message = error instanceof Error ? error.message : 'Recognition failed';

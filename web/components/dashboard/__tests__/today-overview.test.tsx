@@ -75,7 +75,8 @@ vi.mock('@/app/actions/history', () => ({
   getNutritionByDate: vi.fn().mockResolvedValue({ dietLogs: [] }),
 }))
 
-vi.mock('@/lib/utils/date', () => ({
+vi.mock('@/lib/utils/date', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/utils/date')>()),
   getTodayDate: () => '2026-07-08',
 }))
 

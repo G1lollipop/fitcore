@@ -1,10 +1,10 @@
 import type { ChatConversationSummary } from '@/app/actions/chat'
 import type { Dictionary } from '@/lib/i18n'
+import { formatClock, toLocalDateStr } from '@/lib/utils/date'
 
-/** Current wall-clock as HH:MM (24h, zero-padded). */
+/** Current wall-clock in the app time zone as HH:MM (24h, zero-padded). */
 export function nowHHMM(): string {
-  const d = new Date()
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  return formatClock()
 }
 
 /** Quick http(s)-URL test used to decide whether to render a citation source as a link. */
@@ -20,7 +20,9 @@ export function isHttpUrl(s: string): boolean {
 export function sessionSelectLabel(c: ChatConversationSummary, activeId: string, t: Dictionary): string {
   const short = c.conversationId === activeId ? t.aiChat.current : `…${c.conversationId.slice(-6)}`
   const d = c.lastAt ? new Date(c.lastAt) : new Date()
-  const md = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`
+  // Month/day of the conversation's last message on the app's calendar.
+  const [, month, day] = toLocalDateStr(d).split('-')
+  const md = `${month}/${day}`
   const pv = (c.preview || '').replace(/\s+/g, ' ').slice(0, 20)
   return pv ? `${short} ${md} · ${pv}` : `${short} ${md}`
 }

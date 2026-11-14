@@ -1,5 +1,6 @@
 // web/lib/training/session-state.ts
 import type { PlanDay, PlanExercise } from '@/lib/plans/types'
+import { toLocalDateStr } from '@/lib/utils/date'
 
 export interface CompletedSet {
   setNumber: number
@@ -217,6 +218,65 @@ export function loadTrainingSession(params: {
   const raw = localStorage.getItem(key)
   if (!raw) return null
   return deserializeSession(raw)
+}
+
+/**
+ * The zone the app calendar was kept in before it moved to America/Chicago.
+ * Drafts are stored under the calendar date of the day they were started, so
+ * one started before the move sits under that zone's date — a day ahead of the
+ * current app date for much of the day.
+ */
+const PREVIOUS_APP_TIME_ZONE = 'Asia/Shanghai'
+
+/** When the user last touched a draft: its start, or its latest logged set. */
+function lastActivity(session: TrainingSession): number {
+  return Math.max(
+    session.startedAt.getTime(),
+    ...session.exercises.flatMap((ex) => ex.completedSets.map((set) => set.loggedAt.getTime()))
+  )
+}
+
+/** Whether `candidate` should be resumed in preference to `other`. */
+function isNewerDraft(candidate: TrainingSession, other: TrainingSession): boolean {
+  // Two copies of one session: the edit counter says which is ahead.
+  if (candidate.requestId === other.requestId) return candidate.revision > other.revision
+  return lastActivity(candidate) > lastActivity(other)
+}
+
+export interface ResumableTrainingSession {
+  session: TrainingSession
+  /** The date the draft is stored under; keep reading and writing it there. */
+  date: string
+  /** True when that is the previous zone's date rather than today's. */
+  legacy: boolean
+}
+
+/**
+ * The unfinished workout to resume for today, if any.
+ *
+ * Normally that is the draft stored under today's date. While the previous
+ * zone's date differs from today's, a draft stored under *that* date is an
+ * unfinished workout from before the zone change, and is found too — otherwise
+ * it would vanish until the app calendar catches up with it.
+ *
+ * This only reads. A draft is resumed where it is stored (`date`), with its
+ * request id, revision and sets as they are; nothing is copied, moved or
+ * removed, so no draft can be overwritten. If both dates hold a draft, the one
+ * the user touched most recently is resumed and the other is left as it is.
+ */
+export function findResumableTrainingSession(
+  params: { userId: string; planId: string; dayId: string; date: string },
+  now: Date = new Date()
+): ResumableTrainingSession | null {
+  const current = loadTrainingSession(params)
+  const previousDate = toLocalDateStr(now, PREVIOUS_APP_TIME_ZONE)
+  const previous =
+    previousDate === params.date ? null : loadTrainingSession({ ...params, date: previousDate })
+
+  if (previous && (!current || isNewerDraft(previous, current))) {
+    return { session: previous, date: previousDate, legacy: true }
+  }
+  return current ? { session: current, date: params.date, legacy: false } : null
 }
 
 /**

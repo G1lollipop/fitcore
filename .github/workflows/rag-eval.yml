@@ -216,8 +216,8 @@ jobs:
           RETRIEVAL_VECTOR_WEIGHT: '0.8'
           RERANKER_ENABLED: 'false'
           CACHE_BACKEND: memory
-          RAG_CHAT_MODEL: gemini-2.5-flash
-          EVAL_JUDGE_MODEL: gemini-2.5-flash
+          RAG_CHAT_MODEL: gemini-4-hydrogen
+          EVAL_JUDGE_MODEL: gemini-4-hydrogen
         run: |
           nohup uvicorn backend_api:app --host 127.0.0.1 --port 8000 > backend.log 2>&1 &
           echo $! > backend.pid
@@ -240,7 +240,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RAG_SERVICE_URL: http://127.0.0.1:8000
-          EVAL_JUDGE_MODEL: gemini-2.5-flash
+          EVAL_JUDGE_MODEL: gemini-4-hydrogen
         run: python eval/evaluate.py
 
       - name: Enforce answer-level thresholds
@@ -290,7 +290,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RAG_SERVICE_URL: http://127.0.0.1:8000
-          EVAL_JUDGE_MODEL: gemini-2.5-flash
+          EVAL_JUDGE_MODEL: gemini-4-hydrogen
         run: python eval/eval_faithfulness.py --http --gate --tag nightly
 
       - name: Run abstention eval + gate

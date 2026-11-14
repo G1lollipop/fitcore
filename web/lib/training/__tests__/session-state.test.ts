@@ -1,5 +1,5 @@
 /// <reference types="@testing-library/jest-dom" />
-import { describe, it, expect, beforeEach } from 'vitest'
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest'
 import type { TrainingSession } from '@/lib/training/session-state'
 import {
   createTrainingSession,
@@ -12,6 +12,7 @@ import {
   loadTrainingSession,
   clearTrainingSession,
   clearTrainingSessionIfSaved,
+  findResumableTrainingSession,
 } from '@/lib/training/session-state'
 import type { PlanDay } from '@/lib/plans/types'
 
@@ -241,5 +242,119 @@ describe('session-state persistence helpers', () => {
       clearTrainingSession({ userId, planId, dayId: 'day-1', date })
       expect(loadTrainingSession({ userId, planId, dayId: 'day-1', date })).toBeNull()
     })
+  })
+})
+
+describe('findResumableTrainingSession — time zone cutover', () => {
+  const where = { userId: 'user-1', planId: 'plan-1', dayId: '' }
+  // 13:00 on 8 July in America/Chicago is already 02:00 on 9 July in
+  // Asia/Shanghai: a draft started under the old calendar sits under the 9th.
+  const now = new Date('2026-07-08T18:00:00Z')
+  const today = '2026-07-08'
+  const oldZoneDate = '2026-07-09'
+  const keyFor = (date: string) => buildTrainingSessionKey({ ...where, date })
+
+  /** A draft with `sets` logged sets, started (and last touched) around `startedAt`. */
+  function draftStartedAt(startedAt: string, sets: number): TrainingSession {
+    vi.setSystemTime(new Date(startedAt))
+    let session = makeSession()
+    for (let i = 0; i < sets; i++) session = logSet(session, 0, i + 1, 60 + 5 * i, 8)
+    return session
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers({ toFake: ['Date'] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('finds a draft stored under the old zone date while the two dates differ', () => {
+    const draft = draftStartedAt('2026-07-08T17:20:00Z', 2)
+    saveTrainingSession(draft, { ...where, date: oldZoneDate })
+    const storedBefore = localStorage.getItem(keyFor(oldZoneDate))
+
+    const found = findResumableTrainingSession({ ...where, date: today }, now)
+
+    expect(found).toMatchObject({ date: oldZoneDate, legacy: true })
+    // The session comes back exactly as it was saved.
+    expect(found!.session.requestId).toBe(draft.requestId)
+    expect(found!.session.revision).toBe(2)
+    expect(found!.session.exercises[0].completedSets).toEqual(draft.exercises[0].completedSets)
+    expect(found!.session.startedAt).toEqual(draft.startedAt)
+    // Looking it up moves and rewrites nothing.
+    expect(localStorage.getItem(keyFor(oldZoneDate))).toBe(storedBefore)
+    expect(localStorage.getItem(keyFor(today))).toBeNull()
+    expect(localStorage.length).toBe(1)
+  })
+
+  it('still finds a draft stored under today, and reports where it lives', () => {
+    const draft = draftStartedAt('2026-07-08T17:20:00Z', 1)
+    saveTrainingSession(draft, { ...where, date: today })
+
+    const found = findResumableTrainingSession({ ...where, date: today }, now)
+
+    expect(found).toMatchObject({ date: today, legacy: false })
+    expect(found!.session.requestId).toBe(draft.requestId)
+  })
+
+  it('does not look under another date when the two zones agree on the day', () => {
+    // 09:00 on 8 July in Chicago is 22:00 on 8 July in Shanghai.
+    const morning = new Date('2026-07-08T14:00:00Z')
+    saveTrainingSession(draftStartedAt('2026-07-08T13:00:00Z', 1), { ...where, date: oldZoneDate })
+
+    expect(findResumableTrainingSession({ ...where, date: today }, morning)).toBeNull()
+  })
+
+  it('returns nothing when there is no draft under either date', () => {
+    expect(findResumableTrainingSession({ ...where, date: today }, now)).toBeNull()
+  })
+
+  it('prefers a newer draft stored under today and leaves both untouched', () => {
+    const old = draftStartedAt('2026-07-08T15:00:00Z', 3)
+    const newer = draftStartedAt('2026-07-08T17:30:00Z', 1)
+    saveTrainingSession(old, { ...where, date: oldZoneDate })
+    saveTrainingSession(newer, { ...where, date: today })
+    const before = [localStorage.getItem(keyFor(oldZoneDate)), localStorage.getItem(keyFor(today))]
+
+    const found = findResumableTrainingSession({ ...where, date: today }, now)
+
+    // More sets do not make a draft newer; when it was last touched does.
+    expect(found).toMatchObject({ date: today, legacy: false })
+    expect(found!.session.requestId).toBe(newer.requestId)
+    expect([localStorage.getItem(keyFor(oldZoneDate)), localStorage.getItem(keyFor(today))]).toEqual(
+      before
+    )
+  })
+
+  it('prefers the old zone draft over an older one abandoned under today, and leaves both untouched', () => {
+    // Yesterday's abandoned draft happens to sit under what is now today's date.
+    const abandoned = draftStartedAt('2026-07-07T16:00:00Z', 2)
+    const unfinished = draftStartedAt('2026-07-08T17:20:00Z', 1)
+    saveTrainingSession(abandoned, { ...where, date: today })
+    saveTrainingSession(unfinished, { ...where, date: oldZoneDate })
+    const before = [localStorage.getItem(keyFor(oldZoneDate)), localStorage.getItem(keyFor(today))]
+
+    const found = findResumableTrainingSession({ ...where, date: today }, now)
+
+    expect(found).toMatchObject({ date: oldZoneDate, legacy: true })
+    expect(found!.session.requestId).toBe(unfinished.requestId)
+    expect([localStorage.getItem(keyFor(oldZoneDate)), localStorage.getItem(keyFor(today))]).toEqual(
+      before
+    )
+  })
+
+  it('takes the copy with the higher revision when both dates hold the same session', () => {
+    const behind = draftStartedAt('2026-07-08T17:20:00Z', 1)
+    const ahead = logSet(behind, 0, 2, 65, 8)
+    saveTrainingSession(behind, { ...where, date: oldZoneDate })
+    saveTrainingSession(ahead, { ...where, date: today })
+
+    const found = findResumableTrainingSession({ ...where, date: today }, now)
+
+    expect(found).toMatchObject({ date: today, legacy: false })
+    expect(found!.session.revision).toBe(2)
   })
 })

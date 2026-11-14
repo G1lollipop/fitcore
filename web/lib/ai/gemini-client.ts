@@ -11,9 +11,8 @@
  * Never import from client components.
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const DEFAULT_VISION_MODEL = 'gemini-2.5-flash';
+import { GoogleGenerativeAI, type Part } from '@google/generative-ai';
+import { GEMINI_VISION_MODELS, withModelFallback, type FallbackOptions } from '@/lib/ai/model';
 
 let _client: GoogleGenerativeAI | null = null;
 
@@ -29,11 +28,33 @@ function getClient(): GoogleGenerativeAI {
   return _client;
 }
 
-export function getGeminiVisionModel() {
-  const modelName = process.env.GEMINI_VISION_MODEL || DEFAULT_VISION_MODEL;
-  return getClient().getGenerativeModel({
-    model: modelName,
-    // Force JSON output. Less prompt-engineering, no markdown-fence stripping.
-    generationConfig: { responseMimeType: 'application/json' },
-  });
+/**
+ * Ask the vision model for a JSON answer about the given prompt + image parts.
+ *
+ * Models are tried in the configured order (`GEMINI_VISION_MODEL` first when
+ * set, then gemini-4-hydrogen → gemini-3.8-flash → gemini-3.6-flash); the next
+ * one is used when the current one is out of quota, unavailable, or does not
+ * answer in time. Every model gets the same request, with JSON output forced,
+ * so the caller parses the reply the same way whichever model produced it.
+ */
+export async function generateVisionJson(
+  parts: Array<string | Part>,
+  models: readonly string[] = GEMINI_VISION_MODELS,
+  options: FallbackOptions = {}
+): Promise<{ text: string; model: string }> {
+  return withModelFallback(
+    models,
+    async (model, attempt) => {
+      const result = await getClient()
+        .getGenerativeModel({
+          model,
+          // Force JSON output. Less prompt-engineering, no markdown-fence stripping.
+          generationConfig: { responseMimeType: 'application/json' },
+        })
+        // The signal cancels the request when the attempt is given up on.
+        .generateContent(parts, { signal: attempt.signal, timeout: attempt.timeoutMs });
+      return { text: result.response.text() ?? '', model };
+    },
+    options
+  );
 }

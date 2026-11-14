@@ -19,7 +19,7 @@ const input: FinishTrainingInput = {
   revision: 3,
   planId,
   workoutName: 'Push Day',
-  startedAt: '2026-07-07T16:00:00.000Z',
+  startedAt: '2026-07-08T04:00:00.000Z',
   exercises: [
     {
       name: 'Bench Press',
@@ -160,8 +160,9 @@ function fakeDatabase() {
 beforeEach(() => {
   vi.resetAllMocks()
   vi.useFakeTimers()
-  // 16:45 UTC on the 7th is already 00:45 on the 8th in the app time zone.
-  vi.setSystemTime(new Date('2026-07-07T16:45:00.000Z'))
+  // 04:45 UTC on the 8th is still 23:45 on the 7th in the app time zone
+  // (America/Chicago, CDT) — the UTC date is a day ahead.
+  vi.setSystemTime(new Date('2026-07-08T04:45:00.000Z'))
   mocks.auth.mockResolvedValue({ ok: true, userId: 'user-1' })
 })
 
@@ -182,7 +183,7 @@ describe('finishTrainingSession', () => {
       p_user_id: 'user-1',
       p_request_id: requestId,
       p_revision: 3,
-      p_date: '2026-07-08',
+      p_date: '2026-07-07',
       p_plan_id: planId,
       p_workout_name: 'Push Day',
       p_duration_minutes: 45,
@@ -195,6 +196,28 @@ describe('finishTrainingSession', () => {
     })
     expect(db.sets.get(requestId)).toHaveLength(3)
     expect(mocks.revalidate).toHaveBeenCalledWith('/')
+  })
+
+  it('dates the workout by the app calendar on either side of Chicago midnight', async () => {
+    fakeDatabase()
+    const dateSent = () => mocks.rpc.mock.calls.at(-1)![1].p_date
+    const other = (id: string) => ({ ...input, requestId: id })
+
+    // 23:59 CDT on the 7th, then 00:00 CDT on the 8th.
+    vi.setSystemTime(new Date('2026-07-08T04:59:00.000Z'))
+    await finishTrainingSession(other('11111111-1111-4111-8111-111111111111'))
+    expect(dateSent()).toBe('2026-07-07')
+    vi.setSystemTime(new Date('2026-07-08T05:00:00.000Z'))
+    await finishTrainingSession(other('22222222-2222-4222-8222-222222222222'))
+    expect(dateSent()).toBe('2026-07-08')
+
+    // In winter (CST) midnight is an hour later in UTC.
+    vi.setSystemTime(new Date('2026-01-15T05:30:00.000Z'))
+    await finishTrainingSession(other('33333333-3333-4333-8333-333333333333'))
+    expect(dateSent()).toBe('2026-01-14')
+    vi.setSystemTime(new Date('2026-01-15T06:00:00.000Z'))
+    await finishTrainingSession(other('44444444-4444-4444-8444-444444444444'))
+    expect(dateSent()).toBe('2026-01-15')
   })
 
   it('reports failure and stores nothing when the sets cannot be saved', async () => {
@@ -230,7 +253,7 @@ describe('finishTrainingSession', () => {
     // Ten minutes later the same snapshot is sent again: same request id, same
     // revision, same sets. It is confirmed as already stored.
     db.dropResponse(false)
-    vi.setSystemTime(new Date('2026-07-07T16:55:00.000Z'))
+    vi.setSystemTime(new Date('2026-07-08T04:55:00.000Z'))
     expect(await finishTrainingSession(input)).toEqual(saved(3))
 
     expect(mocks.rpc.mock.calls.map(([, args]) => [args.p_request_id, args.p_revision])).toEqual([
@@ -256,7 +279,7 @@ describe('finishTrainingSession', () => {
     expect(db.workouts.size).toBe(1)
     expect(db.sets.get(requestId)).toHaveLength(4)
     // The workout stays on the day it was first saved.
-    expect(db.workouts.get(requestId)?.date).toBe('2026-07-08')
+    expect(db.workouts.get(requestId)?.date).toBe('2026-07-07')
   })
 
   it('reports a conflict, and overwrites nothing, when another snapshot has the same revision', async () => {

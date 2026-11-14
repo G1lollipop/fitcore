@@ -5,6 +5,7 @@ import { Flame, UtensilsCrossed } from 'lucide-react'
 import type { WeeklyTrendData, WeeklyTrendDay } from '@/app/actions/types'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n/provider'
+import { formatCalendarDate, getTodayDate } from '@/lib/utils/date'
 import { useTabActive } from '@/components/dashboard/tab-active-context'
 
 interface WeeklyActivityProps {
@@ -17,10 +18,11 @@ function monFirstIndex(jsDay: number): number {
   return (jsDay + 6) % 7
 }
 
-/** Week-of-month (1-based) for a given date, matching the server heuristic. */
-function weekOfMonth(date: Date): number {
-  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay()
-  return Math.ceil((date.getDate() + firstDay) / 7)
+/** Week-of-month (1-based) for a `YYYY-MM-DD` date, matching the server heuristic. */
+function weekOfMonth(dateStr: string): number {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const firstDay = new Date(Date.UTC(y, m - 1, 1)).getUTCDay()
+  return Math.ceil((d + firstDay) / 7)
 }
 
 const containerVariants = {
@@ -74,11 +76,12 @@ export function WeeklyActivity({ data, className }: WeeklyActivityProps) {
     }
     return day.dayLabel
   }
-  // Derive the week label from the client clock so it follows the selected
-  // language, instead of using the server-rendered Chinese label.
-  const now = new Date()
-  const monthName = now.toLocaleDateString(t.common.locale, { month: 'long' })
-  const weekLabel = data ? t.dashboard.weeklyTrend.weekLabel(monthName, weekOfMonth(now)) : ''
+  // Derive the week label on the client so it follows the selected language,
+  // from the app's calendar day (not the browser's clock) so it names the same
+  // week the server built the trend for.
+  const today = getTodayDate()
+  const monthName = formatCalendarDate(today, t.common.locale, { month: 'long' })
+  const weekLabel = data ? t.dashboard.weeklyTrend.weekLabel(monthName, weekOfMonth(today)) : ''
   // The peak number we scale bars against — guard against zero so the empty
   // state doesn't divide by zero.
   const max = Math.max(1, data?.maxKcal ?? 0)

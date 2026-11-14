@@ -1,7 +1,7 @@
 'use server';
 
-import { openai } from '@/lib/openaiClient';
-import { AI_CHAT_MODEL } from '@/lib/ai/model';
+import { createChatCompletion } from '@/lib/ai/chat-completion';
+import { AI_CHAT_MODEL, AI_CHAT_MODELS } from '@/lib/ai/model';
 import { authedUserId } from '@/lib/auth/require-user';
 import { ActionError } from '@/lib/errors';
 import {
@@ -128,18 +128,23 @@ const clampInt = (v: unknown, min: number, max: number, fallback: number): numbe
  * free-text exercises, then normalize into `CustomPlanDay[]`. Does not persist.
  * No exercise catalog — the app is AI-first and stores exercises as free text.
  */
+/**
+ * A whole multi-day plan is by far the longest reply the app asks for, so each
+ * model gets longer to produce it than the default before the next is tried.
+ */
+const PLAN_GENERATION_TIMEOUTS = { attemptTimeoutMs: 60_000, totalTimeoutMs: 120_000 };
+
 async function buildPlanStructureFromGoal(goalText: string): Promise<BuildResult> {
   let generated: GeneratedPlan | null = null;
   try {
-    const response = await openai.chat.completions.create({
-      model: AI_CHAT_MODEL,
+    const response = await createChatCompletion(AI_CHAT_MODELS, {
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: `User goal: ${goalText}` },
       ],
       response_format: { type: 'json_object' },
       temperature: 0.4,
-    });
+    }, PLAN_GENERATION_TIMEOUTS);
     const content = response.choices[0]?.message?.content;
     if (content) generated = safeParseJson(content);
   } catch (error) {
