@@ -1,5 +1,5 @@
 import { streamChatCompletion } from "@/lib/ai/chat-completion"
-import { AI_CHAT_MODELS } from "@/lib/ai/model"
+import { AI_CHAT_MODELS, AI_USES_GOOGLE } from "@/lib/ai/model"
 import { createAgentPlan } from "@/lib/ai/plan-step"
 import type { Citation, AgentMode, UserContextPayload, CoachChatMessage } from "@/lib/ai/types"
 import { chatWithRagRetrieve } from "@/lib/ai/rag-client"
@@ -48,6 +48,14 @@ export interface AgentResult {
     promptCharsApprox: number
     completionChars: number
     completionTokensApprox: number
+  }
+}
+
+/** Empty message lets the chat route use its localized generic stream error. */
+class EmptyAgentResponseError extends Error {
+  constructor() {
+    super("")
+    this.name = "EmptyAgentResponseError"
   }
 }
 
@@ -146,20 +154,31 @@ export async function runAgent(params: {
   // Moves to the next model only if the current one fails over (quota,
   // unavailable, too slow) before it has shown any text; after that the
   // reply is never switched.
+  const generationParams = AI_USES_GOOGLE
+    ? { messages, max_tokens: 4096, reasoning_effort: "low" as const }
+    : { messages, temperature: 0.7, max_tokens: 900 }
   const streamResponse = streamChatCompletion(
     AI_CHAT_MODELS,
-    { messages, temperature: 0.7, max_tokens: 900 },
+    generationParams,
     { signal }
   )
 
   let fullAnswer = ""
+  let hasVisibleContent = false
   for await (const chunk of streamResponse) {
     const token = chunk.choices[0]?.delta?.content ?? ""
     if (token) {
       fullAnswer += token
-      onToken(token)
+      if (!hasVisibleContent) {
+        if (!/\S/.test(token)) continue
+        hasVisibleContent = true
+        onToken(fullAnswer)
+      } else {
+        onToken(token)
+      }
     }
   }
+  if (!hasVisibleContent) throw new EmptyAgentResponseError()
   const generationMs = Date.now() - genStart
 
   const hasKnowledge = toolsUsed.includes("query_knowledge_base")

@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ create: vi.fn() }))
 vi.mock('@/lib/openaiClient', () => ({ openai: { chat: { completions: { create: mocks.create } } } }))
 vi.mock('@/lib/ai/rag-client', () => ({ chatWithRagRetrieve: vi.fn() }))
+vi.mock('@/lib/ai/model', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/ai/model')>()),
+  AI_USES_GOOGLE: true,
+}))
 
 import { runAgent } from '@/lib/ai/agent'
 import { GEMINI_GENERATION_MODELS } from '@/lib/ai/model'
@@ -20,15 +24,28 @@ let streams: Record<string, Step[]>
 let planRateLimited: string[]
 const asked: Array<{ model: string; kind: 'plan' | 'stream' }> = []
 const signals: Array<AbortSignal | undefined> = []
+const generationRequests: Array<{
+  model: string
+  temperature?: number
+  max_tokens?: number
+  reasoning_effort?: string
+}> = []
 
 beforeEach(() => {
   streams = {}
   planRateLimited = []
   asked.length = 0
   signals.length = 0
+  generationRequests.length = 0
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   mocks.create.mockReset()
-  mocks.create.mockImplementation(async (params: { model: string; stream?: boolean }, options?: { signal?: AbortSignal }) => {
+  mocks.create.mockImplementation(async (params: {
+    model: string
+    stream?: boolean
+    temperature?: number
+    max_tokens?: number
+    reasoning_effort?: string
+  }, options?: { signal?: AbortSignal }) => {
     asked.push({ model: params.model, kind: params.stream ? 'stream' : 'plan' })
     signals.push(options?.signal)
     if (!params.stream) {
@@ -36,6 +53,12 @@ beforeEach(() => {
       // The planner answers directly: no tools to run.
       return { model: params.model, choices: [{ index: 0, finish_reason: 'stop', message: { role: 'assistant', content: null } }] }
     }
+    generationRequests.push({
+      model: params.model,
+      temperature: params.temperature,
+      max_tokens: params.max_tokens,
+      reasoning_effort: params.reasoning_effort,
+    })
     const steps = streams[params.model] ?? []
     if (steps[0] instanceof Error) throw steps[0]
     return (async function* () {
@@ -75,6 +98,39 @@ describe('coach answer streaming', () => {
       { model: HYDROGEN, kind: 'plan' },
       { model: HYDROGEN, kind: 'stream' },
     ])
+  })
+
+  it('uses a bounded low-reasoning budget for Google final answer generation', async () => {
+    streams = { [HYDROGEN]: ['A concise answer.'] }
+    await ask().result
+
+    expect(generationRequests).toHaveLength(1)
+    expect(generationRequests[0]).toMatchObject({
+      model: HYDROGEN,
+      max_tokens: 4096,
+      reasoning_effort: 'low',
+    })
+    expect(generationRequests[0]?.temperature).toBeUndefined()
+  })
+
+  it('preserves leading whitespace when visible answer text follows', async () => {
+    streams = { [HYDROGEN]: ['  \n', 'A concise answer.'] }
+    const { tokens, result } = ask()
+
+    expect((await result).answer).toBe('  \nA concise answer.')
+    expect(tokens.join('')).toBe('  \nA concise answer.')
+  })
+
+  it.each([
+    { label: 'no answer chunks', chunks: [] as Step[] },
+    { label: 'whitespace only', chunks: ['  ', '\n\t'] },
+  ])('rejects a clean $label response without emitting blank tokens', async ({ chunks }) => {
+    streams = { [HYDROGEN]: chunks }
+    const { tokens, result } = ask()
+
+    await expect(result).rejects.toMatchObject({ name: 'EmptyAgentResponseError', message: '' })
+    expect(tokens).toEqual([])
+    expect(asked.filter((entry) => entry.kind === 'stream').map((entry) => entry.model)).toEqual([HYDROGEN])
   })
 
   it('answers from the next model when the first is rate-limited before any text', async () => {
