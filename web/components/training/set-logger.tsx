@@ -109,6 +109,7 @@ function CompletedSetRow({
         {set.weightKg != null && set.reps != null && ' × '}
         {set.reps != null && `${set.reps} reps`}
       </span>
+      {/* Always visible on touch screens, which have no hover. */}
       {onRemove && (
         <button
           type="button"
@@ -116,7 +117,8 @@ function CompletedSetRow({
             e.stopPropagation()
             onRemove()
           }}
-          className="shrink-0 flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+          aria-label="Remove set"
+          className="shrink-0 flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
         >
           <X size={12} />
         </button>

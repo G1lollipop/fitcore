@@ -221,6 +221,9 @@ export function HomePlanSection({ info, userId, onLogged, className }: HomePlanS
             onFinish={() => {
               setTrainingOpen(false)
               refreshPlan()
+              // The finished workout is a new log: refresh Today's totals and
+              // the Record tab like every other logging surface does.
+              onLogged?.()
             }}
           />
         )}

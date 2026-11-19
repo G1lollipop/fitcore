@@ -73,8 +73,10 @@ export function TodayOverview({
         className
       )}
     >
-      <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/5 blur-3xl" aria-hidden />
-      <div className="absolute -bottom-24 -left-12 h-48 w-48 rounded-full bg-accent/10 blur-3xl" aria-hidden />
+      {/* Decorative glows: positioned, so they paint above the card's controls
+          ("Edit targets" sits under the top-right one) — never catch taps. */}
+      <div className="pointer-events-none absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/5 blur-3xl" aria-hidden />
+      <div className="pointer-events-none absolute -bottom-24 -left-12 h-48 w-48 rounded-full bg-accent/10 blur-3xl" aria-hidden />
 
       <div className="flex items-stretch gap-3 md:gap-4">
         {/* Left: calorie ring */}

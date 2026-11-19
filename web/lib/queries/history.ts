@@ -15,6 +15,9 @@ import type { QuickLogResult } from '@/app/actions/quickLog'
  */
 export const nutritionKey = (dateStr: string) => ['nutrition', dateStr] as const
 export const workoutsKey = (dateStr: string) => ['workouts', dateStr] as const
+/** Prefixes of the Record tab's date-range queries (see `history-center.tsx`). */
+export const nutritionRangeKey = ['nutrition', 'range'] as const
+export const workoutsRangeKey = ['workouts', 'range'] as const
 
 const FALLBACK_GOALS = { calories: 2500, protein: 150, carbs: 300, fat: 80 } as const
 
@@ -29,12 +32,20 @@ const FALLBACK_GOALS = { calories: 2500, protein: 150, carbs: 300, fat: 80 } as 
 export function useHistoryActions() {
   const qc = useQueryClient()
 
+  // Each patch also goes to every loaded Record range that holds the day —
+  // Record renders from those, so the change shows there at once instead of
+  // after a refetch (several seconds: server actions run one at a time).
   const patchNutrition = useCallback(
     (dateStr: string, fn: (logs: DietLogItem[]) => DietLogItem[]) => {
       qc.setQueryData<NutritionDayData>(nutritionKey(dateStr), (old) => ({
         goals: old?.goals ?? { ...FALLBACK_GOALS },
         dietLogs: fn(old?.dietLogs ?? []),
       }))
+      qc.setQueriesData<Record<string, NutritionDayData>>({ queryKey: nutritionRangeKey }, (old) =>
+        old?.[dateStr]
+          ? { ...old, [dateStr]: { ...old[dateStr], dietLogs: fn(old[dateStr].dietLogs) } }
+          : old
+      )
     },
     [qc]
   )
@@ -42,6 +53,9 @@ export function useHistoryActions() {
   const patchWorkouts = useCallback(
     (dateStr: string, fn: (logs: WorkoutLogItem[]) => WorkoutLogItem[]) => {
       qc.setQueryData<WorkoutLogItem[]>(workoutsKey(dateStr), (old) => fn(old ?? []))
+      qc.setQueriesData<Record<string, WorkoutLogItem[]>>({ queryKey: workoutsRangeKey }, (old) =>
+        old?.[dateStr] ? { ...old, [dateStr]: fn(old[dateStr]) } : old
+      )
     },
     [qc]
   )
@@ -146,11 +160,18 @@ export function useHistoryActions() {
     [patchNutrition, patchWorkouts]
   )
 
-  /** Background refetch of both day caches to reconcile against the server. */
+  /**
+   * Background refetch of a day to reconcile against the server: its own
+   * caches and the Record tab's range queries, which are what Record actually
+   * renders (`['nutrition'|'workouts', 'range', …]` — not matched by the
+   * day's key, so without this a change stays invisible there).
+   */
   const invalidateDate = useCallback(
     (dateStr: string) => {
       void qc.invalidateQueries({ queryKey: nutritionKey(dateStr) })
       void qc.invalidateQueries({ queryKey: workoutsKey(dateStr) })
+      void qc.invalidateQueries({ queryKey: nutritionRangeKey })
+      void qc.invalidateQueries({ queryKey: workoutsRangeKey })
     },
     [qc]
   )

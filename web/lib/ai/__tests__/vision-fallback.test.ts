@@ -75,12 +75,16 @@ describe('generateVisionJson', () => {
     const result = await generateVisionJson(parts, GEMINI_GENERATION_MODELS, QUICK)
 
     expect(modelsAsked()).toEqual([HYDROGEN, FLASH_38, FLASH_36])
-    // Same image and JSON settings for every model, each with its own time limit.
-    for (const [, input, options] of mocks.generateContent.mock.calls) {
+    // Same image and JSON settings for every model, each with its own time
+    // limit: the attempt limit, except for the last model, which has nothing
+    // to fall back to and gets what is left of the total.
+    const calls = mocks.generateContent.mock.calls
+    calls.forEach(([, input, options], i) => {
       expect(input).toBe(parts)
-      expect(options.timeout).toBeLessThanOrEqual(QUICK.attemptTimeoutMs)
+      const limit = i === calls.length - 1 ? QUICK.totalTimeoutMs : QUICK.attemptTimeoutMs
+      expect(options.timeout).toBeLessThanOrEqual(limit)
       expect(options.signal).toBeInstanceOf(AbortSignal)
-    }
+    })
     for (const [config] of mocks.getGenerativeModel.mock.calls) {
       expect(config.generationConfig).toEqual({ responseMimeType: 'application/json' })
     }

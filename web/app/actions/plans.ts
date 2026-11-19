@@ -143,10 +143,51 @@ export async function deletePlan(planId: string) {
   try {
     planLogger.info('Deleting plan', { planId });
 
+    // The active plan is referenced from user_settings without ON DELETE, so
+    // deleting it directly fails on the foreign key: unset it first, and put
+    // it back if the delete then fails, so the user is never left with a plan
+    // that still exists but is no longer selected.
+    const { data: settings, error: readError } = await supabase
+      .from('user_settings')
+      .select('current_plan_id, current_plan_start_date')
+      .eq('user_id', a.userId)
+      .single();
+    if (readError && readError.code !== 'PGRST116') {
+      planLogger.error('Failed to read current plan', { error: readError.message, planId });
+      throw new Error(readError.message);
+    }
+    const wasCurrent = settings?.current_plan_id === planId;
+
+    if (wasCurrent) {
+      const { error: unsetError } = await supabase
+        .from('user_settings')
+        .update({ current_plan_id: null, current_plan_start_date: null })
+        .eq('user_id', a.userId)
+        .eq('current_plan_id', planId);
+      if (unsetError) {
+        planLogger.error('Failed to unset current plan', { error: unsetError.message, planId });
+        throw new Error(unsetError.message);
+      }
+    }
+
     const { error } = await supabase.from('workout_plans').delete().eq('id', planId);
 
     if (error) {
       planLogger.error('Failed to delete plan', { error: error.message, planId });
+      if (wasCurrent) {
+        // Only while nothing else has been selected in the meantime.
+        const { error: restoreError } = await supabase
+          .from('user_settings')
+          .update({
+            current_plan_id: planId,
+            current_plan_start_date: settings?.current_plan_start_date ?? null,
+          })
+          .eq('user_id', a.userId)
+          .is('current_plan_id', null);
+        if (restoreError) {
+          planLogger.error('Failed to restore current plan', { error: restoreError.message, planId });
+        }
+      }
       throw new Error(error.message);
     }
 

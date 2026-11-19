@@ -257,6 +257,24 @@ describe('withModelFallback', () => {
     expect(elapsedMs).toBeLessThan(500)
   })
 
+  it('lets the last model use the rest of the total time instead of cutting it off', async () => {
+    // Seen live: Hydrogen out of quota, 3.8 overloaded, and 3.6 answering in
+    // 35–50 s against a 30 s attempt limit. Nothing comes after the last
+    // model, so stopping it at the attempt limit could only fail the call.
+    const result = await withModelFallback(
+      GEMINI_GENERATION_MODELS,
+      async (model, attempt) => {
+        if (model === HYDROGEN) throw rateLimited()
+        if (model === FLASH_38) throw overloaded()
+        expect(attempt.timeoutMs).toBeGreaterThan(QUICK.attemptTimeoutMs)
+        await new Promise((resolve) => setTimeout(resolve, QUICK.attemptTimeoutMs * 3))
+        return `answer from ${model}`
+      },
+      QUICK
+    )
+    expect(result).toBe(`answer from ${FLASH_36}`)
+  })
+
   it('reports the last error when every model fails over', async () => {
     const { tried, result } = await tryModels({
       [HYDROGEN]: rateLimited,

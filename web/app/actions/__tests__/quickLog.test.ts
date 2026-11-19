@@ -79,9 +79,24 @@ describe('unified quick logging', () => {
   it('does not try another model when the request itself is rejected', async () => {
     mocks.completion.mockRejectedValue(Object.assign(new Error('400 Invalid argument'), { status: 400 }))
 
-    await expect(quickLog('sandwich', requestId)).rejects.toMatchObject({ status: 400 })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await quickLog('sandwich', requestId)).toEqual({ success: false, error: 'AI_PARSE_FAILED' })
     expect(mocks.completion).toHaveBeenCalledTimes(1)
     expect(mocks.completion.mock.calls[0][0].model).toBe('gemini-4-hydrogen')
+  })
+
+  it('returns AI_UNAVAILABLE, not the provider text, when no model can answer', async () => {
+    // Seen live: every model out of quota or overloaded. The raw error used to
+    // reach the screen as "503 status code (no body)".
+    mocks.completion
+      .mockRejectedValueOnce(Object.assign(new Error('429 status code (no body)'), { status: 429 }))
+      .mockRejectedValueOnce(Object.assign(new Error('503 status code (no body)'), { status: 503 }))
+      .mockRejectedValueOnce(Object.assign(new Error('503 status code (no body)'), { status: 503 }))
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    expect(await quickLog('sandwich', requestId)).toEqual({ success: false, error: 'AI_UNAVAILABLE' })
+    expect(mocks.rpc.mock.calls.every(([name]) => name === 'get_quick_log_result')).toBe(true)
   })
 
   it('keeps workout-only logging independent of the nutrition service', async () => {
@@ -93,8 +108,9 @@ describe('unified quick logging', () => {
 
   it('does not save the workout if food nutrition parsing fails', async () => {
     split([food, workout])
-    mocks.nutrition.mockRejectedValue(new Error('Modal unavailable'))
-    await expect(quickLog('sandwich and walking', requestId)).rejects.toThrow('Modal unavailable')
+    mocks.nutrition.mockRejectedValue(new Error('Modal API returned 503'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await quickLog('sandwich and walking', requestId)).toEqual({ success: false, error: 'AI_UNAVAILABLE' })
     expect(mocks.rpc.mock.calls.every(([name]) => name === 'get_quick_log_result')).toBe(true)
     expect(mocks.revalidate).not.toHaveBeenCalled()
   })

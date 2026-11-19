@@ -12,6 +12,8 @@ export const ActionError = {
   MISSING_ORIGINAL_ID: 'MISSING_ORIGINAL_ID',
   AI_PARSE_FAILED: 'AI_PARSE_FAILED',
   AI_PARSE_EMPTY: 'AI_PARSE_EMPTY',
+  /** Every AI model (or the nutrition model) was out of quota, unavailable, or too slow. */
+  AI_UNAVAILABLE: 'AI_UNAVAILABLE',
   DB_QUERY_FAILED: 'DB_QUERY_FAILED',
   DB_INSERT_FAILED: 'DB_INSERT_FAILED',
   DB_UPDATE_FAILED: 'DB_UPDATE_FAILED',

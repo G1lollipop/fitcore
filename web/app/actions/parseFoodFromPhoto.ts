@@ -3,6 +3,8 @@
 import { randomUUID } from 'crypto';
 import { generateVisionJson } from '@/lib/ai/gemini-client';
 import { authedUserId } from '@/lib/auth/require-user';
+import { failoverReason } from '@/lib/ai/model';
+import { ActionError } from '@/lib/errors';
 import type { DietLogItem } from './types';
 
 /**
@@ -80,6 +82,11 @@ export async function parseFoodFromPhoto(
     raw = result.text;
   } catch (error) {
     console.error('[parseFoodFromPhoto] Gemini call failed:', error);
+    // Out of quota, unavailable or too slow on every model: say so plainly
+    // rather than showing the SDK's raw error text.
+    if (failoverReason(error) !== null) {
+      return { success: false, error: ActionError.AI_UNAVAILABLE };
+    }
     const message = error instanceof Error ? error.message : 'Recognition failed';
     if (/fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT/i.test(message)) {
       return {

@@ -13,7 +13,12 @@ export type AgentMode = "knowledge" | "personal" | "hybrid" | "direct"
 export type AgentSSEEvent =
   | { type: "token"; content: string }
   | { type: "done"; mode: AgentMode; citations: Citation[]; toolsUsed: string[]; meta: AIChatMeta }
-  | { type: "error"; message: string }
+  | {
+      type: "error"
+      message: string
+      /** `ai_unavailable`: every model was out of quota, unavailable or too slow. */
+      code?: "ai_unavailable"
+    }
 
 export interface AIChatMeta {
   latencyMs?: number

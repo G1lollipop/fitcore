@@ -18,6 +18,9 @@ export interface UseChatStreamResult {
   sendMessage: (text: string) => Promise<void>
 }
 
+/** The server answered with an HTTP error; its message is already localized. */
+class RequestFailedError extends Error {}
+
 /**
  * One SSE block = `data: {json}\n\n`. Returns the parsed event, or `null`
  * if the block has no usable data line / fails to JSON-parse.
@@ -75,14 +78,44 @@ function applyEvent(
   }
 
   if (event.type === 'error') {
+    const text =
+      event.code === 'ai_unavailable' ? t.aiChat.busy : event.message || t.aiChat.streamError
     setMessages((prev) =>
-      prev.map((m) =>
-        m.id === aiMsgId
-          ? { ...m, content: event.message || t.aiChat.streamError, isStreaming: false }
-          : m
-      )
+      prev.map((m) => {
+        if (m.id !== aiMsgId) return m
+        // Text already shown stays: an error after the answer started means it
+        // was cut off, not that the visible part is wrong.
+        const content = m.content.trim() ? `${m.content}\n\n${t.aiChat.interrupted}` : text
+        return { ...m, content, isStreaming: false }
+      })
     )
   }
+}
+
+/**
+ * The stream closed without a `done` or `error` event (server crash, proxy
+ * timeout, dropped connection). Stop the cursor and say the answer was cut
+ * off, keeping any text that did arrive — otherwise the bubble blinks forever,
+ * blank or half-written, with nothing telling the user to ask again.
+ */
+function finishInterrupted(
+  aiMsgId: string,
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
+  t: Dictionary
+) {
+  setMessages((prev) =>
+    prev.map((m) =>
+      m.id === aiMsgId && m.isStreaming
+        ? {
+            ...m,
+            content: m.content.trim()
+              ? `${m.content}\n\n${t.aiChat.interrupted}`
+              : t.aiChat.interrupted,
+            isStreaming: false,
+          }
+        : m
+    )
+  )
 }
 
 /**
@@ -142,13 +175,19 @@ export function useChatStream({
         })
 
         if (!response.ok || !response.body) {
-          throw new Error(t.aiChat.requestFailed(response.status))
+          throw new RequestFailedError(t.aiChat.requestFailed(response.status))
         }
 
         // 3. Read the SSE stream. Each "block" is terminated with \n\n.
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
         let buffer = ''
+        let finished = false
+        const handle = (event: AgentSSEEvent | null) => {
+          if (!event) return
+          if (event.type === 'done' || event.type === 'error') finished = true
+          applyEvent(event, aiMsgId, setMessages, t, onAssistantDone)
+        }
 
         while (true) {
           const { done, value } = await reader.read()
@@ -159,34 +198,27 @@ export function useChatStream({
           // Last item may be a partial block — keep it for the next read.
           buffer = blocks.pop() ?? ''
 
-          for (const block of blocks) {
-            const event = parseSSEBlock(block)
-            if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone)
-          }
+          for (const block of blocks) handle(parseSSEBlock(block))
         }
 
         // Flush any trailing block that wasn't terminated by "\n\n" (e.g. the
         // final `done`/`error` event on chunk boundaries) so we never drop it.
         const tail = buffer.trim()
-        if (tail) {
-          const event = parseSSEBlock(tail)
-          if (event) applyEvent(event, aiMsgId, setMessages, t, onAssistantDone)
-        }
+        if (tail) handle(parseSSEBlock(tail))
+        if (!finished) finishInterrupted(aiMsgId, setMessages, t)
       } catch (error) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === aiMsgId
-              ? {
-                  ...m,
-                  content:
-                    error instanceof Error
-                      ? error.message
-                      : t.aiChat.cantAnswer,
-                  isStreaming: false,
-                }
-              : m
+        if (error instanceof RequestFailedError) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMsgId ? { ...m, content: error.message, isStreaming: false } : m
+            )
           )
-        )
+        } else {
+          // The connection failed (offline, dropped mid-answer): keep what
+          // arrived and say it was cut off, rather than showing the browser's
+          // raw "network error" in place of the answer.
+          finishInterrupted(aiMsgId, setMessages, t)
+        }
         console.error('[useChatStream] error:', error)
       } finally {
         setIsTyping(false)

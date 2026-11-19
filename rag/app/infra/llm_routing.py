@@ -217,14 +217,22 @@ class GeminiFailoverChatModel(BaseChatModel):
     def _identifying_params(self) -> dict[str, Any]:
         return {"models": self.model_names}
 
-    def _next_attempt_timeout(self, started: float) -> float | None:
-        """Seconds the next attempt may take, or None when no time is left."""
+    def _next_attempt_timeout(
+        self, started: float, is_last_model: bool = False
+    ) -> float | None:
+        """Seconds the next attempt may take, or None when no time is left.
+
+        The per-attempt limit exists to move on to the next model. The last
+        model has no next one, so it gets everything left of the total:
+        cutting it off at the attempt limit would only turn a slow answer into
+        a certain failure.
+        """
         remaining = self.total_timeout - (time.monotonic() - started)
         # A sliver of time is not an attempt: starting a model that is certain
         # to be cut off only adds a pointless request.
         if remaining < self.attempt_timeout * _MIN_ATTEMPT_FRACTION:
             return None
-        return min(self.attempt_timeout, remaining)
+        return remaining if is_last_model else min(self.attempt_timeout, remaining)
 
     def _should_try_next(self, exc: Exception, index: int, started: float) -> bool:
         """Decide whether to go on after a failed attempt; log it if so."""
@@ -249,8 +257,9 @@ class GeminiFailoverChatModel(BaseChatModel):
     ) -> ChatResult:
         del run_manager  # The outer model emits callbacks for the returned result.
         started = time.monotonic()
+        last = len(self.models) - 1
         for index, (model, model_name) in enumerate(zip(self.models, self.model_names)):
-            timeout = self._next_attempt_timeout(started)
+            timeout = self._next_attempt_timeout(started, index == last)
             if timeout is None:  # Only possible when total_timeout is not positive.
                 raise AttemptTimeoutError(model_name, 0.0)
             try:
@@ -278,8 +287,9 @@ class GeminiFailoverChatModel(BaseChatModel):
     ) -> Iterator[ChatGenerationChunk]:
         del run_manager  # Avoid double-emitting callbacks from nested chat models.
         started = time.monotonic()
+        last = len(self.models) - 1
         for index, (model, model_name) in enumerate(zip(self.models, self.model_names)):
-            timeout = self._next_attempt_timeout(started)
+            timeout = self._next_attempt_timeout(started, index == last)
             if timeout is None:  # Only possible when total_timeout is not positive.
                 raise AttemptTimeoutError(model_name, 0.0)
             attempt_started = time.monotonic()

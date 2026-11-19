@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import type { AgentSSEEvent, CoachChatMessage } from "@/lib/ai/types"
 import { runAgent, type AgentResult } from "@/lib/ai/agent"
+import { failoverReason } from "@/lib/ai/model"
 import { buildUserContext } from "@/lib/ai/user-context"
 
 /**
@@ -212,13 +213,20 @@ export async function POST(request: Request) {
         }
         console.error("[/api/ai/chat] agent error:", error)
         controller.enqueue(
-          encodeEvent({
-            type: "error",
-            // Empty for the generic case so the client renders its own
-            // localized fallback (t.aiChat.streamError); real Error messages
-            // (often technical) are still forwarded for debugging.
-            message: error instanceof Error ? error.message : "",
-          })
+          encodeEvent(
+            failoverReason(error) !== null
+              ? // No model could answer right now (quota, overload, too slow):
+                // the client says so in plain words instead of showing the
+                // provider's raw text ("503 status code (no body)") as the answer.
+                { type: "error", code: "ai_unavailable", message: "" }
+              : {
+                  type: "error",
+                  // Empty for the generic case so the client renders its own
+                  // localized fallback (t.aiChat.streamError); real Error messages
+                  // (often technical) are still forwarded for debugging.
+                  message: error instanceof Error ? error.message : "",
+                }
+          )
         )
         controller.close()
       }

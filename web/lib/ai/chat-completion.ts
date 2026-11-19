@@ -109,7 +109,9 @@ export async function* streamChatCompletion(
   for (let i = 0; ; i++) {
     const model = models[i]
     if (userSignal?.aborted) throw cancellationError(userSignal)
-    const timeoutMs = failover ? nextAttemptTimeout(startedAt, options) : null
+    const timeoutMs = failover
+      ? nextAttemptTimeout(startedAt, options, i === models.length - 1)
+      : null
     if (failover && timeoutMs === null) throw new AttemptTimeoutError(models[i - 1] ?? model, 0)
 
     // Aborted when this attempt runs out of time or the caller cancels.

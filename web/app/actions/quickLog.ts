@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createHash, randomUUID } from 'crypto';
 import { createChatCompletion } from '@/lib/ai/chat-completion';
 import { supabase } from '@/lib/supabaseClient';
-import { AI_FAST_MODELS } from '@/lib/ai/model';
+import { AI_FAST_MODELS, failoverReason } from '@/lib/ai/model';
 import { fetchNutritionApi } from '@/lib/ai/nutrition-client';
 import { Database, Json } from '@/lib/database.types';
 import { getTodayDate } from '@/lib/utils/date';
@@ -124,6 +124,18 @@ async function parseQuickLog(userInput: string): Promise<ParsedSegment[]> {
   }));
 }
 
+/**
+ * True when parsing failed because a model could not answer right now — every
+ * Gemini model out of quota, unavailable or too slow, or the nutrition model
+ * timing out or overloaded — so the same input is worth retrying later.
+ */
+function isTransientAiFailure(error: unknown): boolean {
+  if (failoverReason(error) !== null) return true;
+  if (!(error instanceof Error)) return false;
+  if (error.name === 'AbortError' || error.name === 'TimeoutError') return true;
+  return /Modal API returned (429|5\d\d)|fetch failed/.test(error.message);
+}
+
 async function getCommittedQuickLog(
   userId: string,
   requestId: string,
@@ -186,7 +198,16 @@ export async function quickLog(
       if (cached.success) revalidatePath('/');
       return cached;
     }
-    throw parseError;
+    // Return a code instead of throwing: a thrown error reaches the browser
+    // as the provider's raw text in development ("503 status code (no body)")
+    // and as Next's opaque masked message in production.
+    console.error('[quickLog] parse failed:', parseError);
+    return {
+      success: false,
+      error: isTransientAiFailure(parseError)
+        ? ActionError.AI_UNAVAILABLE
+        : ActionError.AI_PARSE_FAILED,
+    };
   }
 
   if (segments.length === 0) {

@@ -334,6 +334,21 @@ def test_each_attempt_gets_a_time_limit_within_the_total():
     assert 0 < second <= 0.16
 
 
+def test_the_last_model_gets_the_rest_of_the_total_time():
+    # Seen live: Hydrogen out of quota, 3.8 overloaded, and 3.6 answering only
+    # after the attempt limit. Nothing comes after the last model, so cutting
+    # it off at the attempt limit could only fail the call.
+    model, log = failover_model(
+        {HYDROGEN: [rate_limited()], FLASH_38: [overloaded()], FLASH_36: ["ok"]},
+        attempt_timeout=0.1,
+        total_timeout=1.0,
+    )
+    assert model.invoke("hi").content == "ok"
+    *earlier, (_, last) = log
+    assert all(kwargs["timeout"] == pytest.approx(0.1) for _, kwargs in earlier)
+    assert last["timeout"] > 0.5
+
+
 def test_no_attempt_starts_once_the_total_time_is_used_up():
     model, log = failover_model(
         {
@@ -555,8 +570,11 @@ def test_real_sdk_reaches_3_6_when_hydrogen_returns_429_and_3_8_fails(flash_38, 
     assert [name for name, _ in requests] == [HYDROGEN, FLASH_38, FLASH_36]
     assert model.last_model_used == FLASH_36
     assert time.monotonic() - started < 5.0
-    # Each request carried the attempt's own time limit down to the HTTP client.
-    assert all(0 < timeout["read"] <= 7.0 for _, timeout in requests)
+    # Each request carried its own time limit down to the HTTP client: the
+    # attempt limit, or what is left of the total for the last model.
+    *earlier, (_, last) = requests
+    assert all(0 < timeout["read"] <= 7.0 for _, timeout in earlier)
+    assert 7.0 < last["read"] <= 20.0
     assert "trying gemini-3.6-flash" in capsys.readouterr().out
 
 

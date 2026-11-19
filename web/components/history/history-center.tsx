@@ -66,8 +66,25 @@ export function HistoryCenter({ userId, onLogSuccess }: HistoryCenterProps) {
     }
   }, [workoutQuery.data, qc])
 
-  const dietData = nutritionQuery.data?.[selectedStr]
-  const workoutLogs = workoutQuery.data?.[selectedStr]
+  // The week queries only cover the last 7 days; the date picker reaches any
+  // earlier day, which is loaded on its own (under the same `range` prefix,
+  // so the logging surfaces' invalidation refreshes it too).
+  const outsideWeek = selectedStr < weekStart
+  const dayNutritionQuery = useQuery({
+    queryKey: ['nutrition', 'range', selectedStr, selectedStr],
+    queryFn: () => getNutritionRange(selectedStr, selectedStr),
+    enabled: !!userId && outsideWeek,
+    staleTime: 5 * 60 * 1000,
+  })
+  const dayWorkoutQuery = useQuery({
+    queryKey: ['workouts', 'range', selectedStr, selectedStr],
+    queryFn: () => getWorkoutHistory(selectedStr, selectedStr),
+    enabled: !!userId && outsideWeek,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const dietData = (outsideWeek ? dayNutritionQuery.data : nutritionQuery.data)?.[selectedStr]
+  const workoutLogs = (outsideWeek ? dayWorkoutQuery.data : workoutQuery.data)?.[selectedStr]
 
   return (
     <div className="flex flex-col gap-2">

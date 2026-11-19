@@ -14,7 +14,6 @@ import { useSpeechInput } from '@/lib/hooks/use-speech-input'
 import type { DietLogItem } from '@/app/actions/types'
 import { cn } from '@/lib/utils'
 import { elapsedLoggingMs, trackLoggingEvent } from '@/lib/analytics/logging-events'
-
 interface HomeLogBarProps {
   userId?: string
   /** Background reconcile after a successful optimistic patch. */
@@ -71,11 +70,25 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
     feedbackTimer.current = setTimeout(() => setFeedback(null), 5000)
   }, [])
 
+  // The last failed submission. Re-submitting the same text (from the input,
+  // where it is put back on failure) reuses its request id, so a request
+  // that did commit but whose response was lost is not saved twice.
+  const lastFailedRef = useRef<{ text: string; requestId: string } | null>(null)
+
+  /** Put a failed entry back in the input — unless the user has typed something new since. */
+  const restoreInput = useCallback((failedText: string, requestId: string) => {
+    lastFailedRef.current = { text: failedText, requestId }
+    setText((current) => (current.trim() ? current : failedText))
+  }, [])
+
   const submit = useCallback(
     (raw: string, retryRequestId?: string) => {
       const trimmed = raw.trim()
       if (!trimmed) return
-      const requestId = retryRequestId ?? crypto.randomUUID()
+      const failed = lastFailedRef.current
+      const requestId =
+        retryRequestId ?? (failed?.text === trimmed ? failed.requestId : crypto.randomUUID())
+      lastFailedRef.current = null
       const startedAt = performance.now()
       trackLoggingEvent('FitCore Logging Attempt', {
         source: 'text',
@@ -127,6 +140,7 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
             })
             outcomeTracked = true
             history.removeFood(today, tempId)
+            restoreInput(trimmed, requestId)
             showFeedback({
               kind: 'error',
               text: tError(t, res.error),
@@ -147,7 +161,7 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
           history.applyResolvedQuickLog(today, tempId, res.items)
           onLogged?.()
           showFeedback({ kind: 'success', text: summarize(res.items, t) })
-        } catch (err) {
+        } catch {
           if (!outcomeTracked) {
             trackLoggingEvent('FitCore Logging Failed', {
               source: 'text',
@@ -157,9 +171,12 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
             })
           }
           history.removeFood(today, tempId)
+          restoreInput(trimmed, requestId)
+          // A thrown error is a transport failure (offline, server crashed);
+          // its message is technical, or masked by Next in production.
           showFeedback({
             kind: 'error',
-            text: err instanceof Error ? err.message : t.logForm.quick.tryLater,
+            text: t.logForm.quick.tryLater,
             retry: { text: trimmed, requestId },
           })
         } finally {
@@ -167,7 +184,7 @@ export function HomeLogBar({ userId, onLogged, className }: HomeLogBarProps) {
         }
       })()
     },
-    [userId, applyQuickLogItems, history, onLogged, showFeedback, t]
+    [userId, applyQuickLogItems, history, onLogged, showFeedback, restoreInput, t]
   )
 
   const speech = useSpeechInput({

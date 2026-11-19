@@ -112,7 +112,7 @@ export function QuickLogBar() {
         applyQuickLogItems(res.items)
         onLogged?.()
         toast({ title: t.logForm.quick.logged, description: summarizeResults(res.items, t) })
-      } catch (err) {
+      } catch {
         loading.dismiss()
         if (!outcomeTracked) {
           trackLoggingEvent('FitCore Logging Failed', {
@@ -125,7 +125,9 @@ export function QuickLogBar() {
         toast({
           variant: 'destructive',
           title: t.logForm.quick.logFailed,
-          description: err instanceof Error ? err.message : t.logForm.quick.tryLater,
+          // A thrown error is a transport failure; its message is technical
+          // (or masked by Next in production).
+          description: t.logForm.quick.tryLater,
         })
       }
     })()

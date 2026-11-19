@@ -2,10 +2,10 @@
 'use client'
 
 import React, { useMemo, useState, useTransition } from 'react'
-import { Dumbbell, Pencil, Trash2, UtensilsCrossed } from 'lucide-react'
+import { Dumbbell, Pencil, Plus, Trash2, UtensilsCrossed } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useQueryClient } from '@tanstack/react-query'
 import { useT } from '@/lib/i18n/provider'
+import { useHistoryActions } from '@/lib/queries/history'
 import { minutesOfDay } from '@/lib/utils/date'
 import { EmptyState } from '@/components/ui/empty-state'
 import { DietLogEditDialog } from '@/components/log-form/diet-log-edit-dialog'
@@ -56,10 +56,19 @@ const SLOT_LABELS: Record<string, string> = {
 export function DayTimeline({ dateStr, userId, dietData, workoutLogs, onChange }: DayTimelineProps) {
   const t = useT()
   const { toast } = useToast()
-  const qc = useQueryClient()
   const [isPending, startTransition] = useTransition()
+  const history = useHistoryActions()
   const [editingDiet, setEditingDiet] = useState<DietLogItem | null>(null)
   const [editingWorkout, setEditingWorkout] = useState<WorkoutLogItem | null>(null)
+  const [adding, setAdding] = useState<'diet' | 'workout' | null>(null)
+
+  // Any change to this day: refetch the Record ranges (and the dashboard).
+  // The parent's `onChange` already does both; invalidating here as well would
+  // queue every refetch twice, and server actions run one at a time.
+  const handleChanged = () => {
+    if (onChange) onChange()
+    else history.invalidateDate(dateStr)
+  }
 
   const timelineItems = useMemo((): TimelineItem[] => {
     const items: TimelineItem[] = []
@@ -100,8 +109,8 @@ export function DayTimeline({ dateStr, userId, dietData, workoutLogs, onChange }
         toast({ variant: 'destructive', title: 'Delete failed', description: tError(t, result.error) })
         return
       }
-      void qc.invalidateQueries({ queryKey: ['nutrition', dateStr] })
-      onChange?.()
+      history.removeFood(dateStr, log.id)
+      handleChanged()
     })
   }
 
@@ -113,19 +122,73 @@ export function DayTimeline({ dateStr, userId, dietData, workoutLogs, onChange }
         toast({ variant: 'destructive', title: 'Delete failed', description: tError(t, result.error) })
         return
       }
-      void qc.invalidateQueries({ queryKey: ['workouts', dateStr] })
-      onChange?.()
+      history.removeWorkout(dateStr, log.id)
+      handleChanged()
     })
   }
 
+  // Manual entry for the day being viewed — the only way to back-date an
+  // entry or to log a workout by hand (Quick Log always logs to today).
+  const addBar = userId ? (
+    <div className="mb-2 flex items-center justify-end gap-1.5">
+      <button
+        type="button"
+        onClick={() => setAdding('diet')}
+        className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+      >
+        <Plus size={11} />
+        Food
+      </button>
+      <button
+        type="button"
+        onClick={() => setAdding('workout')}
+        className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+      >
+        <Plus size={11} />
+        Workout
+      </button>
+    </div>
+  ) : null
+
+  const dialogs = (
+    <>
+      <DietLogEditDialog log={editingDiet} onClose={() => setEditingDiet(null)} onSuccess={handleChanged} />
+      <WorkoutLogEditDialog log={editingWorkout} onClose={() => setEditingWorkout(null)} onSuccess={handleChanged} />
+      <DietLogEditDialog
+        mode="create"
+        open={adding === 'diet'}
+        dateStr={dateStr}
+        onClose={() => setAdding(null)}
+        onSuccess={(created) => {
+          if (created) history.addPendingFood(dateStr, created)
+          handleChanged()
+        }}
+      />
+      <WorkoutLogEditDialog
+        mode="create"
+        open={adding === 'workout'}
+        dateStr={dateStr}
+        onClose={() => setAdding(null)}
+        onSuccess={(created) => {
+          if (created) history.addPendingWorkout(dateStr, created)
+          handleChanged()
+        }}
+      />
+    </>
+  )
+
   if (timelineItems.length === 0) {
     return (
-      <EmptyState
-        icon={UtensilsCrossed}
-        title="No meals or workouts yet"
-        description="Tap + to start logging"
-        size="inset"
-      />
+      <>
+        {addBar}
+        <EmptyState
+          icon={UtensilsCrossed}
+          title="No meals or workouts yet"
+          description="Tap + to start logging"
+          size="inset"
+        />
+        {dialogs}
+      </>
     )
   }
 
@@ -133,6 +196,7 @@ export function DayTimeline({ dateStr, userId, dietData, workoutLogs, onChange }
 
   return (
     <>
+      {addBar}
       <div className="space-y-1">
         <AnimatePresence initial={false}>
           {timelineItems.map((item) => {
@@ -164,10 +228,10 @@ export function DayTimeline({ dateStr, userId, dietData, workoutLogs, onChange }
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-foreground">{item.data.food_name}</p>
                         <p className="text-[10px] text-muted-foreground tabular-nums">
-                          {item.data.calories} kcal
-                          {item.data.protein != null ? ` · P${item.data.protein}` : ''}
-                          {item.data.carbs != null ? ` · C${item.data.carbs}` : ''}
-                          {item.data.fat != null ? ` · F${item.data.fat}` : ''}
+                          {item.data.pending ? t.logForm.quick.homeSubmitting : `${item.data.calories} kcal`}
+                          {!item.data.pending && item.data.protein != null ? ` · P${item.data.protein}` : ''}
+                          {!item.data.pending && item.data.carbs != null ? ` · C${item.data.carbs}` : ''}
+                          {!item.data.pending && item.data.fat != null ? ` · F${item.data.fat}` : ''}
                         </p>
                       </div>
                     </>
@@ -186,8 +250,10 @@ export function DayTimeline({ dateStr, userId, dietData, workoutLogs, onChange }
                       </div>
                     </>
                   )}
-                  {userId && (
-                    <div className="flex shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
+                  {/* A Quick Log entry still being parsed has no row to edit yet. */}
+                  {userId && !(item.kind === 'diet' && item.data.pending) && (
+                    // Always visible on touch screens, which have no hover.
+                    <div className="flex shrink-0 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                       <button
                         type="button"
                         onClick={() => item.kind === 'diet' ? setEditingDiet(item.data) : setEditingWorkout(item.data)}
@@ -213,8 +279,7 @@ export function DayTimeline({ dateStr, userId, dietData, workoutLogs, onChange }
         </AnimatePresence>
       </div>
 
-      <DietLogEditDialog log={editingDiet} onClose={() => setEditingDiet(null)} onSuccess={onChange} />
-      <WorkoutLogEditDialog log={editingWorkout} onClose={() => setEditingWorkout(null)} onSuccess={onChange} />
+      {dialogs}
     </>
   )
 }

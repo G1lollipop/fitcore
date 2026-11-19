@@ -28,7 +28,11 @@ const SUPERSEDED_GEMINI_MODELS = new Set(["gemini-2.5-flash"])
 
 export const GOOGLE_OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
-/** How long one model gets to answer (or, when streaming, to start showing text). */
+/**
+ * How long one model gets to answer (or, when streaming, to start showing
+ * text) before the next model is tried. The last model in the order gets what
+ * is left of {@link AI_TOTAL_TIMEOUT_MS} instead.
+ */
 export const AI_ATTEMPT_TIMEOUT_MS = 30_000
 /** How long a call may spend across all models before it gives up. */
 export const AI_TOTAL_TIMEOUT_MS = 75_000
@@ -176,17 +180,27 @@ export interface AttemptContext {
   timeoutMs: number
 }
 
-/** What is left of the total time for the next attempt, or `null` when none is. */
+/**
+ * What is left of the total time for the next attempt, or `null` when none is.
+ *
+ * The per-attempt limit exists to move on to the next model. The last model
+ * has no next one, so it gets everything that is left of the total instead:
+ * cutting it off at the attempt limit would only turn a slow answer into a
+ * certain failure (seen in practice with an overloaded fallback model that
+ * answered in 35–50s while the earlier models were out of quota).
+ */
 export function nextAttemptTimeout(
   startedAt: number,
-  options: FallbackOptions = {}
+  options: FallbackOptions = {},
+  isLastModel = false
 ): number | null {
   const attempt = options.attemptTimeoutMs ?? AI_ATTEMPT_TIMEOUT_MS
   const total = options.totalTimeoutMs ?? AI_TOTAL_TIMEOUT_MS
   const remaining = total - (Date.now() - startedAt)
   // A sliver of time is not an attempt: starting a model that is certain to be
   // cut off only adds a pointless request.
-  return remaining >= attempt * MIN_ATTEMPT_FRACTION ? Math.min(attempt, remaining) : null
+  if (remaining < attempt * MIN_ATTEMPT_FRACTION) return null
+  return isLastModel ? remaining : Math.min(attempt, remaining)
 }
 
 /** The error a cancelled call ends with: the caller's own reason when it gave one. */
@@ -222,7 +236,7 @@ export async function withModelFallback<T>(
   for (let i = 0; ; i++) {
     const model = models[i]
     if (userSignal?.aborted) throw cancellationError(userSignal)
-    const timeoutMs = nextAttemptTimeout(startedAt, options)
+    const timeoutMs = nextAttemptTimeout(startedAt, options, i === models.length - 1)
     // Only reachable after a failed attempt used up the rest of the time.
     if (timeoutMs === null) throw new AttemptTimeoutError(models[i - 1] ?? model, 0)
 

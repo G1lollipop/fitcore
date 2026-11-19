@@ -45,4 +45,38 @@ describe('mixed quick-log cache reconciliation', () => {
     unmount()
     client.clear()
   })
+
+  it('patches and invalidates the range queries the Record tab renders from', () => {
+    // Record shows `['nutrition'|'workouts', 'range', start, end]`, not the
+    // per-day keys; changes that only touched the day keys stayed invisible
+    // there until a full reload.
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const date = '2026-10-05'
+    const goals = { calories: 2000, protein: 150, carbs: 200, fat: 70 }
+    const nutritionRange = ['nutrition', 'range', '2026-09-29', date]
+    const workoutRange = ['workouts', 'range', '2026-09-29', date]
+    client.setQueryData(nutritionRange, { [date]: { goals, dietLogs: [] }, '2026-10-04': { goals, dietLogs: [] } })
+    client.setQueryData(workoutRange, { [date]: [], '2026-10-04': [] })
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    const { result, unmount } = renderHook(() => useHistoryActions(), { wrapper })
+
+    act(() => {
+      result.current.addPendingFood(date, { id: 'pending-id', food_name: 'sandwich', calories: 0, protein: 0, carbs: 0, fat: 0, logged_at: '2026-10-05T17:00:00.000Z', pending: true })
+      result.current.applyResolvedQuickLog(date, 'pending-id', items)
+    })
+    const nutrition = client.getQueryData<Record<string, NutritionDayData>>(nutritionRange)!
+    expect(nutrition[date].dietLogs.map((log) => log.id)).toEqual(['food-1'])
+    expect(nutrition['2026-10-04'].dietLogs).toEqual([])
+    expect(client.getQueryData<Record<string, WorkoutLogItem[]>>(workoutRange)![date].map((log) => log.id)).toEqual(['workout-1'])
+
+    act(() => {
+      result.current.removeFood(date, 'food-1')
+      result.current.invalidateDate(date)
+    })
+    expect(client.getQueryData<Record<string, NutritionDayData>>(nutritionRange)![date].dietLogs).toEqual([])
+    expect(client.getQueryState(nutritionRange)!.isInvalidated).toBe(true)
+    expect(client.getQueryState(workoutRange)!.isInvalidated).toBe(true)
+    unmount()
+    client.clear()
+  })
 })
